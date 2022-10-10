@@ -1,3 +1,4 @@
+from tokenize import group
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from typing import Type, List, Optional
@@ -18,18 +19,15 @@ def conv1x1(in_planes, out_planes, stride=1):
 class Bottleneck(nn.Module) :
     expansion = 4
     
-    def __init__(self, inplanes, planes, stride=1, downsample=None, base_width=64, 
-                 dilation=1, norm_layer=None) -> None:
-        super(Bottleneck).__init__()
-        if norm_layer is None:
-            norm_layer = nn.BatchNorm2d
-        width = int(planes * (base_width / 64.0))
-        self.conv1 = conv1x1(inplanes, width)
-        self.bn1 = norm_layer(width)
-        self.conv2 = conv3x3(width, width, stride, dilation)
-        self.bn2 = norm_layer(width)
-        self.conv3 = conv1x1(width, planes * self.expansion)
-        self.bn3 = norm_layer(planes * self.expansion)
+    def __init__(self, inplanes, outplanes, stride=1, downsample=None,
+                 dilation=1, norm_layer=nn.BatchNorm2d) -> None:
+        super().__init__()
+        self.conv1 = conv1x1(inplanes, outplanes)
+        self.bn1 = norm_layer(outplanes)
+        self.conv2 = conv3x3(outplanes, outplanes, stride, dilation)
+        self.bn2 = norm_layer(outplanes)
+        self.conv3 = conv1x1(outplanes, outplanes * Bottleneck.expansion)
+        self.bn3 = norm_layer(outplanes * Bottleneck.expansion)
         
         self.relu = nn.ReLU(inplace=True)
         self.downsample = downsample
@@ -57,32 +55,37 @@ class Bottleneck(nn.Module) :
 
         return out
     
-class ResNetEncoder():
+class ResNetEncoder(nn.Module):
     def __init__(self, 
-                 block: Type[Bottleneck],
-                 layers: List[int] = [3, 4, 6, 3],
-                 in_channels: int = 3,
-                 out_channels: List[int] = [256, 512, 1024, 2048],
-                 aux_in_channels: Optional[int] = None,
-                 aux_in_position: Optional[int] = None
+                 block = Bottleneck,
+                 layers = [3, 4, 6, 3],
+                 in_channels = 4,
+                 out_channels = [64, 128, 256, 512],
+                 norm_layer = nn.BatchNorm2d
                 ):
         super(ResNetEncoder, self).__init__
         
         self.in_channels = in_channels 
-        self.out_channels = out_channels
-        self.aux_in_position = aux_in_position
-        self.norm_layer = nn.BatchNorm2d
+        self._out_channels = out_channels
+        self._norm_layer = norm_layer
         self.inplanes = 64
         self.dilation = 1
         
         # input layer
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
-        self.bn1 = self.norm_layer(self.inplanes)
+        self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         
         #conv layers
-        self.layer1 = self.
+        self.layer1 = self._make_layer(block, out_channels[0], layers[0])
+        self.layer2 = self._make_layer(block, out_channels[1], layers[1], stride=2)
+        self.layer3 = self._make_layer(block, out_channels[2], layers[2], stride=2)
+        self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2)
+
+    @property
+    def out_channels(self):
+        return [self.in_channels] + self._out_channels
         
         
     def _make_layer(
@@ -93,7 +96,7 @@ class ResNetEncoder():
         stride: int = 1,
         dilate: bool = False,
     ) -> nn.Sequential:
-        norm_layer = self.norm_layer
+        norm_layer = self._norm_layer
         downsample = None
         previous_dilation = self.dilation
         if dilate:
@@ -106,13 +109,32 @@ class ResNetEncoder():
             )
             
         layers = []
+
         layers.append(block(self.inplanes, planes, stride, downsample, dilation=previous_dilation, norm_layer=norm_layer))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(
                 block(
                     self.inplanes,
-                    planes, stride, downsample, dilation=previous_dilation,
+                    planes, stride, downsample, dilation=self.dilation,
                     norm_layer=norm_layer)
                 )
         return nn.Sequential(*layers)
+    
+    def _foward_impl(self, x): 
+        features = []
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        
+        x = self.layer1(x)
+        features.append(x)
+        x = self.layer2(x)
+        features.append(x)
+        x = self.layer3(x)
+        features.append(x)
+        x = self.layer4(x)
+        features.append(x)
+        return features
+        
