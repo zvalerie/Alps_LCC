@@ -58,6 +58,6 @@ def modify_attribute(layer):
 
 
 if __name__ == '__main__':
-    input_shp_name = r"" + os.path.abspath("") + "/VALAIS_MERGED.shp"
-    output_raster_name = r"" + os.path.abspath("") + "/VALAIS_MERGED.tif"
-    vector2raster(input_shp_name, output_raster_name, 4, field_name = "OBJEKTART")
+    input_shp_name = "/data/xiaolong/label/Label.shp"
+    output_raster_name = "/data/xiaolong/label/Label.tif"
+    vector2raster(input_shp_name, output_raster_name, 0.5, field_name = "OBJEKTART")
