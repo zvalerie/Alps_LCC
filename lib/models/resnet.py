@@ -72,15 +72,21 @@ class ResNetEncoder(nn.Module):
         self.dilation = 1
         
         # input layer
+        # 400, 400, 4 -> 200, 200, 64
         self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
+        # 200, 200, 64 -> 100, 100, 64
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         
         #conv layers
+        # 100, 100, 64 -> 100, 100, 256
         self.layer1 = self._make_layer(block, out_channels[0], layers[0])
+        # 100, 100, 256 -> 50, 50, 512
         self.layer2 = self._make_layer(block, out_channels[1], layers[1], stride=2)
+        # 50, 50, 512 -> 25, 25, 1024
         self.layer3 = self._make_layer(block, out_channels[2], layers[2], stride=2)
+        # 25, 25, 1024 -> 13, 13, 2048
         self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2)
 
     @property
@@ -122,19 +128,32 @@ class ResNetEncoder(nn.Module):
         return nn.Sequential(*layers)
     
     def _foward_impl(self, x): 
-        features = []
         x = self.conv1(x)
         x = self.bn1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
+        # 200, 200, 64
+        feat1 = self.relu(x)
+        x = self.maxpool(feat1)
         
-        x = self.layer1(x)
-        features.append(x)
-        x = self.layer2(x)
-        features.append(x)
-        x = self.layer3(x)
-        features.append(x)
-        x = self.layer4(x)
-        features.append(x)
-        return features
+        #100, 100, 256
+        feat2 = self.layer1(x)
+        #50, 50, 512
+        feat3 = self.layer2(feat2)
+        #25, 25, 1024
+        feat4 = self.layer3(feat3)
+        #13, 13, 2048
+        feat5 = self.layer4(feat4)
+        
+        return [feat1, feat2, feat3, feat4, feat5]
+
+    def forward(self, x):
+        return self._foward_impl(x)
+    
+def resnet50(pretrained=False, **kwargs):
+    model = ResNetEncoder(Bottleneck)
+    if pretrained:
+        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']), strict=False)
+        
+    del model.avgpool
+    del model.fc
+    return model
         
