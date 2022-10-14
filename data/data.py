@@ -11,6 +11,7 @@ def label_selection(label_path, rgb_path, dem_path, threshold):
     rgb_list = []
     dem_list = []
     for filename in tqdm(os.listdir(label_path)):
+        ## skip the images that cannot be opened
         try:
             img = Image.open(label_path + '/' + filename)
         except:
