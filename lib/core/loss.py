@@ -1,71 +1,40 @@
 import numpy as np
 import torch
-import torch.nn.functional as F
+import torch.nn as nn
 
-def focal_loss(labels, logits, alpha, gamma):
-    """Compute the focal loss between `logits` and the ground truth `labels`.
-    Focal loss = -alpha_t * (1-pt)^gamma * log(pt)
-    where pt is the probability of being classified to the true class.
-    pt = p (if true class), otherwise pt = 1 - p. p = sigmoid(logit).
-    Args:
-      labels: A float tensor of size [batch, num_classes].
-      logits: A float tensor of size [batch, num_classes].
-      alpha: A float tensor of size [batch_size]
-        specifying per-example weight for balanced cross entropy.
-      gamma: A float scalar modulating loss from hard and easy examples.
-    Returns:
-      focal_loss: A float32 scalar representing normalized total loss.
-    """    
-    BCLoss = F.binary_cross_entropy_with_logits(input = logits, target = labels, reduction = "none")
+def _assert_no_grad(tensor):
+    assert not tensor.requires_grad, \
+        "nn criterions don't compute the gradient w.r.t. targets - please " \
+        "mark these tensors as not requiring gradients"
+        
+class FocalLoss(nn.Module):
+    def __init__(self, alpha=0.5, gamma=2, weight=None, ignore_index=0, reduction = 'mean'):
+        super().__init__()
+        self.alpha = alpha
+        self.gamma = gamma
+        self.weight = weight
+        self.ignore_index = ignore_index
+        self.reduction = reduction
+        self.ce_fn = nn.CrossEntropyLoss(weight=self.weight, ignore_index=self.ignore_index, reduction=self.reduction)
 
-    if gamma == 0.0:
-        modulator = 1.0
-    else:
-        modulator = torch.exp(-gamma * labels * logits - gamma * torch.log(1 + 
-            torch.exp(-1.0 * logits)))
+    def forward(self, preds, labels, resize_scores=True):
+        '''Forward pass of the loss function'''
+        _assert_no_grad(labels)
+        
+        b, c, h, w = preds.size()
+        tb, th, tw = labels.size()
 
-    loss = modulator * BCLoss
+        assert(b == tb)
 
-    weighted_loss = alpha * loss
-    focal_loss = torch.sum(weighted_loss)
-
-    focal_loss /= torch.sum(labels)
-    return focal_loss
-
-
-def CB_loss(labels, logits, samples_per_cls, no_of_classes, loss_type, beta, gamma):
-    """Compute the Class Balanced Loss between `logits` and the ground truth `labels`.
-    Class Balanced Loss: ((1-beta)/(1-beta^n))*Loss(labels, logits)
-    where Loss is one of the standard losses used for Neural Networks.
-    Args:
-      labels: A int tensor of size [batch].
-      logits: A float tensor of size [batch, no_of_classes].
-      samples_per_cls: A python list of size [no_of_classes].
-      no_of_classes: total number of classes. int
-      loss_type: string. One of "sigmoid", "focal", "softmax".
-      beta: float. Hyperparameter for Class balanced loss.
-      gamma: float. Hyperparameter for Focal loss.
-    Returns:
-      cb_loss: A float tensor representing class balanced loss
-    """
-    effective_num = 1.0 - np.power(beta, samples_per_cls)
-    weights = (1.0 - beta) / np.array(effective_num)
-    weights = weights / np.sum(weights) * no_of_classes
-
-    labels_one_hot = F.one_hot(labels, no_of_classes).float()
-
-    weights = torch.tensor(weights).float()
-    weights = weights.unsqueeze(0)
-    weights = weights.repeat(labels_one_hot.shape[0],1) * labels_one_hot
-    weights = weights.sum(1)
-    weights = weights.unsqueeze(1)
-    weights = weights.repeat(1,no_of_classes)
-
-    if loss_type == "focal":
-        cb_loss = focal_loss(labels_one_hot, logits, weights, gamma)
-    elif loss_type == "sigmoid":
-        cb_loss = F.binary_cross_entropy_with_logits(input = logits,target = labels_one_hot, weights = weights)
-    elif loss_type == "softmax":
-        pred = logits.softmax(dim = 1)
-        cb_loss = F.binary_cross_entropy(input = pred, target = labels_one_hot, weight = weights)
-    return cb_loss
+        # Handle inconsistent size between input and preds
+        if resize_scores:
+            if h != th or w != tw:  # upsample logits
+                preds = nn.functional.interpolate(preds, size=(th, tw), mode="bilinear", align_corners=False)
+        else:
+            if h != th or w != tw:  # downsample labels
+                labels = nn.functional.interpolate(labels.view(b, 1, th, tw).float(), size=(h, w), mode="nearest").view(b, h, w).long()
+        
+        logpt = -self.ce_fn(preds, labels)
+        pt = torch.exp(logpt)
+        loss = -((1 - pt) ** self.gamma) * self.alpha * logpt
+        return loss

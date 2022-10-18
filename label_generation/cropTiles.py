@@ -25,7 +25,7 @@ def cropTiles(label_path, grid_path, tmp_path):
             # subprocess.run(cmd)
               
 if __name__ == '__main__':
-    label_path = "/data/xiaolong/label/Label.tif"
+    label_path = "/data/xiaolong/mask_shp/Label.tif"
     grid_path = "/data/xiaolong/grid/aoiGrid100m.shp"
     tmp_path = "/data/xiaolong/tmp/tmp.shp"
     cropTiles(label_path, grid_path, tmp_path)
