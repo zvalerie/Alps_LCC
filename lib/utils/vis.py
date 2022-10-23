@@ -24,7 +24,9 @@ def colormap():
             [192, 128, 0],  
             [64, 0, 128], 
             [192, 0, 128],
-            
+            [64, 128, 128],
+            [192, 128, 128],
+            [0, 64, 0]
         ]
     )
     
@@ -37,3 +39,4 @@ def vis_seg_mask(mask):
     xv, yv = np.meshgrid(np.arange(0, width), np.arange(0, height))
     
     mask_img[yv, xv, :] = colors[mask]
+    return mask_img

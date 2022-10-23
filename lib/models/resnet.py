@@ -1,4 +1,7 @@
 from tokenize import group
+import math
+
+import torch
 import torch.nn as nn
 import torch.utils.model_zoo as model_zoo
 from typing import Type, List, Optional
@@ -20,8 +23,8 @@ class Bottleneck(nn.Module) :
     expansion = 4
     
     def __init__(self, inplanes, outplanes, stride=1, downsample=None,
-                 dilation=1, norm_layer=nn.BatchNorm2d) -> None:
-        super().__init__()
+                 dilation=1, norm_layer=nn.BatchNorm2d):
+        super(Bottleneck, self).__init__()
         self.conv1 = conv1x1(inplanes, outplanes)
         self.bn1 = norm_layer(outplanes)
         self.conv2 = conv3x3(outplanes, outplanes, stride, dilation)
@@ -55,7 +58,7 @@ class Bottleneck(nn.Module) :
 
         return out
     
-class ResNetEncoder(nn.Module):
+class ResNet50Encoder(nn.Module):
     def __init__(self, 
                  block = Bottleneck,
                  layers = [3, 4, 6, 3],
@@ -63,7 +66,7 @@ class ResNetEncoder(nn.Module):
                  out_channels = [64, 128, 256, 512],
                  norm_layer = nn.BatchNorm2d
                 ):
-        super(ResNetEncoder, self).__init__
+        super(ResNet50Encoder, self).__init__()
         
         self.in_channels = in_channels 
         self._out_channels = out_channels
@@ -73,7 +76,7 @@ class ResNetEncoder(nn.Module):
         
         # input layer
         # 400, 400, 4 -> 200, 200, 64
-        self.conv1 = nn.Conv2d(3, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
+        self.conv1 = nn.Conv2d(4, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
         # 200, 200, 64 -> 100, 100, 64
@@ -89,6 +92,14 @@ class ResNetEncoder(nn.Module):
         # 25, 25, 1024 -> 13, 13, 2048
         self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2)
 
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                n = m.kernel_size[0] * m.kernel_size[1] * m.out_channels
+                m.weight.data.normal_(0, math.sqrt(2. / n))
+            elif isinstance(m, nn.BatchNorm2d):
+                m.weight.data.fill_(1)
+                m.bias.data.zero_()
+                       
     @property
     def out_channels(self):
         return [self.in_channels] + self._out_channels
@@ -122,7 +133,7 @@ class ResNetEncoder(nn.Module):
             layers.append(
                 block(
                     self.inplanes,
-                    planes, stride, downsample, dilation=self.dilation,
+                    planes, dilation=self.dilation,
                     norm_layer=norm_layer)
                 )
         return nn.Sequential(*layers)
@@ -146,14 +157,16 @@ class ResNetEncoder(nn.Module):
         return [feat1, feat2, feat3, feat4, feat5]
 
     def forward(self, x):
+        ls = self._foward_impl(x)
         return self._foward_impl(x)
     
 def resnet50(pretrained=False, **kwargs):
-    model = ResNetEncoder(Bottleneck)
+    model = ResNet50Encoder(Bottleneck)
     if pretrained:
-        model.load_state_dict(model_zoo.load_url(model_urls['resnet50']), strict=False)
-        
-    del model.avgpool
-    del model.fc
+        weights = model_zoo.load_url(model_urls['resnet50'])
+        # weights from channel(0) are copied for the new channel(dem)
+        weight_dem = weights['conv1.weight'][:, 0:1]
+        weights['conv1.weight'] = torch.cat((weights['conv1.weight'], weight_dem), dim = 1)
+
+        model.load_state_dict(weights, strict=False)
     return model
-        

@@ -1,19 +1,19 @@
 import logging
 import time
 import os
-from turtle import back
 
 import numpy as np
 import torch
+import torch.nn as nn
 
-from inference import get_final_preds
-from utils.vis import vis_seg_mask
-from utils.evaluation import calc_IoU
+from lib.core.inference import get_final_preds
+from lib.utils.vis import vis_seg_mask
+from lib.utils.evaluation import calc_IoU
 
 logger = logging.getLogger(__name__)
 
 def train(train_loader, model, criterion, optimizer, epoch, output_dir,
-          writer_dict, *args):
+          writer_dict, args):
     '''Train one epoch
     
     Args:
@@ -38,14 +38,15 @@ def train(train_loader, model, criterion, optimizer, epoch, output_dir,
     
     for i, (image, dem, mask) in enumerate(train_loader):
         # measure the data loading time
-        data_time.updata(time.time() - end)
+        data_time.update(time.time() - end)
         
         # compute output
+        
         input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
-        output = model(input)
+        output = model(input) #[B,16,400,400]
         
         # compute loss
-        mask = mask.to(output.device)
+        mask = mask.to(output.device)#[B,16,200,200]
         loss = criterion(output, mask)
         
         # compute gradient and update
@@ -59,8 +60,7 @@ def train(train_loader, model, criterion, optimizer, epoch, output_dir,
         batch_time.update(time.time() - end)
         end = time.time()
         
-        
-        if i % args.frequency == 0:
+        if i % args.frequent == 0:
             msg = 'Epoch: [{0}][{1}/{2}]\t' \
                   'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
                   'Speed {speed:.1f} samples/s\t' \
@@ -100,20 +100,20 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
         for i, (image, dem, mask) in enumerate(val_loader):
             # compute output
             input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
-            output = model(input)
+            output = model(input) #[B, 16, 400, 400]
+            output = nn.functional.interpolate(output, size=(200, 200), mode="bilinear", align_corners=False) #[B,16,200,200]
             
             num_inputs = input.size(0)
             # compute loss
-            mask = mask.to(output.device)
+            mask = mask.to(output.device) #[B, 16, 200, 200]
             loss = criterion(output, mask)
-
             # measure accuracy and record loss
-            losses.update(loss.item(), input.size(0))
+            losses.update(loss.item(), num_inputs)
             preds = get_final_preds(output.detach().cpu().numpy())
             
             all_preds.extend(preds)
-            all_gts.extend(mask)
-            
+            all_gts.extend(mask.squeeze().detach().cpu().numpy())
+
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -126,22 +126,20 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
                 idx = np.random.randint(0, num_inputs)
 
                 # Unnormalize the image to [0, 255] to visualize
-                input_image = image.detach().cpu().numpy()[idx]
-                input_image = input_image * val_dataset.std.squeeze(0) + val_dataset.mean.squeeze(0)
+                input_image = image.detach().cpu().numpy()[idx] #[3, 400, 400]
+                input_image = input_image * val_dataset.std.reshape(3,1,1) + val_dataset.mean.reshape(3,1,1)
                 input_image[input_image > 1.0] = 1.0
                 input_image[input_image < 0.0] = 0.0
-                input_image = input_image * 255
 
                 ## Turn the numerical labels into colorful map
-                mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)
-                mask_image = vis_seg_mask(mask_image)
+                mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)#[1,200,200]
+                mask_image = vis_seg_mask(mask_image.squeeze())
 
                 output = torch.nn.functional.softmax(output, dim=1)
                 output_mask = torch.argmax(output, dim=1, keepdim=False)
 
                 output_mask = output_mask.detach().cpu().numpy()[idx]
                 output_mask = vis_seg_mask(output_mask)
-
 
                 writer.add_image('input_image', input_image, global_steps,
                     dataformats='CHW')
@@ -152,8 +150,8 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
 
                 writer_dict['vis_global_steps'] = global_steps + 1         
 
-        all_preds = np.concatenate(all_preds, axis=0)
-        all_gts = np.concatenate(all_gts, axis=0)
+        # all_preds = np.concatenate(all_preds, axis=0)
+        # all_gts = np.concatenate(all_gts, axis=0)
             
         avg_iou_score = calc_IoU(all_preds, all_gts, 16)
         perf_indicator = avg_iou_score
@@ -189,6 +187,7 @@ def test(test_loader, test_dataset, model, output_dir,
     with torch.no_grad():
         end = time.time()
         for i, (image, dem, mask) in enumerate(test_loader):
+            
             # compute output
             input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
             output = model(input)
@@ -257,7 +256,12 @@ def test(test_loader, test_dataset, model, output_dir,
             writer_dict['test_global_steps'] = global_steps + 1
             
     return perf_indicator
-   
+
+def _resize(img, dem):
+    c, h, w = img.size()
+    dem = nn.functional.interpolate(dem, size=(h, w), mode="bilinear", align_corners=False)
+    return dem
+
 class AverageMeter(object):
     """Computes and stores the average and current value."""
     

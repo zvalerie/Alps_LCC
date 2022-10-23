@@ -1,10 +1,14 @@
 import os
-from unicodedata import category
+import sys
 import numpy as np
 import pandas as pd
 from PIL import Image
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
+import torch
+sys.path.append("..") 
+from lib.dataset.SwissImage import SwissImage
+
 
 def label_selection(label_path, rgb_path, threshold):
     '''Select the labels, rgb and dem imgs with the proportion of background 
@@ -37,8 +41,7 @@ def label_selection(label_path, rgb_path, threshold):
     df = pd.DataFrame(data=ls, columns=['rbg', 'dem', 'mask','mainclass'])
     df.to_csv('label_selection_{}.csv'.format(threshold), index = False)
 
-
-def get_stat(filepath, save_name):
+def class_distribution(filepath, save_name):
     '''return the number of each class'''
     df = pd.read_csv(filepath)
     mainclasses = df['mainclass'].values
@@ -60,13 +63,62 @@ def data_split(csv_path, train_ratio, val_ratio, test_ratio):
     trainset.to_csv('train_dataset.csv', index = False)
     valset.to_csv('val_dataset.csv', index = False)
     testset.to_csv('test_dataset.csv', index = False)
-    
+
+def subset(csv_list, name_list, frac):
+    '''
+    use stratified selection to extract certain percent of data as subset
+    '''
+    for i in range(len(csv_list)):
+        dataset = pd.read_csv(csv_list[i])
+        subset = dataset.groupby('mainclass').sample(frac = frac, random_state = 1)
+        subset.to_csv(name_list[i]+'_subset.csv',index = False)
+
+def getStat(train_data):
+    '''
+    Compute mean and variance for training data
+    :param train_data: Dataset
+    :return: (mean, std)
+    '''
+    print(len(train_data))
+    train_loader = torch.utils.data.DataLoader(
+        train_data, batch_size=1, shuffle=False, num_workers=0,
+        pin_memory=True)
+    mean = torch.zeros(3)
+    std = torch.zeros(3)
+    for X, _, _ in tqdm(train_loader):
+        for d in range(3):
+            mean[d] += X[:, d, :, :].mean()
+            std[d] += X[:, d, :, :].std()
+    mean.div_(len(train_data))
+    std.div_(len(train_data))
+    return list(mean.numpy()), list(std.numpy())
+
 if __name__ == '__main__':
+    
     rgb_path = '/data/xiaolong/rgb'
     dem_path = '/data/xiaolong/dem'
     mask_path = '/data/xiaolong/mask'
     threshold = 0.1
+    # label_selection(mask_path, rgb_path, threshold)
+    
+    
     label_csv_path = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
     counts_path = '/data/xiaolong/master_thesis/data/mainclass_distribution.txt'
-    label_selection(mask_path, rgb_path, threshold)
-    get_stat(label_csv_path, 'mainclass_distribution')
+    # class_distribution(label_csv_path, 'mainclass_distribution')
+    
+    
+    csv_list = ['/data/xiaolong/master_thesis/data/train_dataset.csv',
+                '/data/xiaolong/master_thesis/data/val_dataset.csv',
+                '/data/xiaolong/master_thesis/data/test_dataset.csv']
+    name_list = ['train', 'val', 'test']
+    # subset(csv_list, name_list, 0.1)
+    
+    train_csv = '/data/xiaolong/master_thesis/data/subset/train_subset.csv'
+    img_dir = '/data/xiaolong/rgb'
+    dem_dir = '/data/xiaolong/dem'
+    mask_dir = '/data/xiaolong/mask'
+    train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir)
+    mean, std = getStat(train_dataset)
+    np.savetxt("mean.txt", mean, fmt='%.04f')
+    np.savetxt("std.txt", std, fmt='%.04f')
+
