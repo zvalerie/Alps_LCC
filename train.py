@@ -1,8 +1,10 @@
 import os
 import argparse
+from pickle import FALSE
 import pprint
 
 import random
+from xmlrpc.client import boolean
 import numpy as np
 import torch
 import torch.optim as optim
@@ -43,9 +45,9 @@ def parse_args():
                         default=1e-1,
                         type=float)      
     parser.add_argument('--bs',
-                    help='batch size',
-                    default=8,
-                    type=int)
+                        help='batch size',
+                        default=64,
+                        type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
                         default='out',
@@ -56,20 +58,29 @@ def parse_args():
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
-                        default=100,
-                        type=int)
-    parser.add_argument('--eval_interval',
-                        help='evaluation interval',
-                        default=1,
+                        default=500,
                         type=int)
     parser.add_argument('--gpus',
                         help='which gpu(s) to use',
                         default='0',
                         type=str)
+    # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=4,
+                        default=6,
                         type=int)
+    parser.add_argument('--continues',
+                        help='continue training from checkpoint',
+                        default=False,
+                        type=bool)
+    parser.add_argument('--debug',
+                        help='is debuging?',
+                        default=False,
+                        type=bool)
+    parser.add_argument('--tune',
+                        help='is tunning?',
+                        default=False,
+                        type=bool)
     args = parser.parse_args()
     
     return args
@@ -109,13 +120,18 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     
     # Create training and validation datasets
-    train_csv = '/data/xiaolong/master_thesis/data/train_dataset.csv'
-    val_csv = '/data/xiaolong/master_thesis/data/val_dataset.csv'
+    if args.tune:
+        train_csv = '/data/xiaolong/master_thesis/data/subset/train_subset.csv'
+        val_csv = '/data/xiaolong/master_thesis/data/subset/val_subset.csv'
+    else : 
+        train_csv = '/data/xiaolong/master_thesis/data/train_dataset.csv'
+        val_csv = '/data/xiaolong/master_thesis/data/val_dataset.csv'
+        
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
-    train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir)
-    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir)
+    train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir, args.debug)
+    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, args.debug)
     
     train_loader = DataLoader(
         train_dataset,
@@ -138,14 +154,18 @@ def main():
     start_epoch = 0
     
     #load existing model
-    log_dir = '/data/xiaolong/master_thesis/out/checkpoint.pth.tar'
-    if os.path.exists(log_dir):
-        checkpoint = torch.load(log_dir)
-        model.load_state_dict(checkpoint['state_dict'])
-        optimizer.load_state_dict(checkpoint['optimizer'])
-        start_epoch = checkpoint['epoch']
-        perf_indicator = checkpoint['perf']
-        print('loadding epoch {} succeed'.format(start_epoch))
+    if args.continues:
+        log_dir = '/data/xiaolong/master_thesis/out/checkpoint.pth.tar'
+        if os.path.exists(log_dir):
+            checkpoint = torch.load(log_dir)
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            start_epoch = checkpoint['epoch']
+            perf_indicator = checkpoint['perf']
+            print('loadding epoch {} succeed'.format(start_epoch))
+        else:
+            print('loadding checkpoint failed, start trainning from epoch 0')
+            start_epoch = 0
     else:
         start_epoch = 0
 
@@ -154,7 +174,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch,
               args.out_dir, writer_dict, args)
 
-        if (epoch + 1) % args.eval_interval == 0:
+        if (epoch + 1) % 1 == 0:
             # evaluate on validation set
             perf_indicator = validate(val_loader, val_dataset, model,
                                       criterion, args.out_dir, writer_dict, args)

@@ -76,8 +76,8 @@ def subset(csv_list, name_list, frac):
 def getStat(train_data):
     '''
     Compute mean and variance for training data
-    :param train_data: Dataset
-    :return: (mean, std)
+    param: train_data: Dataset
+    return: mean, std
     '''
     print(len(train_data))
     train_loader = torch.utils.data.DataLoader(

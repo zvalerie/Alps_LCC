@@ -8,7 +8,9 @@ import torch.nn as nn
 
 from lib.core.inference import get_final_preds
 from lib.utils.vis import vis_seg_mask
-from lib.utils.evaluation import calc_IoU
+# from lib.utils.evaluation import calc_IoU
+from lib.utils.evaluation import cal_Iou
+# from lib.utils.evaluation import createConfusionMatrix
 
 logger = logging.getLogger(__name__)
 
@@ -91,9 +93,7 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
     
     # switch to evaluate mode
     model.eval()
-    
-    all_preds = []
-    all_gts = []
+    metrics = cal_Iou(model.num_classes)
     
     with torch.no_grad():
         end = time.time()
@@ -107,13 +107,13 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
             # compute loss
             mask = mask.to(output.device) #[B, 16, 200, 200]
             loss = criterion(output, mask)
+            
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
             preds = get_final_preds(output.detach().cpu().numpy())
+            gt = mask.squeeze().detach().cpu().numpy()
+            metrics.update(gt, preds)
             
-            all_preds.extend(preds)
-            all_gts.extend(mask.squeeze().detach().cpu().numpy())
-
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -149,11 +149,7 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
                     dataformats='HWC')
 
                 writer_dict['vis_global_steps'] = global_steps + 1         
-
-        # all_preds = np.concatenate(all_preds, axis=0)
-        # all_gts = np.concatenate(all_gts, axis=0)
-            
-        avg_iou_score = calc_IoU(all_preds, all_gts, 16)
+        confusionMatrix, acc_cls, avg_iou_score = metrics.get_scores()
         perf_indicator = avg_iou_score
         
         logger.info('Mean IoU score: {:.3f}'.format(avg_iou_score))
@@ -180,9 +176,7 @@ def test(test_loader, test_dataset, model, output_dir,
     
     # switch to evaluate mode
     model.eval()
-    
-    all_preds = []
-    all_gts = []
+    metrics = cal_Iou(model.num_classes)
     
     with torch.no_grad():
         end = time.time()
@@ -191,6 +185,7 @@ def test(test_loader, test_dataset, model, output_dir,
             # compute output
             input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
             output = model(input)
+            output = nn.functional.interpolate(output, size=(200, 200), mode="bilinear", align_corners=False) #[B,16,200,200]
             
             num_inputs = input.size(0)
             # compute loss
@@ -199,8 +194,8 @@ def test(test_loader, test_dataset, model, output_dir,
             # measure accuracy
             preds = get_final_preds(output.detach().cpu().numpy())
             
-            all_preds.extend(preds)
-            all_gts.extend(mask)
+            gt = mask.detach().cpu().numpy()
+            metrics.update(gt, preds)
             
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -215,14 +210,13 @@ def test(test_loader, test_dataset, model, output_dir,
 
                 # Unnormalize the image to [0, 255] to visualize
                 input_image = image.detach().cpu().numpy()[idx]
-                input_image = input_image * test_dataset.std.squeeze(0) + test_dataset.mean.squeeze(0)
+                input_image = input_image * test_dataset.std.reshape(3,1,1) + test_dataset.mean.reshape(3,1,1)
                 input_image[input_image > 1.0] = 1.0
                 input_image[input_image < 0.0] = 0.0
-                input_image = input_image * 255
 
                 ## Turn the numerical labels into colorful map
                 mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)
-                mask_image = vis_seg_mask(mask_image)
+                mask_image = vis_seg_mask(mask_image.squeeze())
 
                 output = torch.nn.functional.softmax(output, dim=1)
                 output_mask = torch.argmax(output, dim=1, keepdim=False)
@@ -238,12 +232,10 @@ def test(test_loader, test_dataset, model, output_dir,
                     dataformats='HWC')
 
                 writer_dict['vis_global_steps'] = global_steps + 1         
-
-        all_preds = np.concatenate(all_preds, axis=0)
-        all_gts = np.concatenate(all_gts, axis=0)
             
-        avg_iou_score = calc_IoU(all_preds, all_gts, 16)
+        confusionMatrix, acc_cls, avg_iou_score = metrics.get_scores()
         perf_indicator = avg_iou_score
+        np.save('ConfusionMatrix', confusionMatrix)
         
         logger.info('Mean IoU score: {:.3f}'.format(avg_iou_score))
         
@@ -252,7 +244,7 @@ def test(test_loader, test_dataset, model, output_dir,
             global_steps = writer_dict['test_global_steps']
             
             writer.add_scalar('test_iou_score', avg_iou_score, global_steps)
-
+            # writer.add_figure('Confusion Matrix', CM_figure, global_steps)
             writer_dict['test_global_steps'] = global_steps + 1
             
     return perf_indicator

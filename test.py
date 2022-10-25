@@ -32,7 +32,7 @@ def parse_args():
                         type=float)
     parser.add_argument('--epoch',
                         help='training epoches',
-                        default=50,
+                        default=10,
                         type=int)  
     parser.add_argument('--wd',
                         help='weight decay',
@@ -40,7 +40,7 @@ def parse_args():
                         type=float)      
     parser.add_argument('--bs',
                     help='batch size',
-                    default=8,
+                    default=1,
                     type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
@@ -52,7 +52,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
-                        default=100,
+                        default=10,
                         type=int)
     parser.add_argument('--eval_interval',
                         help='evaluation interval',
@@ -64,7 +64,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=4,
+                        default=1,
                         type=int)
     args = parser.parse_args()
     
@@ -80,6 +80,15 @@ def main():
     
     if args.backbone == 'resnet50':
         model = Res50_UNet(num_classes=16)
+        
+    if len(args.gpus) == 0:
+        gpus = []
+    else:
+        gpus = [int(i) for i in args.gpus.split(',')]       
+    
+    # Define loss function (criterion) and optimizer  
+    if len(gpus) > 0:
+        model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
     
     if tb_logger:
         writer_dict = {
@@ -94,9 +103,10 @@ def main():
     model_state_file = os.path.join(args.out_dir,
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
-    model.load_state_dict(torch.load(model_state_file))
+    bestmodel = torch.load(model_state_file)
+    model.load_state_dict(bestmodel)
 
-    test_csv = '/data/xiaolong/master_thesis/data/test_dataset.csv'
+    test_csv = '/data/xiaolong/master_thesis/data/subset/test_subset.csv'
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
@@ -104,12 +114,12 @@ def main():
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=8,
+        batch_size=1,
         shuffle=False,
         num_workers=args.num_workers,
         pin_memory=True
     )
-
+    
     # evaluate on test set
     perf_indicator = test(test_loader, test_dataset, model,
                          args.out_dir, writer_dict, args)

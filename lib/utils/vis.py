@@ -5,7 +5,7 @@ def colormap():
     create a color map associates all the classes(including background) with label colors.
     
     Returns:
-        np.ndarray with dimensions (16, 3)
+        np.ndarray with dimensions (14, 3)
     '''
     
     colormap = np.asarray(
