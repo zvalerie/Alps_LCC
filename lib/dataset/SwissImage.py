@@ -25,8 +25,8 @@ class SwissImage(Dataset):
             self.img_dem_label = self.img_dem_label.iloc[:100]
         self.transform = transform
         self.mask_transform = mask_transform
-        self.mean = np.array([0.5405, 0.5583, 0.5364], dtype=np.float32)
-        self.std = np.array([0.1254, 0.1201, 0.0961], dtype=np.float32)
+        self.mean = np.array([0.5580, 0.5766, 0.5538], dtype=np.float32)
+        self.std = np.array([0.1309, 0.1253, 0.1002], dtype=np.float32)
         
     def __len__(self):
         return len(self.img_dem_label)
