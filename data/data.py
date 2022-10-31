@@ -48,7 +48,6 @@ def class_distribution(filepath, save_name):
     mainclass, counts = np.unique(mainclasses, return_counts=True)
     stat = np.concatenate((mainclass.reshape(mainclass.size, 1),counts.reshape(counts.size,1)), axis = 1).astype(int)
     np.savetxt("{}.txt".format(save_name), stat, fmt='%i')
-    return
 
 def data_split(csv_path, train_ratio, val_ratio, test_ratio):
     '''split the dataset into train, val, test set using stratified selection'''
@@ -71,7 +70,7 @@ def subset(csv_list, name_list, frac):
     for i in range(len(csv_list)):
         dataset = pd.read_csv(csv_list[i])
         subset = dataset.groupby('mainclass').sample(frac = frac, random_state = 1)
-        subset.to_csv(name_list[i]+'_subset.csv',index = False)
+        subset.to_csv('./subset/'+name_list[i]+'_subset.csv',index = False)
 
 def getStat(train_data):
     '''
@@ -79,7 +78,6 @@ def getStat(train_data):
     param: train_data: Dataset
     return: mean, std
     '''
-    print(len(train_data))
     train_loader = torch.utils.data.DataLoader(
         train_data, batch_size=1, shuffle=False, num_workers=0,
         pin_memory=True)
@@ -95,17 +93,19 @@ def getStat(train_data):
 
 if __name__ == '__main__':
     
+    # selection the label with background pixels lower than 10%
     rgb_path = '/data/xiaolong/rgb'
     dem_path = '/data/xiaolong/dem'
     mask_path = '/data/xiaolong/mask'
     threshold = 0.1
     # label_selection(mask_path, rgb_path, threshold)
     
-    
-    label_csv_path = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
-    counts_path = '/data/xiaolong/master_thesis/data/mainclass_distribution.txt'
+    # generate the main class distribution
+    label_csv_path = '/data/xiaolong/master_thesis/data/label_selection_0.1_rgb.csv'
     # class_distribution(label_csv_path, 'mainclass_distribution')
     
+    # split the data into train, val, test 
+    # data_split(label_csv_path, 0.6, 0.2, 0.2)
     
     csv_list = ['/data/xiaolong/master_thesis/data/train_dataset.csv',
                 '/data/xiaolong/master_thesis/data/val_dataset.csv',
@@ -119,6 +119,6 @@ if __name__ == '__main__':
     mask_dir = '/data/xiaolong/mask'
     train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir)
     mean, std = getStat(train_dataset)
-    np.savetxt("mean.txt", mean, fmt='%.04f')
-    np.savetxt("std.txt", std, fmt='%.04f')
-
+    print(mean, std)
+    # np.savetxt("mean.txt", mean, fmt='%.04f')
+    # np.savetxt("std.txt", std, fmt='%.04f')
