@@ -75,21 +75,21 @@ class ResNet50Encoder(nn.Module):
         self.dilation = 1
         
         # input layer
-        # 400, 400, 4 -> 200, 200, 64
+        # 200, 200, 4 -> 100, 100, 64
         self.conv1 = nn.Conv2d(4, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
         self.bn1 = self._norm_layer(self.inplanes)
         self.relu = nn.ReLU(inplace=True)
-        # 200, 200, 64 -> 100, 100, 64
+        # 100, 100, 64 -> 50, 50, 64
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         
         #conv layers
-        # 100, 100, 64 -> 100, 100, 256
+        # 50, 50, 64 -> 50, 50, 256
         self.layer1 = self._make_layer(block, out_channels[0], layers[0])
-        # 100, 100, 256 -> 50, 50, 512
+        # 50, 50, 256 -> 25, 25, 512
         self.layer2 = self._make_layer(block, out_channels[1], layers[1], stride=2)
-        # 50, 50, 512 -> 25, 25, 1024
+        #25, 25, 512 -> 13, 13, 1024
         self.layer3 = self._make_layer(block, out_channels[2], layers[2], stride=2)
-        # 25, 25, 1024 -> 13, 13, 2048
+        # 13, 13, 1024 -> 7, 7, 2048
         self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2)
 
         for m in self.modules():
@@ -139,20 +139,15 @@ class ResNet50Encoder(nn.Module):
         return nn.Sequential(*layers)
     
     def _foward_impl(self, x): 
-        x = self.conv1(x)
+        x = self.conv1(x) 
         x = self.bn1(x)
-        # 200, 200, 64
-        feat1 = self.relu(x)
-        x = self.maxpool(feat1)
+        feat1 = self.relu(x) #64, 100, 100
+        x = self.maxpool(feat1) # 64, 50, 50
         
-        #100, 100, 256
-        feat2 = self.layer1(x)
-        #50, 50, 512
-        feat3 = self.layer2(feat2)
-        #25, 25, 1024
-        feat4 = self.layer3(feat3)
-        #13, 13, 2048
-        feat5 = self.layer4(feat4)
+        feat2 = self.layer1(x) # 256, 50, 50
+        feat3 = self.layer2(feat2) # 512, 25, 25
+        feat4 = self.layer3(feat3) # 1024, 13, 13
+        feat5 = self.layer4(feat4) # 2048, 7, 7
         
         return [feat1, feat2, feat3, feat4, feat5]
 

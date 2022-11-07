@@ -73,13 +73,13 @@ def parse_args():
 def main():
     args = parse_args()
     
-    logger, tb_logger = create_logger(
+    logger, tb_logger,time_str= create_logger(
         args.out_dir, phase='test', create_tf_logs=True)
     
     logger.info(pprint.pformat(args))
     
     if args.backbone == 'resnet50':
-        model = Res50_UNet(num_classes=16)
+        model = Res50_UNet(num_classes=10)
         
     if len(args.gpus) == 0:
         gpus = []

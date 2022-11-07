@@ -55,41 +55,34 @@ class Upsampling(nn.Module):
         return x
     
 class Res50_UNet(nn.Module):
-    def __init__(self, num_classes, pretrained = True, backbone = "resnet50"):
+    def __init__(self, num_classes, pretrained = True):
         super(Res50_UNet, self).__init__()
         out_channels = [64, 128, 256, 512]
-        if backbone == "resnet50":
-            self.resnet = resnet50(pretrained = pretrained)
-            # skip_channels = [64, 256, 512, 1024, 2048]
-            # in_channels = [192, 512, 1024, 3072]
-            in_channels = [192, 512, 1024, 3072]
-        self.backbone = backbone
+        self.resnet = resnet50(pretrained = pretrained)
+        in_channels = [192, 512, 1024, 3072]
+        self.num_classes = num_classes
         self.up4 = Upsampling(in_channels[3], out_channels[3])
         self.up3 = Upsampling(in_channels[2], out_channels[2])
         self.up2 = Upsampling(in_channels[1], out_channels[1])
         self.up1 = Upsampling(in_channels[0], out_channels[0])
-        if backbone == 'resnet50':
-            self.up_conv = nn.Sequential(
+        self.up_conv = nn.Sequential(
                 nn.UpsamplingBilinear2d(scale_factor = 2), 
                 nn.Conv2d(out_channels[0], out_channels[0], kernel_size = 3, padding = 1),
                 nn.ReLU(),
                 nn.Conv2d(out_channels[0], out_channels[0], kernel_size = 3, padding = 1),
                 nn.ReLU(),
             )
-        self.segmentation_head = SegmentationHead(out_channels[0], num_classes)
-        
-        # self.outconv = nn.Conv2d(out_channels[0], num_classes, 1)
+        self.outconv = nn.Conv2d(out_channels[0], self.num_classes, 1)
         
     def forward(self, x):
-        if self.backbone == "resnet50" :
-            [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
+        [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
         
         up4 = self.up4(feat4, feat5) 
         up3 = self.up3(feat3, up4) 
         up2 = self.up2(feat2, up3) 
         up1 = self.up1(feat1, up2) 
         y = self.up_conv(up1)
-        y = self.segmentation_head(y)
+        y = self.outconv(y)
         return y
 
 class SegmentationHead(nn.Sequential):

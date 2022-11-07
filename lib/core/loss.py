@@ -22,8 +22,7 @@ class FocalLoss(nn.Module):
         _assert_no_grad(labels)
         
         b, c, h, w = preds.size()
-        labels = torch.squeeze(labels,1)
-        tb, th, tw = labels.size()
+        tb, tc, th, tw = labels.size()
 
         assert(b == tb)
 
@@ -42,7 +41,7 @@ class FocalLoss(nn.Module):
     
     
 class CrossEntropy2D(nn.Module):
-    def __init__(self, reduction='mean', weight=None):
+    def __init__(self, ignore_index = 0, reduction='mean', weight=None):
         """Initialize the module
 
         Args:
@@ -54,6 +53,7 @@ class CrossEntropy2D(nn.Module):
         super(CrossEntropy2D, self).__init__()
         self.weight = weight
         self.reduction = reduction
+        self.ignore_index = ignore_index
 
     def forward(self, output, target, resize_scores=True):
         """Forward pass of the loss function
@@ -84,7 +84,7 @@ class CrossEntropy2D(nn.Module):
                 target = nn.functional.interpolate(target.view(b, 1, th, tw).float(), size=(h, w), mode="nearest").view(b, h, w).long()
 
         loss = nn.functional.cross_entropy(
-            output, target.long(), weight=self.weight, reduction=self.reduction
+            output, target.long(), weight=self.weight, ignore_index=self.ignore_index, reduction=self.reduction
         )
 
         return loss

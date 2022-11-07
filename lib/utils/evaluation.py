@@ -1,5 +1,4 @@
 import numpy as np
-# import seaborn as sn
 # import matplotlib.pyplot as plt
 
 def _fast_hist(label_true, label_pred, n_class):
@@ -32,7 +31,7 @@ def calc_IoU(label_preds, label_trues, n_class):
     return mean_iu
 
 
-class cal_Iou(object):
+class MetricLogger(object):
     def __init__(self, n_classes):
         self.n_classes = n_classes
         self.confusion_matrix = np.zeros((n_classes, n_classes))
@@ -60,20 +59,20 @@ class cal_Iou(object):
         """
         hist = self.confusion_matrix
         acc = np.diag(hist).sum() / hist.sum()
-        acc_cls = np.diag(hist) / hist.sum(axis=1)
+        with np.errstate(divide='ignore', invalid='ignore'):
+            acc_cls = np.diag(hist) / hist.sum(axis=1)
         acc_cls = np.nanmean(acc_cls)
-        iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
+        with np.errstate(divide='ignore', invalid='ignore'):
+            iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
         mean_iu = np.nanmean(iu)
-        # freq = hist.sum(axis=1) / hist.sum()
-        # fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-        # cls_iu = dict(zip(range(self.n_classes), iu))
+        freq = hist.sum(axis=1) / hist.sum()
+        fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
+        cls_iu = dict(zip(range(self.n_classes), iu))
 
-        return hist, acc_cls, mean_iu
+        return acc_cls, mean_iu
 
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))
         
-# def createConfusionMatrix(nparray):
-#     plt.figure(figsize=(12, 7)) 
-#     sn.heatmap(nparray, annot=True)
-#     plt.savefig('ConfusionMatrix.png')
+    def get_confusion_matrix(self):
+        return self.confusion_matrix
