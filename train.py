@@ -43,11 +43,11 @@ def parse_args():
                         type=int)  
     parser.add_argument('--wd',
                         help='weight decay',
-                        default=1e-1,
+                        default=1e-2,
                         type=float)      
     parser.add_argument('--bs',
                         help='batch size',
-                        default=16,
+                        default=32,
                         type=int)
     parser.add_argument('--lr_factor',
                         help='scheduler_decay_rate',
@@ -151,7 +151,7 @@ def main():
         ])
     
     train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir, transform=img_transform, mask_transform=mask_transform, debug=args.debug)
-    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
+    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, transform=img_transform, mask_transform=mask_transform, debug=args.debug)
     
     train_loader = DataLoader(
         train_dataset,
