@@ -24,9 +24,13 @@ def mergeLabel(dataset_csv):
         img[(img==8) | (img==14) | (img==15)] = 7
         # merge Gletscher Schneefeld Toteis
         img[img==12] = 9
+        # Lockergestein 10 -> 6
+        img[img == 10] = 6
+        # Lockergestein locker 11 -> 8 
+        img[img == 11] = 8
         img = Image.fromarray(img)
         img.save(mask_path)
         
 if __name__ == '__main__':
-    data_csv = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
+    data_csv = '/data/xiaolong/master_thesis/data_preprocessing/label_selection_0.1_rgb.csv'
     mergeLabel(data_csv)
