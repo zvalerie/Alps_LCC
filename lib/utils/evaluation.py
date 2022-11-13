@@ -61,7 +61,7 @@ class MetricLogger(object):
         acc = np.diag(hist).sum() / hist.sum()
         with np.errstate(divide='ignore', invalid='ignore'):
             acc_cls = np.diag(hist) / hist.sum(axis=1)
-        acc_cls = np.nanmean(acc_cls)
+        mean_cls = np.nanmean(acc_cls)
         with np.errstate(divide='ignore', invalid='ignore'):
             iu = np.diag(hist) / (hist.sum(axis=1) + hist.sum(axis=0) - np.diag(hist))
         mean_iu = np.nanmean(iu)
@@ -69,7 +69,7 @@ class MetricLogger(object):
         fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
         cls_iu = dict(zip(range(self.n_classes), iu))
 
-        return acc_cls, mean_iu
+        return mean_cls, mean_iu, acc_cls, acc
 
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))

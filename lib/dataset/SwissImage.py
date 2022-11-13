@@ -13,15 +13,15 @@ import torch
 
 class SwissImage(Dataset):
     '''Transformer needed to be added'''
-    def __init__(self, dataset_csv, img_dir, dem_dir, mask_dir, transform=None, mask_transform=None, debug=False):
+    def __init__(self, dataset_csv, img_dir, dem_dir, mask_dir, common_transform=None, img_transform=None, debug=False):
         self.img_dir = img_dir
         self.dem_dir = dem_dir
         self.mask_dir = mask_dir
         self.img_dem_label = pd.read_csv(dataset_csv)
         if debug:
             self.img_dem_label = self.img_dem_label.iloc[:1000]
-        self.transform = transform
-        self.mask_transform = mask_transform
+        self.common_transform = common_transform
+        self.img_transform = img_transform
         self.mean = np.array([0.5580, 0.5766, 0.5538], dtype=np.float32)
         self.std = np.array([0.1309, 0.1253, 0.1002], dtype=np.float32)
         
@@ -38,19 +38,11 @@ class SwissImage(Dataset):
         dem = Image.open(dem_path)
         mask = Image.open(mask_path)
         
-        seed = 2
-        if self.transform is not None:
-            random.seed(seed)
-            torch.manual_seed(seed)
-            image = self.transform(image)
+        if self.common_transform is not None:
+            image, dem, mask = self.common_transform(image, dem, mask)
 
-        if self.mask_transform is not None:
-            random.seed(seed)
-            torch.manual_seed(seed)
-            dem = self.mask_transform(dem)
-            random.seed(seed)
-            torch.manual_seed(seed)
-            mask = self.mask_transform(mask)
+        if self.img_transform is not None:
+            image = self.img_transform(image)
             
         basic_transform = transforms.Compose([
             transforms.ToTensor(),
@@ -60,4 +52,5 @@ class SwissImage(Dataset):
         image = basic_transform(image)
         dem = transforms.ToTensor()(dem)
         mask = transforms.ToTensor()(mask)
+        
         return image, dem, mask

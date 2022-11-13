@@ -8,18 +8,18 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
-from torch.optim.lr_scheduler import ReduceLROnPlateau
+from torch.optim.lr_scheduler import StepLR
 
 from lib.core.function import train
 from lib.core.function import validate
-from lib.core.loss import FocalLoss
+# from lib.core.loss import FocalLoss
 from lib.core.loss import CrossEntropy2D
 from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
 from lib.models.Unet import Res50_UNet
 from lib.dataset.SwissImage import SwissImage
-from lib.utils.utils import MyRandomRotation90
+from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
 
 # fix random seeds for reproducibility
@@ -49,13 +49,17 @@ def parse_args():
                         help='batch size',
                         default=32,
                         type=int)
-    parser.add_argument('--lr_factor',
+    parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
-                        default=0.8,
-                        type=int)
-    parser.add_argument('--patience',
-                        help='scheduler_patience',
-                        default=5,
+                        default=0.1,
+                        type=float)
+    # parser.add_argument('--patience',
+    #                     help='scheduler_patience',
+    #                     default=10,
+    #                     type=int)
+    parser.add_argument('--step_size',
+                        help='step to decrease lr',
+                        default = 10,
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
@@ -123,7 +127,7 @@ def main():
         criterion = CrossEntropy2D(ignore_index=0)
     
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    lr_scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=args.lr_factor, patience=args.patience)
+    lr_scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
     
     # Create training and validation datasets
     if args.tune:
@@ -137,21 +141,18 @@ def main():
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
     
-    img_transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
+    common_transform = Compose([
+        MyRandomHorizontalFlip(p=0.5),
+        MyRandomVerticalFlip(p=0.5),
         MyRandomRotation90(p=0.5),
+        ])
+        
+    img_transform = transforms.Compose([
         transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05)
         ])
-    
-    mask_transform = transforms.Compose([
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomVerticalFlip(p=0.5),
-        MyRandomRotation90(p=0.5),
-        ])
-    
-    train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir, transform=img_transform, mask_transform=mask_transform, debug=args.debug)
-    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, transform=img_transform, mask_transform=mask_transform, debug=args.debug)
+
+    train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir, common_transform=common_transform, img_transform=img_transform, debug=args.debug)
+    val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
     
     train_loader = DataLoader(
         train_dataset,
@@ -175,12 +176,12 @@ def main():
 
     for epoch in range(start_epoch, args.epoch):
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch,
+        train(train_loader,train_dataset, model, criterion, optimizer, epoch,
               args.out_dir, writer_dict, args)
 
         if (epoch + 1) % 1 == 0:
             # evaluate on validation set
-            perf_indicator = validate(val_loader, val_dataset, model,
+            val_loss, perf_indicator = validate(val_loader, val_dataset, model,
                                       criterion, args.out_dir, writer_dict, args)
 
             # update best performance
@@ -193,7 +194,7 @@ def main():
             perf_indicator = -1
             best_model = False
 
-        lr_scheduler.step(perf_indicator)
+        lr_scheduler.step()
         
         # update best model so far
         folder_path = os.path.join(args.out_dir, folder_name)
@@ -213,7 +214,6 @@ def main():
         final_model_state_file))
     torch.save(model.module.state_dict() if len(gpus) > 0 else model.state_dict(), final_model_state_file)
     writer_dict['logger'].close()
-
 
 if __name__ == '__main__':
     main()

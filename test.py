@@ -25,26 +25,14 @@ if torch.cuda.is_available():
     torch.cuda.manual_seed_all(seed)
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Test image segmentation network')
-    parser.add_argument('--lr',
-                        help='learning rate',
-                        default=1e-5,
-                        type=float)
-    parser.add_argument('--epoch',
-                        help='training epoches',
-                        default=10,
-                        type=int)  
-    parser.add_argument('--wd',
-                        help='weight decay',
-                        default=1e-1,
-                        type=float)      
-    parser.add_argument('--bs',
-                    help='batch size',
-                    default=1,
-                    type=int)
+    parser = argparse.ArgumentParser(description='Train image segmentation network')
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out',
+                        default='out/train',
+                        type=str)
+    parser.add_argument('--foldername',
+                        help='time_str when trainning model ',
+                        default='',
                         type=str)
     parser.add_argument('--backbone',
                         help='backbone of encoder',
@@ -52,20 +40,25 @@ def parse_args():
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
-                        default=10,
-                        type=int)
-    parser.add_argument('--eval_interval',
-                        help='evaluation interval',
-                        default=1,
+                        default=100,
                         type=int)
     parser.add_argument('--gpus',
                         help='which gpu(s) to use',
                         default='0',
                         type=str)
+    # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=1,
+                        default=6,
                         type=int)
+    parser.add_argument('--debug',
+                        help='is debuging?',
+                        default=False,
+                        type=bool)
+    parser.add_argument('--tune',
+                        help='is tunning?',
+                        default=True,
+                        type=bool)
     args = parser.parse_args()
     
     return args
@@ -73,7 +66,7 @@ def parse_args():
 def main():
     args = parse_args()
     
-    logger, tb_logger,time_str= create_logger(
+    logger, tb_logger, _ = create_logger(
         args.out_dir, phase='test', create_tf_logs=True)
     
     logger.info(pprint.pformat(args))
@@ -89,7 +82,7 @@ def main():
     # Define loss function (criterion) and optimizer  
     if len(gpus) > 0:
         model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
-    
+        
     if tb_logger:
         writer_dict = {
             'logger': tb_logger,
@@ -100,17 +93,20 @@ def main():
         writer_dict = None
 
     # Load best model
-    model_state_file = os.path.join(args.out_dir,
+    model_state_file = os.path.join(args.out_dir, args.foldername,
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
     bestmodel = torch.load(model_state_file)
     model.load_state_dict(bestmodel)
 
-    test_csv = '/data/xiaolong/master_thesis/data/subset/test_subset.csv'
+    if args.tune:
+        test_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv'
+    else :
+        test_csv = '/data/xiaolong/master_thesis/data_preprocessing/test_dataset.csv'
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
-    test_dataset = SwissImage(test_csv, img_dir, dem_dir, mask_dir)
+    test_dataset = SwissImage(test_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
 
     test_loader = DataLoader(
         test_dataset,
@@ -121,11 +117,12 @@ def main():
     )
     
     # evaluate on test set
-    perf_indicator = test(test_loader, test_dataset, model,
+    confusionMatrix = test(test_loader, test_dataset, model,
                          args.out_dir, writer_dict, args)
 
+    
+    np.save('ConfusionMatrix', confusionMatrix)
     writer_dict['logger'].close()
-
 
 if __name__ == '__main__':
     main()

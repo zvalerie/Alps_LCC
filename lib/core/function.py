@@ -13,7 +13,7 @@ from lib.utils.evaluation import MetricLogger
 
 logger = logging.getLogger(__name__)
 
-def train(train_loader, model, criterion, optimizer, epoch, output_dir,
+def train(train_loader, train_dataset, model, criterion, optimizer, epoch, output_dir,
           writer_dict, args):
     '''Train one epoch
     
@@ -78,7 +78,34 @@ def train(train_loader, model, criterion, optimizer, epoch, output_dir,
 
         writer.add_scalar('train_loss', losses.avg, global_steps)
         writer.add_scalar('learning_rate', lr, global_steps)
+
+        # # Pick a random image in the batch to visualize
+        # idx = np.random.randint(0, input.size(0))
+
+        # # Unnormalize the image to [0, 255] to visualize
+        # input_image = image.detach().cpu().numpy()[idx] #[3, 400, 400]
+        # input_image = input_image * train_dataset.std.reshape(3,1,1) + train_dataset.mean.reshape(3,1,1)
+        # input_image[input_image > 1.0] = 1.0
+        # input_image[input_image < 0.0] = 0.0
+
+        # ## Turn the numerical labels into colorful map
+        # mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)#[1,200,200]
+        # mask_image = vis_seg_mask(mask_image.squeeze())
+
+        # output = torch.nn.functional.softmax(output, dim=1)
+        # output_mask = torch.argmax(output, dim=1, keepdim=False)
+
+        # output_mask = output_mask.detach().cpu().numpy()[idx]
+        # output_mask = vis_seg_mask(output_mask)
+
+        # writer.add_image('train_image', input_image, global_steps,
+        #     dataformats='CHW')
+        # writer.add_image('train_result', output_mask, global_steps,
+        #     dataformats='HWC')
+        # writer.add_image('train_gt', mask_image, global_steps,
+        #     dataformats='HWC')
         writer_dict['train_global_steps'] = global_steps + 1
+        
                 
                 
 def validate(val_loader, val_dataset, model, criterion, output_dir,
@@ -99,9 +126,8 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
         end = time.time()
         for i, (image, dem, mask) in enumerate(val_loader):
             # compute output
-            input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
-            output = model(input) #[B, 10, 400, 400]
-            output = nn.functional.interpolate(output, size=(200, 200), mode="bilinear", align_corners=False) #[B,10,200,200]
+            input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
+            output = model(input) #[B, 10, 200, 200]
             
             num_inputs = input.size(0)
             # compute loss
@@ -159,7 +185,7 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
 
                     writer_dict['vis_global_steps'] = global_steps + 1  
                            
-        acc_cls, mean_iou = metrics.get_scores()
+        mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         perf_indicator = mean_iou
         metrics.reset()
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
@@ -173,7 +199,7 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
 
             writer_dict['valid_global_steps'] = global_steps + 1
     
-    return perf_indicator
+    return losses.avg, perf_indicator
             
 def test(test_loader, test_dataset, model, output_dir,
              writer_dict, args): 
@@ -186,25 +212,23 @@ def test(test_loader, test_dataset, model, output_dir,
     
     # switch to evaluate mode
     model.eval()
-    metrics = MetricLogger(model.num_classes)
+    metrics = MetricLogger(model.module.num_classes)
     
     with torch.no_grad():
         end = time.time()
         for i, (image, dem, mask) in enumerate(test_loader):
             
             # compute output
-            input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
+            input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input)
-            output = nn.functional.interpolate(output, size=(200, 200), mode="bilinear", align_corners=False) #[B,16,200,200]
             
             num_inputs = input.size(0)
-            # compute loss
             mask = mask.to(output.device)
             
             # measure accuracy
             preds = get_final_preds(output.detach().cpu().numpy())
-            
-            gt = mask.detach().cpu().numpy()
+            # gt = torch.squeeze(mask).detach().cpu().numpy()
+            gt = mask.squeeze(0).detach().cpu().numpy()
             metrics.update(gt, preds)
             
             # measure elapsed time
@@ -243,22 +267,16 @@ def test(test_loader, test_dataset, model, output_dir,
 
                 writer_dict['vis_global_steps'] = global_steps + 1         
             
-        acc_cls, mean_iou = metrics.get_scores()
-        perf_indicator = mean_iou
+        mean_cls, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         confusionMatrix = metrics.get_confusion_matrix()
-        np.save('ConfusionMatrix', confusionMatrix)
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
+        logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
+        logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
+        for i in range(len(acc_cls)):
+            logger.info('Class {} accuracy: {:.3f}'.format(i, acc_cls[i]))
         
-        if writer_dict:
-            writer = writer_dict['logger']
-            global_steps = writer_dict['test_global_steps']
-            
-            writer.add_scalar('test_iou_score', mean_iou, global_steps)
-            # writer.add_figure('Confusion Matrix', CM_figure, global_steps)
-            writer_dict['test_global_steps'] = global_steps + 1
-            
-    return perf_indicator
+    return confusionMatrix
 
 class AverageMeter(object):
     """Computes and stores the average and current value."""

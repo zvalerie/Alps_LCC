@@ -58,15 +58,16 @@ def modify_attribute(input_shp_name):
         print(f'{defn.GetName()} ->  {defn.GetType()} -> {defn.GetWidth()}')
     
     # create a new field to store the confilicting object type
-    # field = ogr.FieldDefn('CLASS', ogr.OFTString)
-    # field.SetWidth(2)
-    # shp_layer.CreateField(field)
+    field = ogr.FieldDefn('CLASS', ogr.OFTString)
+    field.SetWidth(2)
+    shp_layer.CreateField(field)
     
     
     dict = {"Fels" : 1, "Fels locker" : 2, "Felsbloecke" : 3, "Felsbloecke locker" : 4, 
-            "Feuchtgebiet" : 5, "Fliessgewaesser" : 6, "Gebueschwald" : 7, "Gehoelzflaeche" : 8, "Gletscher" : 9, 
-            "Lockergestein" : 10, "Lockergestein locker" : 11, "Schneefeld Toteis" : 12, "Stehende Gewaesser" : 13,
-            "Wald" : 14, "Wald offen" : 15} 
+            "Feuchtgebiet" : 8, "Fliessgewaesser" : 7, "Gebueschwald" : 8, "Gehoelzflaeche" : 8, "Gletscher" : 9, 
+            "Lockergestein" : 5, "Lockergestein locker" : 6, "Schneefeld Toteis" : 9, "Stehende Gewaesser" : 7,
+            "Wald" : 8, "Wald offen" : 8} 
+    
     
     for feature in shp_layer:
         #'OBJEKTART' - WEST, 'OBJEKTART_'' - east

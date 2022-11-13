@@ -1,43 +1,68 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+from typing import Optional
 
 def _assert_no_grad(tensor):
     assert not tensor.requires_grad, \
         "nn criterions don't compute the gradient w.r.t. targets - please " \
         "mark these tensors as not requiring gradients"
         
-class FocalLoss(nn.Module):
-    def __init__(self, ignore_index, alpha=0.5, gamma=2, weight=None, reduction = 'mean'):
-        super().__init__()
-        self.alpha = alpha
-        self.gamma = gamma
-        self.weight = weight
-        self.ignore_index = ignore_index
-        self.reduction = reduction
-        self.ce_fn = nn.CrossEntropyLoss(weight=self.weight, ignore_index=self.ignore_index, reduction=self.reduction)
+def softmax_focal_loss_with_logits(
+    output: torch.Tensor,
+    target: torch.Tensor,
+    gamma: float = 2.0,
+    reduction="mean",
+    normalized=False,
+    reduced_threshold: Optional[float] = None,
+    ignore_index = 0,
+    eps: float = 1e-6,
+) -> torch.Tensor:
+    """Softmax version of focal loss between target and output logits.
+    See :class:`~pytorch_toolbelt.losses.FocalLoss` for details.
+    Args:
+        output: Tensor of shape [B, C, *] (Similar to nn.CrossEntropyLoss)
+        target: Tensor of shape [B, *] (Similar to nn.CrossEntropyLoss)
+        reduction (string, optional): Specifies the reduction to apply to the output:
+            'none' | 'mean' | 'sum' | 'batchwise_mean'. 'none': no reduction will be applied,
+            'mean': the sum of the output will be divided by the number of
+            elements in the output, 'sum': the output will be summed. Note: :attr:`size_average`
+            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
+            specifying either of those two args will override :attr:`reduction`.
+            'batchwise_mean' computes mean loss per sample in batch. Default: 'mean'
+        normalized (bool): Compute normalized focal loss (https://arxiv.org/pdf/1909.07829.pdf).
+        reduced_threshold (float, optional): Compute reduced focal loss (https://arxiv.org/abs/1903.01347).
+    """
+    log_softmax = F.log_softmax(output, dim=1)
 
-    def forward(self, preds, labels, resize_scores=True):
-        '''Forward pass of the loss function'''
-        _assert_no_grad(labels)
-        
-        b, c, h, w = preds.size()
-        tb, tc, th, tw = labels.size()
+    loss = F.nll_loss(log_softmax, target, reduction="none", ignore_index=ignore_index)
+    pt = torch.exp(-loss)
 
-        assert(b == tb)
+    # compute the loss
+    if reduced_threshold is None:
+        focal_term = (1.0 - pt).pow(gamma)
+    else:
+        focal_term = ((1.0 - pt) / reduced_threshold).pow(gamma)
+        focal_term[pt < reduced_threshold] = 1
 
-        # Handle inconsistent size between input and preds
-        if resize_scores:
-            if h != th or w != tw:  # upsample logits
-                preds = nn.functional.interpolate(preds, size=(th, tw), mode="bilinear", align_corners=False)
-        else:
-            if h != th or w != tw:  # downsample labels
-                labels = nn.functional.interpolate(labels.view(b, 1, th, tw).float(), size=(h, w), mode="nearest").view(b, h, w).long()
-        
-        logpt = -self.ce_fn(preds, labels.long())
-        pt = torch.exp(logpt)
-        loss = -((1 - pt) ** self.gamma) * self.alpha * logpt
-        return loss
+    loss = focal_term * loss
+
+    if normalized:
+        norm_factor = focal_term.sum().clamp_min(eps)
+        loss = loss / norm_factor
+
+    if reduction == "mean":
+        loss = loss.mean()
+    if reduction == "sum":
+        loss = loss.sum()
+    if reduction == "batchwise_mean":
+        loss = loss.sum(0)
+
+    return loss
+
+
     
     
 class CrossEntropy2D(nn.Module):

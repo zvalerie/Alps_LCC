@@ -5,7 +5,6 @@ import time
 import torch
 import numpy as np
 
-from torchvision import transforms
 
 def save_checkpoint(states, is_best, output_dir,
                     filename='checkpoint.pth.tar'):
@@ -58,16 +57,3 @@ def create_logger(out_dir, phase='train', create_tf_logs=True):
 
     return logger, writer, time_str
 
-class MyRandomRotation90(object):
-    '''
-        Random rotation by 90 degree counter-clockwise
-    '''
-    def __init__(self, p=0.5):
-        self.p = p
-
-    def __call__(self,  img ):        
-        if torch.rand(1) < self.p:
-           #print('rotation 90degree')    
-            return transforms.RandomRotation((90,90))(img)
-        return img
-    
