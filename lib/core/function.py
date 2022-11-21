@@ -34,7 +34,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     
     # switch to train mode
     model.train()
-    
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
     end = time.time()
     
     for i, (image, dem, mask) in enumerate(train_loader):
@@ -42,11 +42,13 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         data_time.update(time.time() - end)
         
         # compute output
+        image = image.to(device)
+        dem = dem.to(device)
         input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
         output = model(input) #[B,16,400,400]
         
         # compute loss
-        mask = mask.to(output.device)#[B,16,200,200]
+        mask = mask.to(device)#[B,16,200,200]
         loss = criterion(output, mask)
         
         # compute gradient and update
@@ -120,18 +122,21 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
     
     # switch to evaluate mode
     model.eval()
-    metrics = MetricLogger(model.module.num_classes)
+    metrics = MetricLogger(model.num_classes)
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
     
     with torch.no_grad():
         end = time.time()
         for i, (image, dem, mask) in enumerate(val_loader):
             # compute output
+            image = image.to(device)
+            dem = dem.to(device)
             input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input) #[B, 10, 200, 200]
             
             num_inputs = input.size(0)
             # compute loss
-            mask = mask.to(output.device) #[B, 10, 200, 200]
+            mask = mask.to(device) #[B, 10, 200, 200]
             loss = criterion(output, mask)
             
             # measure accuracy and record loss
@@ -212,18 +217,21 @@ def test(test_loader, test_dataset, model, output_dir,
     
     # switch to evaluate mode
     model.eval()
-    metrics = MetricLogger(model.module.num_classes)
+    metrics = MetricLogger(model.num_classes)
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
     
     with torch.no_grad():
         end = time.time()
         for i, (image, dem, mask) in enumerate(test_loader):
             
             # compute output
+            image = image.to(device)
+            dem = dem.to(device)
             input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input)
             
             num_inputs = input.size(0)
-            mask = mask.to(output.device)
+            mask = mask.to(device)
             
             # measure accuracy
             preds = get_final_preds(output.detach().cpu().numpy())

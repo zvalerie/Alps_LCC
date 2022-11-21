@@ -1,6 +1,5 @@
 import os
 import glob
-from re import S
 
 import torch
 import torch.nn as nn

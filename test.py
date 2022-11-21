@@ -42,14 +42,10 @@ def parse_args():
                         help='frequency of logging',
                         default=100,
                         type=int)
-    parser.add_argument('--gpus',
-                        help='which gpu(s) to use',
-                        default='0',
-                        type=str)
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=6,
+                        default=2,
                         type=int)
     parser.add_argument('--debug',
                         help='is debuging?',
@@ -74,14 +70,10 @@ def main():
     if args.backbone == 'resnet50':
         model = Res50_UNet(num_classes=10)
         
-    if len(args.gpus) == 0:
-        gpus = []
-    else:
-        gpus = [int(i) for i in args.gpus.split(',')]       
-    
     # Define loss function (criterion) and optimizer  
-    if len(gpus) > 0:
-        model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    
+    model = model.to(device)
         
     if tb_logger:
         writer_dict = {

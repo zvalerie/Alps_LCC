@@ -73,14 +73,10 @@ def parse_args():
                         help='frequency of logging',
                         default=100,
                         type=int)
-    parser.add_argument('--gpus',
-                        help='which gpu(s) to use',
-                        default='0',
-                        type=str)
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=6,
+                        default=2,
                         type=int)
     parser.add_argument('--continues',
                         help='continue training from checkpoint',
@@ -92,7 +88,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
-                        default=True,
+                        default=False,
                         type=bool)
     args = parser.parse_args()
     
@@ -112,19 +108,12 @@ def main():
             'train_global_steps': 0,
             'valid_global_steps': 0,
             'vis_global_steps': 0,
-            }
-
-    if len(args.gpus) == 0:
-        gpus = []
-    else:
-        gpus = [int(i) for i in args.gpus.split(',')]       
+            }   
     
     # Define loss function (criterion) and optimizer  
-    if len(gpus) > 0:
-        model = torch.nn.DataParallel(model, device_ids=gpus).cuda()
-        criterion = CrossEntropy2D(ignore_index=0).cuda()
-    else:
-        criterion = CrossEntropy2D(ignore_index=0)
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    criterion = CrossEntropy2D(ignore_index=0).to(device)
     
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     lr_scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
@@ -212,7 +201,7 @@ def main():
                                           'final_state.pth.tar')
     logger.info('saving final model state to {}'.format(
         final_model_state_file))
-    torch.save(model.module.state_dict() if len(gpus) > 0 else model.state_dict(), final_model_state_file)
+    torch.save(model.state_dict(), final_model_state_file)
     writer_dict['logger'].close()
 
 if __name__ == '__main__':

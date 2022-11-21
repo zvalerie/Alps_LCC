@@ -1,8 +1,5 @@
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-
 import numpy as np
+
 
 def _softmax(x, axis=0):
     # minus the maximum value for Numerical Stability

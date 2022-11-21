@@ -46,7 +46,7 @@ class SwissImage(Dataset):
             
         basic_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(self.mean, self.std),
+            transforms.Normalize(self.mean, self.std)
         ])
         
         image = basic_transform(image)
