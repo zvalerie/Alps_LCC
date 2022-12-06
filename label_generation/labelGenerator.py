@@ -1,6 +1,4 @@
 import os
-from pickle import NONE
-from turtle import update
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr

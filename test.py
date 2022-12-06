@@ -28,12 +28,16 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train image segmentation network')
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/train',
+                        default='out/test',
                         type=str)
     parser.add_argument('--foldername',
                         help='time_str when trainning model ',
                         default='',
                         type=str)
+    parser.add_argument('--bs',
+                        help='batch size',
+                        default=32,
+                        type=int)
     parser.add_argument('--backbone',
                         help='backbone of encoder',
                         default='resnet50',
@@ -45,7 +49,7 @@ def parse_args():
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=2,
+                        default=6,
                         type=int)
     parser.add_argument('--debug',
                         help='is debuging?',
@@ -53,7 +57,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
-                        default=True,
+                        default=False,
                         type=bool)
     args = parser.parse_args()
     
@@ -102,7 +106,7 @@ def main():
 
     test_loader = DataLoader(
         test_dataset,
-        batch_size=1,
+        batch_size=args.bs,
         shuffle=False,
         num_workers=args.num_workers,
         pin_memory=True

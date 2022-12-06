@@ -34,7 +34,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     
     # switch to train mode
     model.train()
-    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     end = time.time()
     
     for i, (image, dem, mask) in enumerate(train_loader):
@@ -80,32 +80,6 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
 
         writer.add_scalar('train_loss', losses.avg, global_steps)
         writer.add_scalar('learning_rate', lr, global_steps)
-
-        # # Pick a random image in the batch to visualize
-        # idx = np.random.randint(0, input.size(0))
-
-        # # Unnormalize the image to [0, 255] to visualize
-        # input_image = image.detach().cpu().numpy()[idx] #[3, 400, 400]
-        # input_image = input_image * train_dataset.std.reshape(3,1,1) + train_dataset.mean.reshape(3,1,1)
-        # input_image[input_image > 1.0] = 1.0
-        # input_image[input_image < 0.0] = 0.0
-
-        # ## Turn the numerical labels into colorful map
-        # mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)#[1,200,200]
-        # mask_image = vis_seg_mask(mask_image.squeeze())
-
-        # output = torch.nn.functional.softmax(output, dim=1)
-        # output_mask = torch.argmax(output, dim=1, keepdim=False)
-
-        # output_mask = output_mask.detach().cpu().numpy()[idx]
-        # output_mask = vis_seg_mask(output_mask)
-
-        # writer.add_image('train_image', input_image, global_steps,
-        #     dataformats='CHW')
-        # writer.add_image('train_result', output_mask, global_steps,
-        #     dataformats='HWC')
-        # writer.add_image('train_gt', mask_image, global_steps,
-        #     dataformats='HWC')
         writer_dict['train_global_steps'] = global_steps + 1
         
                 
@@ -123,7 +97,7 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
     # switch to evaluate mode
     model.eval()
     metrics = MetricLogger(model.num_classes)
-    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     
     with torch.no_grad():
         end = time.time()
@@ -157,38 +131,6 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
                           loss=losses)
 
                 logger.info(msg)
-                
-                if writer_dict:
-                    writer = writer_dict['logger']
-                    global_steps = writer_dict['vis_global_steps']
-
-                    # Pick a random image in the batch to visualize
-                    idx = np.random.randint(0, num_inputs)
-
-                    # Unnormalize the image to [0, 255] to visualize
-                    input_image = image.detach().cpu().numpy()[idx] #[3, 400, 400]
-                    input_image = input_image * val_dataset.std.reshape(3,1,1) + val_dataset.mean.reshape(3,1,1)
-                    input_image[input_image > 1.0] = 1.0
-                    input_image[input_image < 0.0] = 0.0
-
-                    ## Turn the numerical labels into colorful map
-                    mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)#[1,200,200]
-                    mask_image = vis_seg_mask(mask_image.squeeze())
-
-                    output = torch.nn.functional.softmax(output, dim=1)
-                    output_mask = torch.argmax(output, dim=1, keepdim=False)
-
-                    output_mask = output_mask.detach().cpu().numpy()[idx]
-                    output_mask = vis_seg_mask(output_mask)
-
-                    writer.add_image('input_image', input_image, global_steps,
-                        dataformats='CHW')
-                    writer.add_image('result_vis', output_mask, global_steps,
-                        dataformats='HWC')
-                    writer.add_image('gt_mask', mask_image, global_steps,
-                        dataformats='HWC')
-
-                    writer_dict['vis_global_steps'] = global_steps + 1  
                            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         perf_indicator = mean_iou
@@ -218,7 +160,7 @@ def test(test_loader, test_dataset, model, output_dir,
     # switch to evaluate mode
     model.eval()
     metrics = MetricLogger(model.num_classes)
-    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     
     with torch.no_grad():
         end = time.time()

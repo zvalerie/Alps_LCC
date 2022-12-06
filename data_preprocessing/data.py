@@ -123,7 +123,7 @@ if __name__ == '__main__':
     
     # generate the main class distribution
     label_csv_path = '/data/xiaolong/master_thesis/data/label_selection_0.1_rgb.csv'
-    # class_distribution(label_csv_path, 'mainclass_distribution')
+    class_distribution(label_csv_path, 'mainclass_distribution')
     
     # split the data into train, val, test 
     # data_split(label_csv_path, 0.6, 0.2, 0.2)
@@ -134,15 +134,15 @@ if __name__ == '__main__':
     name_list = ['train', 'val', 'test']
     # subset(csv_list, name_list, 0.1)
     
-    train_csv = '/data/xiaolong/master_thesis/data/subset/train_subset.csv'
+    train_csv = '/data/xiaolong/master_thesis/data_preprocessing/train_dataset.csv'
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
     train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir)
-    mean, std = getStat(train_dataset)
-    print(mean, std)
+    # mean, std = getStat(train_dataset)
+    # print(mean, std)
     # np.savetxt("mean.txt", mean, fmt='%.04f')
     # np.savetxt("std.txt", std, fmt='%.04f')
     
-    data_csv = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
-    searchnoValue(data_csv)
+    # data_csv = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
+    # searchnoValue(data_csv)

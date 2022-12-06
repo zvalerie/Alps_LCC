@@ -9,16 +9,16 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torch.optim.lr_scheduler import StepLR
-# from torch.optim.lr_scheduler import MultiStepLR
 
-from lib.core.function import train
-from lib.core.function import validate
+from lib.core.function_ACE import train
+from lib.core.function_ACE import validate
 # from lib.core.loss import FocalLoss
-from lib.core.loss import CrossEntropy2D
+from lib.core.loss import ResCELoss, CrossEntropy2D
+from lib.utils.utils import get_optimizer
 from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
-from lib.models.Unet import Res50_UNet
+from lib.models.ACE_UNet import ACE_Res50_UNet
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -48,7 +48,7 @@ def parse_args():
                         type=float)      
     parser.add_argument('--bs',
                         help='batch size',
-                        default=32,
+                        default=16,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
@@ -62,10 +62,6 @@ def parse_args():
                         help='step to decrease lr',
                         default = 10,
                         type=int)
-    parser.add_argument('--milestones',
-                        help='step to decrease lr',
-                        default = [10, 25],
-                        type=list)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
                         default='out/train',
@@ -93,8 +89,12 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
-                        default=True,
+                        default=False,
                         type=bool)
+    parser.add_argument('--warm_epoch',
+                        help='warm up epochs',
+                        default=5,
+                        type=int)
     args = parser.parse_args()
     
     return args
@@ -104,9 +104,9 @@ def main():
 
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
-    
+    logger.info("Train ACE model")
     if args.backbone == 'resnet50':
-        model = Res50_UNet(num_classes=10)
+        model = ACE_Res50_UNet(num_classes=10)
     
     writer_dict = {
             'logger': tb_logger,
@@ -118,11 +118,22 @@ def main():
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")
     model = model.to(device)
-    criterion = CrossEntropy2D(ignore_index=0).to(device)
     
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    lr_scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
-    # lr_scheduler = MultiStepLR(optimizer, milestones=args.milestones, gamma=args.lr_decay_rate)
+    many_index = [0, 1, 5, 8, 9]
+    few_index = [2, 3, 4, 6, 7]
+    
+    # criterion_exp = ResCELoss(many_index=many_index, few_index=few_index).to(device)
+    ## 1. CE LOSS + CE LOSS
+    criterion_doubelLoss = ResCELoss(many_index, few_index).to(device)
+    
+    ## 2. CE LOSS + CE LOSS + Complementary LOSS
+    # criterion_tripleLoss = ResCELoss(many_index, few_index).to(device)
+    
+    lr_ratio = 0.032251729
+    optimizer = get_optimizer(model, "ADAM", args, lr_ratio)
+    
+    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
+    
     # Create training and validation datasets
     if args.tune:
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset.csv'
@@ -170,13 +181,13 @@ def main():
 
     for epoch in range(start_epoch, args.epoch):
         # train for one epoch
-        train(train_loader,train_dataset, model, criterion, optimizer, epoch,
+        train(train_loader,train_dataset, model, criterion_doubelLoss, optimizer, epoch,
               args.out_dir, writer_dict, args)
 
         if (epoch + 1) % 1 == 0:
             # evaluate on validation set
             val_loss, perf_indicator = validate(val_loader, val_dataset, model,
-                                      criterion, args.out_dir, writer_dict, args)
+                                      criterion_doubelLoss, many_index, few_index, args.out_dir, writer_dict, args)
 
             # update best performance
             if perf_indicator > best_perf:
@@ -188,7 +199,7 @@ def main():
             perf_indicator = -1
             best_model = False
 
-        lr_scheduler.step()
+        scheduler.step()
         
         # update best model so far
         folder_path = os.path.join(args.out_dir, folder_name)

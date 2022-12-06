@@ -62,9 +62,6 @@ def softmax_focal_loss_with_logits(
 
     return loss
 
-
-    
-    
 class CrossEntropy2D(nn.Module):
     def __init__(self, ignore_index = 0, reduction='mean', weight=None):
         """Initialize the module
@@ -113,3 +110,43 @@ class CrossEntropy2D(nn.Module):
         )
 
         return loss
+
+class ResCELoss(CrossEntropy2D):
+    def __init__(self, many_index, few_index):
+        super(ResCELoss, self).__init__()
+        self.num_classes = 10
+        self.few_index = few_index
+        self.many_index = many_index
+        self.weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
+        self.celoss= CrossEntropy2D()
+        self.weight_celoss = CrossEntropy2D(weight=self.weight)
+
+    def forward(self, output, targets, **kwargs):
+        
+        [many_output_ori, few_output_ori]= output
+        few_head_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        many_head_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        targets_cpu = targets.cpu().numpy()
+        
+        # ## among batch, return the idx that the mask contains few category
+        few_head_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
+        
+        if len(few_head_idx_cpu):
+        # compute weight celoss   
+            claLoss = self.weight_celoss(few_output_ori, targets)
+            comLoss = self._get_comLoss(few_output_ori, targets)
+            few_head_loss = claLoss
+        
+        many_head_loss = self.celoss(many_output_ori, targets)
+        # few_head_loss = self.celoss(few_output_ori, targets)
+        
+        return many_head_loss + few_head_loss
+    
+    def _get_comLoss(self, output, targets):
+        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7)
+        num_few_pixles = (few_mask == False).sum()
+        # few_output = torch.masked_select(output, few_mask)
+        few_mask = few_mask.expand(output.size())
+        few_output = output * few_mask
+        comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index)/num_few_pixles
+        return comLoss
