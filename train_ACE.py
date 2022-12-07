@@ -91,9 +91,9 @@ def parse_args():
                         help='is tunning?',
                         default=False,
                         type=bool)
-    parser.add_argument('--warm_epoch',
-                        help='warm up epochs',
-                        default=5,
+    parser.add_argument('--loss',
+                        help='modify the loss a little bit',
+                        default=0,
                         type=int)
     args = parser.parse_args()
     
@@ -104,7 +104,7 @@ def main():
 
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
-    logger.info("Train ACE model")
+    logger.info("Train ACE model, Tripel loss sum")
     if args.backbone == 'resnet50':
         model = ACE_Res50_UNet(num_classes=10)
     
@@ -124,7 +124,7 @@ def main():
     
     # criterion_exp = ResCELoss(many_index=many_index, few_index=few_index).to(device)
     ## 1. CE LOSS + CE LOSS
-    criterion_doubelLoss = ResCELoss(many_index, few_index).to(device)
+    criterion_doubelLoss = ResCELoss(many_index, few_index, args=args).to(device)
     
     ## 2. CE LOSS + CE LOSS + Complementary LOSS
     # criterion_tripleLoss = ResCELoss(many_index, few_index).to(device)

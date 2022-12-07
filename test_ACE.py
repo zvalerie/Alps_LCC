@@ -9,9 +9,9 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 
 from lib.utils.utils import create_logger
-from lib.core.function import test
+from lib.core.function_ACE import test
 
-from lib.models.Unet import Res50_UNet
+from lib.models.ACE_UNet import ACE_Res50_UNet
 from lib.dataset.SwissImage import SwissImage
 
 
@@ -70,15 +70,19 @@ def main():
         args.out_dir, phase='test', create_tf_logs=True)
     
     logger.info(pprint.pformat(args))
+    logger.info('Test ACE model')
     
     if args.backbone == 'resnet50':
-        model = Res50_UNet(num_classes=10)
+        model = ACE_Res50_UNet(num_classes=10)
         
     # Define loss function (criterion) and optimizer  
-    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda")
     
     model = model.to(device)
-        
+    
+    many_index = [0, 1, 5, 8, 9]
+    few_index = [2, 3, 4, 6, 7]
+    
     if tb_logger:
         writer_dict = {
             'logger': tb_logger,
@@ -113,11 +117,11 @@ def main():
     )
     
     # evaluate on test set
-    confusionMatrix = test(test_loader, test_dataset, model,
+    confusionMatrix = test(test_loader, test_dataset, model, many_index, few_index,
                          args.out_dir, writer_dict, args)
 
     
-    np.save('cm_' + time_str, confusionMatrix)
+    np.save('ACE_cm' + time_str, confusionMatrix)
     writer_dict['logger'].close()
 
 if __name__ == '__main__':
