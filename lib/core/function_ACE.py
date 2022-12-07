@@ -168,7 +168,7 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
     
     return losses.avg, perf_indicator
             
-def test(test_loader, test_dataset, model, output_dir,
+def test(test_loader, test_dataset, model, many_index, few_index, output_dir,
              writer_dict, args): 
     '''Test the model
     Returns:
@@ -182,6 +182,20 @@ def test(test_loader, test_dataset, model, output_dir,
     metrics = MetricLogger(model.num_classes)
     device = torch.device("cuda")
     
+    from collections import OrderedDict
+    new_dict = OrderedDict()
+    for k, v in model.named_parameters():
+        if k.startswith("SegHead"):
+            new_dict[k] = v
+    
+    weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+    weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+    
+    weight_norm_many = LA.norm(weight_many, axis=1)
+    weight_norm_few = LA.norm(weight_few, axis=1)
+    
+    f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+    
     with torch.no_grad():
         end = time.time()
         for i, (image, dem, mask) in enumerate(test_loader):
@@ -192,11 +206,16 @@ def test(test_loader, test_dataset, model, output_dir,
             input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input)
             
+            [many_ouput, few_output] = output
+            few_output[:,many_index] = 0
+            final_output = many_ouput + few_output * f_scale
+            final_output[:,few_index] /= 2
+            
             num_inputs = input.size(0)
             mask = mask.to(device)
             
             # measure accuracy
-            preds = get_final_preds(output.detach().cpu().numpy())
+            preds = get_final_preds(final_output.detach().cpu().numpy())
             # gt = torch.squeeze(mask).detach().cpu().numpy()
             gt = mask.squeeze(0).detach().cpu().numpy()
             metrics.update(gt, preds)
@@ -205,6 +224,13 @@ def test(test_loader, test_dataset, model, output_dir,
             batch_time.update(time.time() - end)
             end = time.time()
             
+            if i % args.frequent == 0:
+                msg = 'Test: [{0}/{1}]\t' \
+                      'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'.format(
+                          i, len(test_loader), batch_time=batch_time)
+
+                logger.info(msg)
+                
             if writer_dict:
                 writer = writer_dict['logger']
                 global_steps = writer_dict['vis_global_steps']
@@ -222,8 +248,8 @@ def test(test_loader, test_dataset, model, output_dir,
                 mask_image = mask.detach().cpu().numpy()[idx].astype(np.int64)
                 mask_image = vis_seg_mask(mask_image.squeeze())
 
-                output = torch.nn.functional.softmax(output, dim=1)
-                output_mask = torch.argmax(output, dim=1, keepdim=False)
+                final_output = torch.nn.functional.softmax(final_output, dim=1)
+                output_mask = torch.argmax(final_output, dim=1, keepdim=False)
 
                 output_mask = output_mask.detach().cpu().numpy()[idx]
                 output_mask = vis_seg_mask(output_mask)
@@ -243,8 +269,10 @@ def test(test_loader, test_dataset, model, output_dir,
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
         logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
+        classes = ["Background","Bedrock", "Bedrock with grass", "Large blocks", "Large blocks with grass", 
+         "Scree", "Scree with grass", "Water area", "Forest", "Glacier"]
         for i in range(len(acc_cls)):
-            logger.info('Class {} accuracy: {:.3f}'.format(i, acc_cls[i]))
+            logger.info(classes[i] + ' : {:.3f}'.format(acc_cls[i]))
         
     return confusionMatrix
 

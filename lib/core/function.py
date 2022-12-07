@@ -223,8 +223,10 @@ def test(test_loader, test_dataset, model, output_dir,
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
         logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
+        classes = ["Background","Bedrock", "Bedrock with grass", "Large blocks", "Large blocks with grass", 
+         "Scree", "Scree with grass", "Water area", "Forest", "Glacier"]
         for i in range(len(acc_cls)):
-            logger.info('Class {} accuracy: {:.3f}'.format(i, acc_cls[i]))
+            logger.info(classes[i] + 'accuracy: {:.3f}'.format(acc_cls[i]))
         
     return confusionMatrix
 
