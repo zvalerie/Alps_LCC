@@ -60,14 +60,25 @@ def create_logger(out_dir, phase='train', create_tf_logs=True):
 
     return logger, writer, time_str
 
-def get_optimizer(model, type, args, lr_ratio):
-    base_lr = args.lr
-    few_params = list(map(id, model.SegHead_few.parameters())) 
-    many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
-    params = [
-            {"params": many_paramas, "lr": args.lr},
-            {"params": model.SegHead_few.parameters(), "lr": args.lr * lr_ratio},
-    ]
+def get_optimizer(model, type, num_experts, base_lr, lr_ratio):
+    if num_experts == 2:
+        few_params = list(map(id, model.SegHead_few.parameters())) 
+        many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
+        params = [
+                {"params": many_paramas, "lr": base_lr},
+                {"params": model.SegHead_few.parameters(), "lr": base_lr * lr_ratio[0]},
+        ]
+    
+    if num_experts == 3:
+        few_params = list(map(id, model.SegHead_few.parameters())) 
+        medium_params = list(map(id, model.SegHead_medium.parameters())) 
+        many_paramas = filter(lambda p : id(p) not in few_params + medium_params, model.parameters())
+        params = [
+                {"params": many_paramas, "lr": base_lr},
+                {"params": model.SegHead_medium.parameters(), "lr": base_lr * lr_ratio[0]},
+                {"params": model.SegHead_few.parameters(), "lr": base_lr * lr_ratio[1]},
+        ]
+            
     if type == "SGD":
         optimizer = torch.optim.SGD(
             model.parameters(),
@@ -81,7 +92,7 @@ def get_optimizer(model, type, args, lr_ratio):
             params,
             lr=base_lr,
             betas=(0.9, 0.999),
-            weight_decay=args.wd,
+            weight_decay=1e-2,
         )
     else:
         raise NotImplementedError
@@ -106,7 +117,10 @@ def get_scheduler(optimizer, type, args):
 
     return scheduler
 
-def get_category_list(label_path, csv_path):
+def get_lr_ratio(label_path, csv_path, expert_idx):
+    '''
+    expert_idx: list, [[many],[medium],[few]]
+    '''
     df = pd.read_csv(csv_path)
     filename = df['mask']
     class_dict = dict()
@@ -121,14 +135,31 @@ def get_category_list(label_path, csv_path):
         classes, counts = np.unique(img, return_counts=True)
         for i in range(len(classes)):
             class_dict[classes[i]]=class_dict.get(classes[i],0)+counts[i]
+
+    # if expert_idx != None:
+    #     num_many = 0 
+    #     num_medium =0
+    #     num_few =0
+    #     for k, v in class_dict.items():
+    #         if k == 0:
+    #             continue
+    #         num_many += v
+    #         if k not in expert_idx[0]:
+    #             num_medium += v
+    #         # if k in expert_idx[2]:
+    #         #     num_few += v
+    #     medium_ratio = num_medium/num_many
+    #     few_ratio = num_few/num_many
+    #     print(medium_ratio, few_ratio)
+    # return medium_ratio, few_ratio
     
+    # f = open('number per class.txt', 'w')
+    # f.write(str(class_dict))
+    # f.close()
     print(class_dict)
-    f = open('number per class.txt', 'w')
-    f.write(str(class_dict))
-    f.close()
     
-   
 if __name__ == '__main__':
     label_path = '/data/xiaolong/mask'
-    label_csv_path = '/data/xiaolong/master_thesis/data_preprocessing/label_selection_0.1_rgb.csv'
-    get_category_list(label_path, label_csv_path)
+    label_csv_path = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
+    expert_idx=[[1, 5, 8, 9], [2, 3, 4, 6, 7]]
+    get_lr_ratio(label_path, label_csv_path, expert_idx)

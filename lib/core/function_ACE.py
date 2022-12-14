@@ -31,6 +31,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     
     data_time = AverageMeter()
     losses = AverageMeter()
+    comlosses = AverageMeter()
     batch_time = AverageMeter()
     
     # switch to train mode
@@ -50,15 +51,47 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         
         # compute loss
         mask = mask.to(device)#[B,16,200,200]
-        loss = criterion(output, mask)
+        if args.experts == 3:
+            [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
+            loss = many_loss + medium_loss + few_loss           
+            # compute gradient and update
+            optimizer.zero_grad()
+            # if train seperately:
+            if args.TRAIN_SEP:
+                many_loss.backward(retain_graph=True)
+                for name, param in model.named_parameters():
+                    if not ('medium' in name or 'few' in name):
+                        param.requires_grad = False
+                
+                (medium_loss+few_loss).backward()
+                for name, param in model.named_parameters():
+                    param.requires_grad = True
+            else:
+                loss.backward()
+            optimizer.step()
         
-        # compute gradient and update
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        if args.experts == 2:
+            [many_loss, few_loss], comloss = criterion(output, mask)
+            loss = many_loss + few_loss 
+                    # compute gradient and update
+            optimizer.zero_grad()
+            # if train seperately:
+            if args.TRAIN_SEP:
+                many_loss.backward(retain_graph=True)
+                for name, param in model.named_parameters():
+                    if not ('few' in name):
+                        param.requires_grad = False
+                
+                (few_loss).backward()
+                for name, param in model.named_parameters():
+                    param.requires_grad = True
+            else:
+                loss.backward()
+            optimizer.step()
         
         # record loss
         losses.update(loss.item(), input.size(0))
+        comlosses.update(comloss.item(), input.size(0))
         
         batch_time.update(time.time() - end)
         end = time.time()
@@ -68,10 +101,11 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                   'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
                   'Speed {speed:.1f} samples/s\t' \
                   'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
-                  'Loss {loss.val:.5f} ({loss.avg:.5f})'.format(
+                  'Loss {loss.val:.5f} ({loss.avg:.5f})\t'\
+                  'ComLoss {comloss.val:.5f} ({comloss.avg:.5f})\t'.format(
                       epoch, i, len(train_loader), batch_time=batch_time,
                       speed=input.size(0)/batch_time.val,
-                      data_time=data_time, loss=losses)
+                      data_time=data_time, loss=losses, comloss=comlosses)
             logger.info(msg)
     
     lr = optimizer.param_groups[0]['lr']
@@ -80,12 +114,12 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         global_steps = writer_dict['train_global_steps']
 
         writer.add_scalar('train_loss', losses.avg, global_steps)
+        writer.add_scalar('com_loss', comlosses.avg, global_steps)
         writer.add_scalar('learning_rate', lr, global_steps)
         writer_dict['train_global_steps'] = global_steps + 1
         
-                
-                
-def validate(val_loader, val_dataset, model, criterion, many_index, few_index, output_dir,
+               
+def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
              writer_dict, args): 
     '''Validate the model
     Returns:
@@ -94,25 +128,41 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
     '''
     batch_time = AverageMeter()
     losses = AverageMeter()
+    comlosses = AverageMeter()
     
     # switch to evaluate mode
     model.eval()
     metrics = MetricLogger(model.num_classes)
     device = torch.device("cuda")
-    
+        
     from collections import OrderedDict
     new_dict = OrderedDict()
     for k, v in model.named_parameters():
         if k.startswith("SegHead"):
             new_dict[k] = v
     
-    weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-    weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+    if args.experts == 3:
+        [many_index, medium_index, few_index] = ls_index
+        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+        weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
+        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+
+        weight_norm_many = LA.norm(weight_many, axis=1)
+        weight_norm_medium = LA.norm(weight_medium, axis=1)
+        weight_norm_few = LA.norm(weight_few, axis=1)
+
+        m_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_medium[medium_index+few_index, :]))
+        f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+
+    if args.experts == 2:
+        [many_index, few_index] = ls_index   
+        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+
+        weight_norm_many = LA.norm(weight_many, axis=1)
+        weight_norm_few = LA.norm(weight_few, axis=1)
     
-    weight_norm_many = LA.norm(weight_many, axis=1)
-    weight_norm_few = LA.norm(weight_few, axis=1)
-    
-    f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+        f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
     
     with torch.no_grad():
         end = time.time()
@@ -122,19 +172,30 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
             dem = dem.to(device)
             input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input) #[B, 10, 200, 200]
-            
-            [many_ouput, few_output] = output
-            few_output[:,many_index] = 0
-            final_output = many_ouput + few_output * f_scale
-            final_output[:,few_index] /= 2
-            
             num_inputs = input.size(0)
             # compute loss
             mask = mask.to(device) #[B, 10, 200, 200]
-            loss = criterion(output, mask)
             
+            if args.experts == 3:
+                [many_ouput, medium_output, few_output] = output
+                medium_output[:,many_index] = 0
+                few_output[:,many_index + medium_index] = 0
+                final_output = many_ouput + medium_output * m_scale + few_output * f_scale
+                final_output[:,medium_index] /= 2
+                final_output[:,few_index] /= 3
+                [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
+                loss = many_loss + medium_loss + few_loss
+            if args.experts == 2:
+                [many_ouput, few_output] = output
+                few_output[:,many_index] = 0
+                final_output = many_ouput + few_output * f_scale
+                final_output[:,few_index] /= 2
+                [many_loss, few_loss], comloss = criterion(output, mask)
+                loss = many_loss + few_loss
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
+            comlosses.update(comloss.item(), num_inputs)
+            
             preds = get_final_preds(final_output.detach().cpu().numpy())
             gt = mask.squeeze().detach().cpu().numpy()
             metrics.update(gt, preds)
@@ -146,9 +207,10 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
             if i % args.frequent == 0:
                 msg = 'Validate: [{0}/{1}]\t' \
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t' \
-                      'Loss {loss.val:.4f} ({loss.avg:.4f})'.format(
+                      'Loss {loss.val:.4f} ({loss.avg:.4f})\t' \
+                      'ComLoss {comloss.val:.4f} ({comloss.avg:.4f})'.format(
                           i, len(val_loader), batch_time=batch_time,
-                          loss=losses)
+                          loss=losses, comloss=comlosses)
 
                 logger.info(msg)
                            
@@ -160,7 +222,7 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
         if writer_dict:
             writer = writer_dict['logger']
             global_steps = writer_dict['valid_global_steps']
-
+            writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
 
@@ -168,7 +230,7 @@ def validate(val_loader, val_dataset, model, criterion, many_index, few_index, o
     
     return losses.avg, perf_indicator
             
-def test(test_loader, test_dataset, model, many_index, few_index, output_dir,
+def test(test_loader, test_dataset, model, ls_index, output_dir,
              writer_dict, args): 
     '''Test the model
     Returns:
@@ -188,13 +250,28 @@ def test(test_loader, test_dataset, model, many_index, few_index, output_dir,
         if k.startswith("SegHead"):
             new_dict[k] = v
     
-    weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-    weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+    if args.experts == 3:
+        [many_index, medium_index, few_index] = ls_index
+        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+        weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
+        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+
+        weight_norm_many = LA.norm(weight_many, axis=1)
+        weight_norm_medium = LA.norm(weight_medium, axis=1)
+        weight_norm_few = LA.norm(weight_few, axis=1)
     
-    weight_norm_many = LA.norm(weight_many, axis=1)
-    weight_norm_few = LA.norm(weight_few, axis=1)
+        f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+        m_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_medium[medium_index+few_index, :]))
+        
+    if args.experts == 2:
+        [many_index, few_index] = ls_index   
+        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+
+        weight_norm_many = LA.norm(weight_many, axis=1)
+        weight_norm_few = LA.norm(weight_few, axis=1)
     
-    f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+        f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
     
     with torch.no_grad():
         end = time.time()
@@ -206,10 +283,19 @@ def test(test_loader, test_dataset, model, many_index, few_index, output_dir,
             input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
             output = model(input)
             
-            [many_ouput, few_output] = output
-            few_output[:,many_index] = 0
-            final_output = many_ouput + few_output * f_scale
-            final_output[:,few_index] /= 2
+            if args.experts == 3:
+                [many_ouput, medium_output, few_output] = output
+                medium_output[:,many_index] = 0
+                few_output[:,many_index + medium_index] = 0
+                final_output = many_ouput + medium_output * m_scale + few_output * f_scale
+                final_output[:,medium_index] /= 2
+                final_output[:,few_index] /= 3
+                
+            if args.experts == 2:
+                [many_ouput, few_output] = output
+                few_output[:,many_index] = 0
+                final_output = many_ouput + few_output * f_scale
+                final_output[:,few_index] /= 2
             
             num_inputs = input.size(0)
             mask = mask.to(device)

@@ -204,12 +204,13 @@ class Upsampling(nn.Module):
         return x
     
 class ACE_Res50_UNet(nn.Module):
-    def __init__(self, num_classes, pretrained = True):
+    def __init__(self, num_classes, num_experts, pretrained = True):
         super(ACE_Res50_UNet, self).__init__()
         out_channels = [64, 128, 256, 512]
         self.resnet = getResNet50(pretrained = pretrained)
         in_channels = [192, 512, 1024, 3072]
         self.num_classes = num_classes
+        self.num_experts = num_experts
         self.up4 = Upsampling(in_channels[3], out_channels[3])
         self.up3 = Upsampling(in_channels[2], out_channels[2])
         self.up2 = Upsampling(in_channels[1], out_channels[1])
@@ -221,8 +222,13 @@ class ACE_Res50_UNet(nn.Module):
                 nn.Conv2d(out_channels[0], out_channels[0], kernel_size = 3, padding = 1),
                 nn.ReLU(),
             )
-        self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
-        self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
+        if num_experts == 2:
+            self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
+            self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
+        elif num_experts == 3:
+            self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
+            self.SegHead_medium = nn.Conv2d(out_channels[0], self.num_classes, 1)
+            self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
         
     def forward(self, x):
         [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
@@ -232,10 +238,16 @@ class ACE_Res50_UNet(nn.Module):
         up2 = self.up2(feat2, up3) 
         up1 = self.up1(feat1, up2) 
         y = self.up_conv(up1)
-        y_few = self.SegHead_few(y)
-        y_many = self.SegHead_many(y)
-        return [y_many, y_few]
-
+        if self.num_experts == 2:
+            y_few = self.SegHead_few(y)
+            y_many = self.SegHead_many(y)
+            return [y_many, y_few]
+        elif self.num_experts == 3:
+            y_few = self.SegHead_few(y)
+            y_medium = self.SegHead_medium(y)
+            y_many = self.SegHead_many(y)
+            return [y_many, y_medium, y_few]
+        
 class SegmentationHead(nn.Sequential):
     '''set up a segmentation head'''
     def __init__(self, in_channels, out_channels, kernel_size = 3, upsampling = 1):

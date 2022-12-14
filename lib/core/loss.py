@@ -115,9 +115,9 @@ class ResCELoss(CrossEntropy2D):
     def __init__(self, many_index, few_index, args):
         super(ResCELoss, self).__init__()
         self.num_classes = 10
+        self.args = args
         self.few_index = few_index
         self.many_index = many_index
-        self.args = args
         self.weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
         self.celoss= CrossEntropy2D()
         self.weight_celoss = CrossEntropy2D(weight=self.weight)
@@ -125,33 +125,102 @@ class ResCELoss(CrossEntropy2D):
     def forward(self, output, targets, **kwargs):
         
         [many_output_ori, few_output_ori]= output
-        few_head_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
-        many_head_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        few_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        many_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        comLoss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         targets_cpu = targets.cpu().numpy()
         
         ## among batch, return the idx that the mask contains few category
-        few_head_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
+        few_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
         
-        if len(few_head_idx_cpu):
+        if len(few_idx_cpu):
         # compute weight celoss   
             claLoss = self.weight_celoss(few_output_ori, targets)
-            # comLoss = self._get_comLoss(few_output_ori, targets)
-            # few_head_loss = claLoss + comLoss
-            few_head_loss = claLoss
+            comLoss = self._get_comLoss(few_output_ori, targets)
+            few_loss = claLoss + comLoss
+            # few_head_loss = claLoss
         
-        many_head_loss = self.celoss(many_output_ori, targets)
-        # few_head_loss = self.celoss(few_output_ori, targets)
-        
-        return many_head_loss + few_head_loss
+        many_loss = self.celoss(many_output_ori, targets)
+        return [many_loss, few_loss], comLoss
     
     def _get_comLoss(self, output, targets):
-        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7)
-        num_few_pixles = (few_mask == False).sum()
+        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7) #[16,1,200,200]
+        num_few_pixles = (few_mask == True).sum()
         # few_output = torch.masked_select(output, few_mask)
-        few_mask = few_mask.expand(output.size())
+        few_mask = few_mask.expand(output.size()) #[16, 10, 200 ,200]
         few_output = output * few_mask
         if self.args.loss == 0:
             comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index)
         elif self.args.loss == 1:
-            comLoss = torch.norm(few_output[:,self.many_index], p=2)/num_few_pixles
+            comLoss = torch.norm(few_output[:,self.many_index], p=2)/num_few_pixles * self.args.comFactor
+        return comLoss
+    
+class ResCELoss_3exp(CrossEntropy2D):
+    def __init__(self, many_index, medium_index, few_index, args):
+        super(ResCELoss_3exp, self).__init__()
+        self.num_classes = 10
+        self.few_index = few_index
+        self.medium_index = medium_index
+        self.many_index = many_index
+        self.args = args
+        self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
+        self.few_weight = torch.tensor([0, 0, 1, 1, 1, 0, 0, 0, 0, 0], dtype=torch.float).cuda()
+        self.celoss= CrossEntropy2D()
+        self.medium_weight_celoss = CrossEntropy2D(weight=self.medium_weight)
+        self.few_weight_celoss = CrossEntropy2D(weight=self.few_weight)
+
+    def forward(self, output, targets, **kwargs):
+        
+        [many_output_ori, medium_output_ori, few_output_ori]= output
+        few_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        medium_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        many_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        medium_comLoss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
+        targets_cpu = targets.cpu().numpy()
+        
+        ## among batch, return the idx that the mask contains few category
+        medium_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.medium_index + self.few_index, targets_cpu[j]))] 
+        few_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
+        
+        if len(medium_idx_cpu):
+        # compute weight celoss   
+            medium_claLoss = self.medium_weight_celoss(medium_output_ori, targets)
+            medium_comLoss = self._get_medium_comLoss(medium_output_ori, targets)
+            medium_loss = medium_claLoss + medium_comLoss
+            # few_head_loss = claLoss
+            
+        if len(few_idx_cpu):
+        # compute weight celoss   
+            few_claLoss = self.few_weight_celoss(few_output_ori, targets)
+            few_comLoss = self._get_few_comLoss(few_output_ori, targets)
+            few_loss = few_claLoss + few_comLoss
+            # few_head_loss = claLoss
+        
+        many_loss = self.celoss(many_output_ori, targets)
+        # few_head_loss = self.celoss(few_output_ori, targets)
+        
+        return [many_loss, medium_loss, few_loss], medium_comLoss
+    
+    def _get_few_comLoss(self, output, targets):
+        few_mask = (targets >= 2) & (targets <= 4) #[16,1,200,200]
+        num_few_pixles = (few_mask == True).sum()
+        # few_output = torch.masked_select(output, few_mask)
+        few_mask = few_mask.expand(output.size()) #[16, 10, 200 ,200]
+        few_output = output * few_mask
+        if self.args.loss == 0:
+            comLoss = torch.norm(few_output[:,self.many_index + self.medium_index], p=2)/len(self.many_index + self.medium_index)
+        elif self.args.loss == 1:
+            comLoss = torch.norm(few_output[:,self.many_index + self.medium_index], p=2)/num_few_pixles * self.args.comFactor
+        return comLoss
+    
+    def _get_medium_comLoss(self, output, targets):
+        medium_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7) #[16,1,200,200]
+        num_medium_pixles = (medium_mask == True).sum()
+        # few_output = torch.masked_select(output, few_mask)
+        medium_mask = medium_mask.expand(output.size()) #[16, 10, 200 ,200]
+        medium_output = output * medium_mask
+        if self.args.loss == 0:
+            comLoss = torch.norm(medium_output[:,self.many_index], p=2)/len(self.many_index)
+        elif self.args.loss == 1:
+            comLoss = torch.norm(medium_output[:,self.many_index], p=2)/num_medium_pixles * self.args.comFactor
         return comLoss
