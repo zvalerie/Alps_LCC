@@ -132,7 +132,10 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
     
     # switch to evaluate mode
     model.eval()
+    
     metrics = MetricLogger(model.num_classes)
+    metrics_exp1 = MetricLogger(model.num_classes)
+    metrics_exp2 = MetricLogger(model.num_classes)
     device = torch.device("cuda")
         
     from collections import OrderedDict
@@ -177,28 +180,36 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
             mask = mask.to(device) #[B, 10, 200, 200]
             
             if args.experts == 3:
-                [many_ouput, medium_output, few_output] = output
+                [many_output, medium_output, few_output] = output
                 medium_output[:,many_index] = 0
                 few_output[:,many_index + medium_index] = 0
-                final_output = many_ouput + medium_output * m_scale + few_output * f_scale
+                final_output = many_output + medium_output * m_scale + few_output * f_scale
                 final_output[:,medium_index] /= 2
                 final_output[:,few_index] /= 3
                 [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
                 loss = many_loss + medium_loss + few_loss
+                
             if args.experts == 2:
-                [many_ouput, few_output] = output
+                [many_output, few_output] = output
                 few_output[:,many_index] = 0
-                final_output = many_ouput + few_output * f_scale
+                final_output = many_output + few_output * f_scale
                 final_output[:,few_index] /= 2
                 [many_loss, few_loss], comloss = criterion(output, mask)
                 loss = many_loss + few_loss
+                
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
             comlosses.update(comloss.item(), num_inputs)
             
             preds = get_final_preds(final_output.detach().cpu().numpy())
+            preds_many = get_final_preds(many_output.detach().cpu().numpy())
+            preds_few = get_final_preds(few_output.detach().cpu().numpy())
+            
             gt = mask.squeeze().detach().cpu().numpy()
+            
             metrics.update(gt, preds)
+            metrics_exp1.update(gt, preds_many)
+            metrics_exp2.update(gt, preds_few)
             
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -215,13 +226,27 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 logger.info(msg)
                            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
+        acc_ACE_many, acc_ACE_few = metrics.get_acc_cat()
+        acc_exp1_many, acc_exp1_few = metrics_exp1.get_acc_cat()
+        acc_exp2_many, acc_exp2_few = metrics_exp2.get_acc_cat()
+        
         perf_indicator = mean_iou
+        
         metrics.reset()
+        metrics_exp1.reset()
+        metrics_exp2.reset()
+        
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         
         if writer_dict:
             writer = writer_dict['logger']
             global_steps = writer_dict['valid_global_steps']
+            writer.add_scalar('accuracy_many', {'expert_1':acc_exp1_many,
+                                                'expert_2':acc_exp2_many,
+                                                'ACE':acc_ACE_many}, global_steps)
+            writer.add_scalar('accuracy_few', {'expert_1':acc_exp1_few,
+                                                'expert_2':acc_exp2_few,
+                                                'ACE':acc_ACE_few}, global_steps)            
             writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
@@ -242,6 +267,8 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
     # switch to evaluate mode
     model.eval()
     metrics = MetricLogger(model.num_classes)
+    metrics_exp1 = MetricLogger(model.num_classes)
+    metrics_exp2 = MetricLogger(model.num_classes)
     device = torch.device("cuda")
     
     from collections import OrderedDict
@@ -284,17 +311,17 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             output = model(input)
             
             if args.experts == 3:
-                [many_ouput, medium_output, few_output] = output
+                [many_output, medium_output, few_output] = output
                 medium_output[:,many_index] = 0
                 few_output[:,many_index + medium_index] = 0
-                final_output = many_ouput + medium_output * m_scale + few_output * f_scale
+                final_output = many_output + medium_output * m_scale + few_output * f_scale
                 final_output[:,medium_index] /= 2
                 final_output[:,few_index] /= 3
                 
             if args.experts == 2:
-                [many_ouput, few_output] = output
+                [many_output, few_output] = output
                 few_output[:,many_index] = 0
-                final_output = many_ouput + few_output * f_scale
+                final_output = many_output + few_output * f_scale
                 final_output[:,few_index] /= 2
             
             num_inputs = input.size(0)
@@ -302,10 +329,14 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             
             # measure accuracy
             preds = get_final_preds(final_output.detach().cpu().numpy())
+            preds_many = get_final_preds(many_output.detach().cpu().numpy())
+            preds_few = get_final_preds(few_output.detach().cpu().numpy())
             # gt = torch.squeeze(mask).detach().cpu().numpy()
             gt = mask.squeeze(0).detach().cpu().numpy()
             metrics.update(gt, preds)
-            
+            metrics_exp1.update(gt, preds_many)
+            metrics_exp2.update(gt, preds_few)        
+                
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -351,10 +382,19 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             
         mean_cls, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         confusionMatrix = metrics.get_confusion_matrix()
+        acc_ACE_many, acc_ACE_few = metrics.get_acc_cat()
+        acc_exp1_many, acc_exp1_few = metrics_exp1.get_acc_cat()
+        acc_exp2_many, acc_exp2_few = metrics_exp2.get_acc_cat()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
         logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
+        logger.info('Many accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_many,
+                                                                               expert1=acc_exp1_many,
+                                                                               expert2=acc_exp2_many))
+        logger.info('Few accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_few,
+                                                                               expert1=acc_exp1_few,
+                                                                               expert2=acc_exp2_few))
         classes = ["Background","Bedrock", "Bedrock with grass", "Large blocks", "Large blocks with grass", 
          "Scree", "Scree with grass", "Water area", "Forest", "Glacier"]
         for i in range(len(acc_cls)):

@@ -34,6 +34,8 @@ def calc_IoU(label_preds, label_trues, n_class):
 class MetricLogger(object):
     def __init__(self, n_classes):
         self.n_classes = n_classes
+        self.many_idx = [1, 5, 8, 9]
+        self.few_idx =[2, 3, 4, 6, 7]
         self.confusion_matrix = np.zeros((n_classes, n_classes))
 
     def _fast_hist(self, label_true, label_pred, n_class):
@@ -68,9 +70,18 @@ class MetricLogger(object):
         freq = hist.sum(axis=1) / hist.sum()
         fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
         cls_iu = dict(zip(range(self.n_classes), iu))
-
+        
         return mean_cls, mean_iu, acc_cls, acc
 
+    def get_acc_cat(self):
+            """Returns accuracy of different categories.
+            """
+            hist = self.confusion_matrix
+            many_acc = np.diag(hist)[:, self.many_idx] / hist.sum(axis=1)[:, self.many_idx]
+            few_acc = np.diag(hist)[:, self.few_idx] / hist.sum(axis=1)[:, self.few_idx]
+            
+            return many_acc, few_acc
+        
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))
         
