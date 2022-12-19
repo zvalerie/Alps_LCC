@@ -180,22 +180,24 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
             mask = mask.to(device) #[B, 10, 200, 200]
             
             if args.experts == 3:
+                [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
+                loss = many_loss + medium_loss + few_loss
+                
                 [many_output, medium_output, few_output] = output
                 medium_output[:,many_index] = 0
                 few_output[:,many_index + medium_index] = 0
                 final_output = many_output + medium_output * m_scale + few_output * f_scale
                 final_output[:,medium_index] /= 2
                 final_output[:,few_index] /= 3
-                [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
-                loss = many_loss + medium_loss + few_loss
                 
             if args.experts == 2:
+                [many_loss, few_loss], comloss = criterion(output, mask)
+                loss = many_loss + few_loss
+                
                 [many_output, few_output] = output
                 few_output[:,many_index] = 0
                 final_output = many_output + few_output * f_scale
                 final_output[:,few_index] /= 2
-                [many_loss, few_loss], comloss = criterion(output, mask)
-                loss = many_loss + few_loss
                 
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
@@ -226,9 +228,11 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 logger.info(msg)
                            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
-        acc_ACE_many, acc_ACE_few = metrics.get_acc_cat()
-        acc_exp1_many, acc_exp1_few = metrics_exp1.get_acc_cat()
-        acc_exp2_many, acc_exp2_few = metrics_exp2.get_acc_cat()
+        logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
+        
+        acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
+        acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
+        acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
         
         perf_indicator = mean_iou
         
@@ -236,21 +240,21 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
         metrics_exp1.reset()
         metrics_exp2.reset()
         
-        logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
-        
         if writer_dict:
             writer = writer_dict['logger']
             global_steps = writer_dict['valid_global_steps']
-            writer.add_scalar('accuracy_many', {'expert_1':acc_exp1_many,
+            writer.add_scalars('accuracy_many', {'expert_1':acc_exp1_many,
                                                 'expert_2':acc_exp2_many,
                                                 'ACE':acc_ACE_many}, global_steps)
-            writer.add_scalar('accuracy_few', {'expert_1':acc_exp1_few,
+            writer.add_scalars('accuracy_medium', {'expert_1':acc_exp1_medium,
+                                                'expert_2':acc_exp2_medium,
+                                                'ACE':acc_ACE_medium}, global_steps) 
+            writer.add_scalars('accuracy_few', {'expert_1':acc_exp1_few,
                                                 'expert_2':acc_exp2_few,
                                                 'ACE':acc_ACE_few}, global_steps)            
             writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
-
             writer_dict['valid_global_steps'] = global_steps + 1
     
     return losses.avg, perf_indicator

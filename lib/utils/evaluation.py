@@ -35,7 +35,8 @@ class MetricLogger(object):
     def __init__(self, n_classes):
         self.n_classes = n_classes
         self.many_idx = [1, 5, 8, 9]
-        self.few_idx =[2, 3, 4, 6, 7]
+        self.medium_idx = [6, 7]
+        self.few_idx = [2, 3, 4]
         self.confusion_matrix = np.zeros((n_classes, n_classes))
 
     def _fast_hist(self, label_true, label_pred, n_class):
@@ -77,10 +78,10 @@ class MetricLogger(object):
             """Returns accuracy of different categories.
             """
             hist = self.confusion_matrix
-            many_acc = np.diag(hist)[:, self.many_idx] / hist.sum(axis=1)[:, self.many_idx]
-            few_acc = np.diag(hist)[:, self.few_idx] / hist.sum(axis=1)[:, self.few_idx]
-            
-            return many_acc, few_acc
+            many_acc = np.diag(hist)[self.many_idx].sum() / hist.sum(axis=1)[self.many_idx].sum()
+            medium_acc = np.diag(hist)[self.medium_idx].sum() / hist.sum(axis=1)[self.medium_idx].sum()
+            few_acc = np.diag(hist)[self.few_idx].sum() / hist.sum(axis=1)[self.few_idx].sum()
+            return many_acc, medium_acc, few_acc
         
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))
