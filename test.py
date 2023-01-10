@@ -12,6 +12,7 @@ from lib.utils.utils import create_logger
 from lib.core.function import test
 
 from lib.models.Unet import Res50_UNet
+from lib.models.DeepLabv3Plus import deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 
 
@@ -73,7 +74,8 @@ def main():
     
     if args.backbone == 'resnet50':
         model = Res50_UNet(num_classes=10)
-        
+    elif args.backbone == 'Deeplabv3+_res50':
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
     # Define loss function (criterion) and optimizer  
     device = ("cuda:0" if torch.cuda.is_available() else "cpu")
     

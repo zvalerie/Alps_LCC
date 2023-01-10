@@ -19,6 +19,7 @@ from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
 from lib.models.Unet import Res50_UNet
+from lib.models.DeepLabv3Plus import deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -72,7 +73,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--backbone',
                         help='backbone of encoder',
-                        default='resnet50',
+                        default='Unet_res50',
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
@@ -105,8 +106,10 @@ def main():
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
     
-    if args.backbone == 'resnet50':
+    if args.backbone == 'Unet_res50':
         model = Res50_UNet(num_classes=10)
+    elif args.backbone == 'Deeplabv3+_res50':
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
     
     writer_dict = {
             'logger': tb_logger,

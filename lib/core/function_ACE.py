@@ -73,7 +73,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         if args.experts == 2:
             [many_loss, few_loss], comloss = criterion(output, mask)
             loss = many_loss + few_loss 
-                    # compute gradient and update
+            # compute gradient and update
             optimizer.zero_grad()
             # if train seperately:
             if args.TRAIN_SEP:
@@ -140,10 +140,15 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
         
     from collections import OrderedDict
     new_dict = OrderedDict()
-    for k, v in model.named_parameters():
-        if k.startswith("SegHead"):
-            new_dict[k] = v
-    
+    if args.backbone == 'Deeplabv3+_res50':
+        for k, v in model.named_parameters():
+            if k.startswith("classifier.SegHead"):
+                new_dict[k] = v
+    else: 
+        for k, v in model.named_parameters():
+            if k.startswith("SegHead"):
+                new_dict[k] = v
+                
     if args.experts == 3:
         [many_index, medium_index, few_index] = ls_index
         weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
@@ -159,9 +164,13 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
 
     if args.experts == 2:
         [many_index, few_index] = ls_index   
-        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
-
+        if args.model_name:
+            weight_many = new_dict['SegHead_many.conv2d.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.conv2d.weight'].detach().cpu().numpy()
+        else:
+            weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
+            weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
+        
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_few = LA.norm(weight_few, axis=1)
     
@@ -278,7 +287,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
     from collections import OrderedDict
     new_dict = OrderedDict()
     for k, v in model.named_parameters():
-        if k.startswith("SegHead"):
+        if k.startswith("classifier.SegHead"):
             new_dict[k] = v
     
     if args.experts == 3:
@@ -296,8 +305,12 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         
     if args.experts == 2:
         [many_index, few_index] = ls_index   
-        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+        if args.LWS:
+            weight_many = new_dict['SegHead_many.conv2d.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.conv2d.weight'].detach().cpu().numpy()
+        else :
+            weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
+            weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
 
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_few = LA.norm(weight_few, axis=1)
@@ -324,9 +337,13 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
                 
             if args.experts == 2:
                 [many_output, few_output] = output
-                few_output[:,many_index] = 0
-                final_output = many_output + few_output * f_scale
+                new_few_output = few_output.clone()
+                new_few_output[:,many_index] = 0
+                # many_output[:, few_index] = 0
+                # few_output *= f_scale
+                final_output = many_output + new_few_output * f_scale
                 final_output[:,few_index] /= 2
+                # final_output = torch.maximum(many_output, few_output)
             
             num_inputs = input.size(0)
             mask = mask.to(device)
@@ -386,9 +403,9 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             
         mean_cls, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         confusionMatrix = metrics.get_confusion_matrix()
-        acc_ACE_many, acc_ACE_few = metrics.get_acc_cat()
-        acc_exp1_many, acc_exp1_few = metrics_exp1.get_acc_cat()
-        acc_exp2_many, acc_exp2_few = metrics_exp2.get_acc_cat()
+        acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
+        acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
+        acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
@@ -396,6 +413,9 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         logger.info('Many accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_many,
                                                                                expert1=acc_exp1_many,
                                                                                expert2=acc_exp2_many))
+        logger.info('Medium accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_medium,
+                                                                               expert1=acc_exp1_medium,
+                                                                               expert2=acc_exp2_medium))        
         logger.info('Few accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_few,
                                                                                expert1=acc_exp1_few,
                                                                                expert2=acc_exp2_few))

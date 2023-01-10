@@ -12,6 +12,7 @@ from lib.utils.utils import create_logger
 from lib.core.function_ACE import test
 
 from lib.models.ACE_UNet import ACE_Res50_UNet
+from lib.models.ACE_DeepLabv3P import deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 
 
@@ -28,7 +29,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train image segmentation network')
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/train',
+                        default='out/ACE',
                         type=str)
     parser.add_argument('--foldername',
                         help='time_str when trainning model ',
@@ -57,6 +58,14 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
+                        default=True,
+                        type=bool)
+    parser.add_argument('--experts',
+                        help='number of experts',
+                        default=2,
+                        type=int)
+    parser.add_argument('--LWS',
+                        help='train LWS or not',
                         default=False,
                         type=bool)
     args = parser.parse_args()
@@ -73,16 +82,28 @@ def main():
     logger.info('Test ACE model')
     
     if args.backbone == 'resnet50':
-        model = ACE_Res50_UNet(num_classes=10)
-        
+        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False)
+        if args.LWS:
+            model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
+            
+    if args.backbone == 'Deeplabv3+_res50':
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
+
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")
-    
     model = model.to(device)
     
-    many_index = [0, 1, 5, 8, 9]
-    few_index = [2, 3, 4, 6, 7]
-    
+    if args.experts==2:
+        many_index = [0, 1, 5, 8, 9]
+        few_index = [2, 3, 4, 6, 7]
+        ls_index = [many_index, few_index]
+        
+    if args.experts==3:
+        many_index = [0, 1, 5, 8, 9]
+        medium_index = [6, 7]
+        few_index = [2, 3, 4]
+        ls_index = [many_index, medium_index, few_index]
+        
     if tb_logger:
         writer_dict = {
             'logger': tb_logger,
@@ -117,11 +138,11 @@ def main():
     )
     
     # evaluate on test set
-    confusionMatrix = test(test_loader, test_dataset, model, many_index, few_index,
+    confusionMatrix = test(test_loader, test_dataset, model, ls_index,
                          args.out_dir, writer_dict, args)
 
     
-    np.save('ACE_cm' + time_str, confusionMatrix)
+    np.save('/data/xiaolong/master_thesis/confusion_matrix/' + 'ACE_cm' + time_str, confusionMatrix)
     writer_dict['logger'].close()
 
 if __name__ == '__main__':

@@ -8,8 +8,7 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
-import random
-import torch
+from collections import Counter
 
 class SwissImage(Dataset):
     '''Transformer needed to be added'''
@@ -54,3 +53,10 @@ class SwissImage(Dataset):
         mask = transforms.ToTensor()(mask)
         
         return image, dem, mask
+
+    def _getImbalancedCount(self):
+        count = Counter(self.img_dem_label['few'])
+        return count
+    
+    def _getImbalancedClass(self, idx):
+        return self.img_dem_label['few'][idx]

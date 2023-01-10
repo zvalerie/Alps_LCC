@@ -49,6 +49,24 @@ def class_distribution(filepath, save_name):
     stat = np.concatenate((mainclass.reshape(mainclass.size, 1),counts.reshape(counts.size,1)), axis = 1).astype(int)
     np.savetxt("{}.txt".format(save_name), stat, fmt='%i')
 
+def few_categories_tile_selection(filepath, few_index):
+    '''Select the tiles that contains few categories'''
+    ls = []
+    df = pd.read_csv(filepath)
+    rgb_dir = '/data/xiaolong/rgb'
+    for idx in tqdm(range(len(df))):
+        rgb_path = os.path.join(rgb_dir, df.iloc[idx, 0])
+        img = Image.open(rgb_path)
+        img = np.array(img)
+        classes, counts = np.unique(img, return_counts=True)
+        inter = [i for i in classes if i in few_index]
+        if inter:
+            ls.append(1)
+        else:
+            ls.append(0)
+    df['few'] = ls
+    df.to_csv('train_subset_few.csv',index=False)
+    
 def data_split(csv_path, train_ratio, val_ratio, test_ratio):
     '''split the dataset into train, val, test set using stratified selection'''
     # read the csv file that contains the tile_id and main class
@@ -123,7 +141,7 @@ if __name__ == '__main__':
     
     # generate the main class distribution
     label_csv_path = '/data/xiaolong/master_thesis/data/label_selection_0.1_rgb.csv'
-    class_distribution(label_csv_path, 'mainclass_distribution')
+    # class_distribution(label_csv_path, 'mainclass_distribution')
     
     # split the data into train, val, test 
     # data_split(label_csv_path, 0.6, 0.2, 0.2)
@@ -146,3 +164,7 @@ if __name__ == '__main__':
     
     # data_csv = '/data/xiaolong/master_thesis/data/label_selection_0.1.csv'
     # searchnoValue(data_csv)
+    
+    file_path = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset.csv'
+    few_index = [2, 3, 4, 6, 7]
+    few_categories_tile_selection(file_path, few_index)

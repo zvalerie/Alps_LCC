@@ -21,9 +21,10 @@ def conv1x1(in_planes, out_planes, stride=1):
 class Bottleneck(nn.Module) :
     expansion = 4
     
-    def __init__(self, inplanes, outplanes, stride=1, downsample=None,
-                 dilation=1, norm_layer=nn.BatchNorm2d):
+    def __init__(self, inplanes, outplanes, stride=1, downsample=None, groups=1,
+                 base_width=64, dilation=1, norm_layer=nn.BatchNorm2d):
         super(Bottleneck, self).__init__()
+        width = int(outplanes * (base_width / 64.)) * groups
         self.conv1 = conv1x1(inplanes, outplanes)
         self.bn1 = norm_layer(outplanes)
         self.conv2 = conv3x3(outplanes, outplanes, stride, dilation)
@@ -63,7 +64,10 @@ class ResNet50Encoder(nn.Module):
                  layers = [3, 4, 6, 3],
                  in_channels = 4,
                  out_channels = [64, 128, 256, 512],
-                 norm_layer = nn.BatchNorm2d
+                 groups=1, 
+                 width_per_group=64,
+                 norm_layer = nn.BatchNorm2d,
+                 replace_stride_with_dilation=None
                 ):
         super(ResNet50Encoder, self).__init__()
         
@@ -72,7 +76,17 @@ class ResNet50Encoder(nn.Module):
         self._norm_layer = norm_layer
         self.inplanes = 64
         self.dilation = 1
+        self.groups = groups
+        self.base_width = width_per_group
         
+        if replace_stride_with_dilation is None:
+            # each element in the tuple indicates if we should replace
+            # the 2x2 stride with a dilated convolution instead
+            replace_stride_with_dilation = [False, False, False]
+        if len(replace_stride_with_dilation) != 3:
+            raise ValueError("replace_stride_with_dilation should be None "
+                             "or a 3-element tuple, got {}".format(replace_stride_with_dilation))
+            
         # input layer
         # 200, 200, 4 -> 100, 100, 64
         self.conv1 = nn.Conv2d(4, self.inplanes, kernel_size=7, stride=2, padding=3, bias=False)
@@ -85,11 +99,14 @@ class ResNet50Encoder(nn.Module):
         # 50, 50, 64 -> 50, 50, 256
         self.layer1 = self._make_layer(block, out_channels[0], layers[0])
         # 50, 50, 256 -> 25, 25, 512
-        self.layer2 = self._make_layer(block, out_channels[1], layers[1], stride=2)
+        self.layer2 = self._make_layer(block, out_channels[1], layers[1], stride=2,
+                                       dilate=replace_stride_with_dilation[0])
         #25, 25, 512 -> 13, 13, 1024
-        self.layer3 = self._make_layer(block, out_channels[2], layers[2], stride=2)
+        self.layer3 = self._make_layer(block, out_channels[2], layers[2], stride=2,
+                                       dilate=replace_stride_with_dilation[1])
         # 13, 13, 1024 -> 7, 7, 2048
-        self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2)
+        self.layer4 = self._make_layer(block, out_channels[3], layers[3], stride=2,
+                                       dilate=replace_stride_with_dilation[2])
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -98,11 +115,10 @@ class ResNet50Encoder(nn.Module):
             elif isinstance(m, nn.BatchNorm2d):
                 m.weight.data.fill_(1)
                 m.bias.data.zero_()
-                       
+                             
     @property
     def out_channels(self):
         return [self.in_channels] + self._out_channels
-        
         
     def _make_layer(
         self, 
@@ -125,14 +141,17 @@ class ResNet50Encoder(nn.Module):
             )
             
         layers = []
-
-        layers.append(block(self.inplanes, planes, stride, downsample, dilation=previous_dilation, norm_layer=norm_layer))
+        layers.append(block(self.inplanes, planes, stride, downsample, self.groups,
+                            self.base_width, dilation=previous_dilation, norm_layer=norm_layer))
         self.inplanes = planes * block.expansion
         for _ in range(1, blocks):
             layers.append(
                 block(
                     self.inplanes,
-                    planes, dilation=self.dilation,
+                    planes, 
+                    groups=self.groups,
+                    base_width=self.base_width,
+                    dilation=self.dilation,
                     norm_layer=norm_layer)
                 )
         return nn.Sequential(*layers)
@@ -155,7 +174,7 @@ class ResNet50Encoder(nn.Module):
         return self._foward_impl(x)
     
 def resnet50(pretrained=False, **kwargs):
-    model = ResNet50Encoder(Bottleneck)
+    model = ResNet50Encoder(block=Bottleneck, **kwargs)
     if pretrained:
         weights = model_zoo.load_url(model_urls['resnet50'])
         # weights from channel(0) are copied for the new channel(dem)

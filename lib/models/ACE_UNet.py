@@ -204,7 +204,7 @@ class Upsampling(nn.Module):
         return x
     
 class ACE_Res50_UNet(nn.Module):
-    def __init__(self, num_classes, num_experts, pretrained = True):
+    def __init__(self, num_classes, num_experts, train_LWS, pretrained = True):
         super(ACE_Res50_UNet, self).__init__()
         out_channels = [64, 128, 256, 512]
         self.resnet = getResNet50(pretrained = pretrained)
@@ -223,8 +223,12 @@ class ACE_Res50_UNet(nn.Module):
                 nn.ReLU(),
             )
         if num_experts == 2:
-            self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
-            self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
+            if train_LWS:  
+                self.SegHead_many = LWS(out_channels[0], self.num_classes)
+                self.SegHead_few = LWS(out_channels[0], self.num_classes)            
+            else:
+                self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
+                self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
         elif num_experts == 3:
             self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_medium = nn.Conv2d(out_channels[0], self.num_classes, 1)
@@ -248,18 +252,30 @@ class ACE_Res50_UNet(nn.Module):
             y_many = self.SegHead_many(y)
             return [y_many, y_medium, y_few]
         
-class SegmentationHead(nn.Sequential):
-    '''set up a segmentation head'''
-    def __init__(self, in_channels, out_channels, kernel_size = 3, upsampling = 1):
-        conv2d = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size//2)
-        upsampling = nn.UpsamplingBilinear2d(scale_factor=upsampling) if upsampling > 1 else nn.Identity()
-        activation = nn.Identity()
-        super().__init__(conv2d, upsampling, activation)
+# class SegmentationHead(nn.Sequential):
+#     '''set up a segmentation head'''
+#     def __init__(self, in_channels, out_channels, kernel_size = 3, upsampling = 1):
+#         conv2d = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, padding=kernel_size//2)
+#         upsampling = nn.UpsamplingBilinear2d(scale_factor=upsampling) if upsampling > 1 else nn.Identity()
+#         activation = nn.Identity()
+#         super().__init__(conv2d, upsampling, activation)
+
+class LWS(nn.Module):
+    def __init__(self, num_features, num_classes):
+        super(LWS, self).__init__()
+        self.conv2d = nn.Conv2d(num_features, num_classes, 1)
+        self.scales = nn.Parameter(torch.ones(num_classes, 200, 200))
+        for param_name, param in self.conv2d.named_parameters():
+            param.requires_grad = False
+
+    def forward(self, x):
+        x = self.conv2d(x)
+        x *= self.scales
+        return x
 
 if __name__ == '__main__':
-    model = ACE_Res50_UNet(10)
-    from collections import OrderedDict
-    new_dict = OrderedDict()
+    model = ACE_Res50_UNet(10, 2, False)
     for k, v in model.named_parameters():
         if k.startswith("SegHead"):
             print(k, v.shape)
+    

@@ -138,13 +138,13 @@ class ResCELoss(CrossEntropy2D):
             claLoss = self.weight_celoss(few_output_ori, targets)
             comLoss = self._get_comLoss(few_output_ori, targets)
             few_loss = claLoss + comLoss
-            # few_head_loss = claLoss
+            # few_loss = claLoss
         
         many_loss = self.celoss(many_output_ori, targets)
         return [many_loss, few_loss], comLoss
     
     def _get_comLoss(self, output, targets):
-        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7) #[16,1,200,200]
+        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets ==7) #[16,1,200,200] 2 3 4 6 7
         num_few_pixles = (few_mask == True).sum()
         # few_output = torch.masked_select(output, few_mask)
         few_mask = few_mask.expand(output.size()) #[16, 10, 200 ,200]
@@ -153,6 +153,8 @@ class ResCELoss(CrossEntropy2D):
             comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index)
         elif self.args.loss == 1:
             comLoss = torch.norm(few_output[:,self.many_index], p=2)/num_few_pixles * self.args.comFactor
+        elif self.args.loss == 2:
+            comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index) * self.args.comFactor
         return comLoss
     
 class ResCELoss_3exp(CrossEntropy2D):
