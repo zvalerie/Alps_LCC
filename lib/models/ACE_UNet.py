@@ -204,13 +204,14 @@ class Upsampling(nn.Module):
         return x
     
 class ACE_Res50_UNet(nn.Module):
-    def __init__(self, num_classes, num_experts, train_LWS, pretrained = True):
+    def __init__(self, num_classes, num_experts, train_LWS, train_MLP, pretrained = True):
         super(ACE_Res50_UNet, self).__init__()
         out_channels = [64, 128, 256, 512]
         self.resnet = getResNet50(pretrained = pretrained)
         in_channels = [192, 512, 1024, 3072]
         self.num_classes = num_classes
         self.num_experts = num_experts
+        self.train_MLP = train_MLP
         self.up4 = Upsampling(in_channels[3], out_channels[3])
         self.up3 = Upsampling(in_channels[2], out_channels[2])
         self.up2 = Upsampling(in_channels[1], out_channels[1])
@@ -233,6 +234,7 @@ class ACE_Res50_UNet(nn.Module):
             self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_medium = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
+        self.MLP = MLP(num_inputs=2, hidden_layers=8)
         
     def forward(self, x):
         [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
@@ -245,7 +247,13 @@ class ACE_Res50_UNet(nn.Module):
         if self.num_experts == 2:
             y_few = self.SegHead_few(y)
             y_many = self.SegHead_many(y)
-            return [y_many, y_few]
+            MLP_output = None
+            if self.train_MLP==True:
+                y_stack = torch.stack((y_many, y_few), -1)
+                MLP_output = self.MLP(y_stack)
+                MLP_output = torch.squeeze(MLP_output, -1)
+            return [y_many, y_few], MLP_output
+        
         elif self.num_experts == 3:
             y_few = self.SegHead_few(y)
             y_medium = self.SegHead_medium(y)
@@ -273,9 +281,20 @@ class LWS(nn.Module):
         x *= self.scales
         return x
 
+class MLP(nn.Module):
+    def __init__(self, num_inputs, hidden_layers):
+        super(MLP, self).__init__()
+        self.mlp = nn.Sequential(nn.Linear(num_inputs, hidden_layers),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_layers, 1))
+
+    def forward(self, x):
+        x = self.mlp(x)
+        return x
+
 if __name__ == '__main__':
-    model = ACE_Res50_UNet(10, 2, False)
+    model = ACE_Res50_UNet(10, 2, False, True)
     for k, v in model.named_parameters():
-        if k.startswith("SegHead"):
-            print(k, v.shape)
+        # if k.startswith("SegHead"):
+            print(k)
     

@@ -64,14 +64,15 @@ class DeepLabHeadV3Plus(nn.Module):
             self.SegHead_many = nn.Conv2d(256, num_classes, 1)
             self.SegHead_medium = nn.Conv2d(256, num_classes, 1)
             self.SegHead_few = nn.Conv2d(256, num_classes, 1)
+        self.segHead = nn.Conv2d(256, num_classes, 1)
         self._init_weight()
 
     def forward(self, feature):
         low_level_feature = self.project( feature['low_level'] )
         output_feature = self.aspp(feature['out'])
         output_feature = F.interpolate(output_feature, size=low_level_feature.shape[2:], mode='bilinear', align_corners=False)
-        final_feature = self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
-        # final_feature = torch.cat( [ low_level_feature, output_feature ], dim=1 )
+        # final_feature = self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
+        final_feature = torch.cat( [ low_level_feature, output_feature ], dim=1 )
         if self.num_experts == 2:
             y_few = self.SegHead_few(final_feature)
             y_many = self.SegHead_many(final_feature)
@@ -82,6 +83,8 @@ class DeepLabHeadV3Plus(nn.Module):
             y_medium = self.SegHead_medium(final_feature)
             y_many = self.SegHead_many(final_feature)
             return [y_many, y_medium, y_few]
+        else:
+            return self.segHead(final_feature)
         
     def _init_weight(self):
         for m in self.modules():

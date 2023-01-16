@@ -47,9 +47,14 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
         output = model(input) #[B,16,400,400]
         
+        if args.MLP == True:
+            [many_output_ori, few_output_ori], MLP_output= output
+            mask = mask.to(device)#[B,16,200,200]
+            loss = criterion(MLP_output, mask)
+        else:
         # compute loss
-        mask = mask.to(device)#[B,16,200,200]
-        loss = criterion(output, mask)
+            mask = mask.to(device)#[B,16,200,200]
+            loss = criterion(output, mask)
         
         # compute gradient and update
         optimizer.zero_grad()
@@ -109,7 +114,11 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
             output = model(input) #[B, 10, 200, 200]
             
             num_inputs = input.size(0)
-            # compute loss
+            
+            if args.MLP == True:
+                _, MLP_output= output
+                output = MLP_output
+                
             mask = mask.to(device) #[B, 10, 200, 200]
             loss = criterion(output, mask)
             
@@ -218,6 +227,7 @@ def test(test_loader, test_dataset, model, output_dir,
                 writer_dict['vis_global_steps'] = global_steps + 1         
             
         mean_cls, mean_iou, acc_cls, overall_acc = metrics.get_scores()
+        many_acc, medium_acc, few_acc = metrics.get_acc_cat()
         confusionMatrix = metrics.get_confusion_matrix()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
@@ -228,6 +238,9 @@ def test(test_loader, test_dataset, model, output_dir,
         for i in range(len(acc_cls)):
             logger.info(classes[i] + 'accuracy: {:.3f}'.format(acc_cls[i]))
         
+        logger.info('Class accuracy: {Many:.3f}\t{Medium:.3f}\t{Few:.3f}\t'.format(Many=many_acc,
+                                                                               Medium=medium_acc,
+                                                                               Few=few_acc))
     return confusionMatrix
 
 class AverageMeter(object):

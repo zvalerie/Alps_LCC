@@ -39,7 +39,7 @@ def parse_args():
                         help='batch size',
                         default=16,
                         type=int)
-    parser.add_argument('--backbone',
+    parser.add_argument('--model',
                         help='backbone of encoder',
                         default='resnet50',
                         type=str)
@@ -81,12 +81,12 @@ def main():
     logger.info(pprint.pformat(args))
     logger.info('Test ACE model')
     
-    if args.backbone == 'resnet50':
+    if args.model == 'Unet':
         model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False)
         if args.LWS:
             model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
             
-    if args.backbone == 'Deeplabv3+_res50':
+    if args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
 
     # Define loss function (criterion) and optimizer  

@@ -124,7 +124,7 @@ class ResCELoss(CrossEntropy2D):
 
     def forward(self, output, targets, **kwargs):
         
-        [many_output_ori, few_output_ori]= output
+        [many_output_ori, few_output_ori], MLP_output= output
         few_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         many_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         comLoss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
@@ -226,3 +226,19 @@ class ResCELoss_3exp(CrossEntropy2D):
         elif self.args.loss == 1:
             comLoss = torch.norm(medium_output[:,self.many_index], p=2)/num_medium_pixles * self.args.comFactor
         return comLoss
+    
+
+class FSAuxCELoss(nn.Module):
+    def __init__(self, seg_weight, aux_weight):
+        super(FSAuxCELoss, self).__init__()
+        self.ce_loss = CrossEntropy2D()
+        self.seg_weight = seg_weight
+        self.aux_weight= aux_weight
+
+    def forward(self, inputs, targets, **kwargs):
+        aux_out, seg_out = inputs
+        seg_loss = self.ce_loss(seg_out, targets)
+        aux_loss = self.ce_loss(aux_out, targets)
+        loss = self.seg_weight * seg_loss
+        loss = loss + self.aux_weight * aux_loss
+        return loss

@@ -81,7 +81,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                 for name, param in model.named_parameters():
                     if not ('few' in name):
                         param.requires_grad = False
-                
+                                  
                 (few_loss).backward()
                 for name, param in model.named_parameters():
                     param.requires_grad = True
@@ -134,13 +134,13 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
     model.eval()
     
     metrics = MetricLogger(model.num_classes)
-    metrics_exp1 = MetricLogger(model.num_classes)
-    metrics_exp2 = MetricLogger(model.num_classes)
+    # metrics_exp1 = MetricLogger(model.num_classes)
+    # metrics_exp2 = MetricLogger(model.num_classes)
     device = torch.device("cuda")
         
     from collections import OrderedDict
     new_dict = OrderedDict()
-    if args.backbone == 'Deeplabv3+_res50':
+    if args.model == 'Deeplabv3':
         for k, v in model.named_parameters():
             if k.startswith("classifier.SegHead"):
                 new_dict[k] = v
@@ -164,17 +164,24 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
 
     if args.experts == 2:
         [many_index, few_index] = ls_index   
-        if args.model_name:
+        if args.model_path:
             weight_many = new_dict['SegHead_many.conv2d.weight'].detach().cpu().numpy()
             weight_few = new_dict['SegHead_few.conv2d.weight'].detach().cpu().numpy()
-        else:
+        elif args.model=='Deeplabv3':
             weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
             weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
-        
+        elif args.model=='Unet':
+            weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+            
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_few = LA.norm(weight_few, axis=1)
-    
+        
+        # f_scale = (np.mean(weight_norm_many[few_index,:]) / np.mean(weight_norm_few[few_index,:]))
+        
         f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+        # f_scale = 1
+        # f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few))
     
     with torch.no_grad():
         end = time.time()
@@ -203,24 +210,30 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 [many_loss, few_loss], comloss = criterion(output, mask)
                 loss = many_loss + few_loss
                 
-                [many_output, few_output] = output
+                [many_output, few_output], _ = output
+                
+                # few_output[:,many_index] = 0
+                # if args.average:
+                # final_output = (many_output + few_output * f_scale) / 2
+                # else:
                 few_output[:,many_index] = 0
                 final_output = many_output + few_output * f_scale
                 final_output[:,few_index] /= 2
+
                 
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
             comlosses.update(comloss.item(), num_inputs)
             
             preds = get_final_preds(final_output.detach().cpu().numpy())
-            preds_many = get_final_preds(many_output.detach().cpu().numpy())
-            preds_few = get_final_preds(few_output.detach().cpu().numpy())
+            # preds_many = get_final_preds(many_output.detach().cpu().numpy())
+            # preds_few = get_final_preds(few_output.detach().cpu().numpy())
             
             gt = mask.squeeze().detach().cpu().numpy()
             
             metrics.update(gt, preds)
-            metrics_exp1.update(gt, preds_many)
-            metrics_exp2.update(gt, preds_few)
+            # metrics_exp1.update(gt, preds_many)
+            # metrics_exp2.update(gt, preds_few)
             
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -239,28 +252,28 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         
-        acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
-        acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
-        acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
+        # acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
+        # acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
+        # acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
         
         perf_indicator = mean_iou
         
         metrics.reset()
-        metrics_exp1.reset()
-        metrics_exp2.reset()
+        # metrics_exp1.reset()
+        # metrics_exp2.reset()
         
         if writer_dict:
             writer = writer_dict['logger']
             global_steps = writer_dict['valid_global_steps']
-            writer.add_scalars('accuracy_many', {'expert_1':acc_exp1_many,
-                                                'expert_2':acc_exp2_many,
-                                                'ACE':acc_ACE_many}, global_steps)
-            writer.add_scalars('accuracy_medium', {'expert_1':acc_exp1_medium,
-                                                'expert_2':acc_exp2_medium,
-                                                'ACE':acc_ACE_medium}, global_steps) 
-            writer.add_scalars('accuracy_few', {'expert_1':acc_exp1_few,
-                                                'expert_2':acc_exp2_few,
-                                                'ACE':acc_ACE_few}, global_steps)            
+            # writer.add_scalars('accuracy_many', {'expert_1':acc_exp1_many,
+            #                                     'expert_2':acc_exp2_many,
+            #                                     'ACE':acc_ACE_many}, global_steps)
+            # writer.add_scalars('accuracy_medium', {'expert_1':acc_exp1_medium,
+            #                                     'expert_2':acc_exp2_medium,
+            #                                     'ACE':acc_ACE_medium}, global_steps) 
+            # writer.add_scalars('accuracy_few', {'expert_1':acc_exp1_few,
+            #                                     'expert_2':acc_exp2_few,
+            #                                     'ACE':acc_ACE_few}, global_steps)            
             writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
@@ -286,9 +299,14 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
     
     from collections import OrderedDict
     new_dict = OrderedDict()
-    for k, v in model.named_parameters():
-        if k.startswith("classifier.SegHead"):
-            new_dict[k] = v
+    if args.model == 'Deeplabv3':
+        for k, v in model.named_parameters():
+            if k.startswith("classifier.SegHead"):
+                new_dict[k] = v
+    else: 
+        for k, v in model.named_parameters():
+            if k.startswith("SegHead"):
+                new_dict[k] = v
     
     if args.experts == 3:
         [many_index, medium_index, few_index] = ls_index
@@ -308,9 +326,12 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         if args.LWS:
             weight_many = new_dict['SegHead_many.conv2d.weight'].detach().cpu().numpy()
             weight_few = new_dict['SegHead_few.conv2d.weight'].detach().cpu().numpy()
-        else :
+        elif args.model=='Deeplabv3':
             weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
             weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
+        elif args.model=='Unet':
+            weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
 
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_few = LA.norm(weight_few, axis=1)
@@ -406,6 +427,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
         acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
         acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
+        _, _, exp2_acc_cls, _ = metrics_exp2.get_scores()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
@@ -423,7 +445,10 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
          "Scree", "Scree with grass", "Water area", "Forest", "Glacier"]
         for i in range(len(acc_cls)):
             logger.info(classes[i] + ' : {:.3f}'.format(acc_cls[i]))
-        
+        logger.info('-------------------')
+        logger.info('Accuracy of expert2')
+        for i in range(len(exp2_acc_cls)):
+            logger.info(classes[i] + ' : {:.3f}'.format(exp2_acc_cls[i]))
     return confusionMatrix
 
 class AverageMeter(object):

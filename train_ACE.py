@@ -41,7 +41,7 @@ def parse_args():
                         type=float)
     parser.add_argument('--epoch',
                         help='training epoches',
-                        default=10,
+                        default=50,
                         type=int)  
     parser.add_argument('--wd',
                         help='weight decay',
@@ -63,9 +63,9 @@ def parse_args():
                         help='directory to save outputs',
                         default='out/ACE',
                         type=str)
-    parser.add_argument('--backbone',
-                        help='backbone of encoder',
-                        default='resnet50',
+    parser.add_argument('--model',
+                        help='model with resnet50 backbone',
+                        default='Unet',
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
@@ -81,7 +81,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
-                        default=False,
+                        default=True,
                         type=bool)
     parser.add_argument('--loss',
                         help='complementary loss type',
@@ -92,21 +92,25 @@ def parse_args():
                         default=2,
                         type=int)
     parser.add_argument('--comFactor',
-                        help='factor of comLoss',
+                        help='factor for comLoss',
                         default=10,
-                        type=int)
+                        type=float)
     parser.add_argument('--TRAIN_SEP',
                         help='train experts seperately',
                         default=False,
                         type=bool)
-    parser.add_argument('--model_name',
-                        help='model name for retuning',
+    parser.add_argument('--model_path',
+                        help='model path for retuning',
                         default=None,
                         type=str)
     parser.add_argument('--is_weighted_sampler',
                         help='is_weighted_sampler',
                         default=False,
                         type=bool)
+    parser.add_argument('--optimizer',
+                        help='number of optimizer',
+                        default=1,
+                        type=float)
     args = parser.parse_args()
     
     return args
@@ -117,9 +121,9 @@ def main():
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
 
-    if args.backbone == 'resnet50':
-        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, pretrained = False)
-    elif args.backbone == 'Deeplabv3+_res50':
+    if args.model == 'Unet':
+        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, pretrained = True, args=args)
+    elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
         
     writer_dict = {
@@ -139,8 +143,14 @@ def main():
         ls_index = [many_index, few_index]
         criterion = ResCELoss(many_index, few_index, args=args).to(device)
         lr_ratio = [0.03] ## ratio of rare categories to frequent categories
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)
-        # optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
+        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)
+        if args.optimizer == 1:
+            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        elif args.optimizer == 1.5:
+            optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
+        elif args.optimizer == 2:
+            many_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+            few_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     
     if args.experts == 3: 
         many_index = [1, 5, 8, 9]
@@ -151,6 +161,7 @@ def main():
         lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
         optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
         # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        
     scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
     
     # Create training and validation datasets

@@ -58,7 +58,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--tune',
                         help='is tunning?',
-                        default=False,
+                        default=True,
                         type=bool)
     args = parser.parse_args()
     
@@ -119,7 +119,7 @@ def main():
                          args.out_dir, writer_dict, args)
 
     
-    np.save('cm_' + time_str, confusionMatrix)
+    np.save('/data/xiaolong/master_thesis/confusion_matrix/' + time_str, confusionMatrix)
     writer_dict['logger'].close()
 
 if __name__ == '__main__':

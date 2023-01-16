@@ -62,15 +62,23 @@ def create_logger(out_dir, phase='train', create_tf_logs=True):
 
     return logger, writer, time_str
 
-def get_optimizer(model, type, num_experts, base_lr, lr_ratio):
+def get_optimizer(model, type, num_experts, base_lr, lr_ratio, args):
     if num_experts == 2:
-        few_params = list(map(id, model.classifier.SegHead_few.parameters())) 
-        many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
-        params = [
-                {"params": many_paramas, "lr": base_lr},
-                {"params": model.classifier.SegHead_few.parameters(), "lr": base_lr * lr_ratio[0]},
-        ]
-    
+        if args.model=='Deeplabv3':
+            few_params = list(map(id, model.classifier.SegHead_few.parameters())) 
+            many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
+            params = [
+                    {"params": many_paramas, "lr": base_lr},
+                    {"params": model.classifier.SegHead_few.parameters(), "lr": base_lr * lr_ratio[0]},
+            ]
+        elif args.model=='Unet':
+            few_params = list(map(id, model.SegHead_few.parameters())) 
+            many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
+            params = [
+                    {"params": many_paramas, "lr": base_lr},
+                    {"params": model.SegHead_few.parameters(), "lr": base_lr * lr_ratio[0]},
+            ]
+            
     if num_experts == 3:
         few_params = list(map(id, model.SegHead_few.parameters())) 
         medium_params = list(map(id, model.SegHead_medium.parameters())) 
@@ -242,6 +250,33 @@ class IntermediateLayerGetter(nn.ModuleDict):
                 else:
                     out[out_name] = x
         return out
+
+
+def get_Proto_optimizer(net_params, lr=0.01, momentum=0.9, weight_decay=0.0005, nesterov=False):
+    optimizer = torch.optim.SGD(net_params,
+                            lr=lr,
+                            momentum=momentum,
+                            weight_decay=weight_decay,
+                            nesterov=nesterov)
+    
+def _get_parameters(model, base_lr):
+    bb_lr = []
+    nbb_lr = []
+    fcn_lr = []
+    params_dict = dict(model.named_parameters())
+    for key, value in params_dict.items():
+        if 'backbone' in key:
+            bb_lr.append(value)
+        elif 'aux_layer' in key or 'upsample_proj' in key:
+            fcn_lr.append(value)
+        else:
+            nbb_lr.append(value)
+
+    params = [{'params': bb_lr, 'lr': base_lr},
+                {'params': fcn_lr, 'lr': base_lr * 10},
+                {'params': nbb_lr, 'lr': base_lr * self.configer.get('lr', 'nbb_mult')}]
+    return params
+
 
 # if __name__ == '__main__':
 #     label_path = '/data/xiaolong/mask'
