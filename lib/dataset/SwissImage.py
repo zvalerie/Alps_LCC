@@ -9,6 +9,7 @@ from torch.utils.data import Dataset
 from PIL import Image
 from torchvision import transforms
 from collections import Counter
+from lib.utils.transforms import MinMaxScaler
 
 class SwissImage(Dataset):
     '''Transformer needed to be added'''
@@ -21,8 +22,12 @@ class SwissImage(Dataset):
             self.img_dem_label = self.img_dem_label.iloc[:1000]
         self.common_transform = common_transform
         self.img_transform = img_transform
-        self.mean = np.array([0.5580, 0.5766, 0.5538], dtype=np.float32)
-        self.std = np.array([0.1309, 0.1253, 0.1002], dtype=np.float32)
+        self.dem_max, self.dem_min = 4603, 948
+        self.dem_mean, self.dem_std = 0.4806, 0.2652
+        self.mean = np.array([0.5585, 0.5771, 0.5543], dtype=np.float32)
+        self.std = np.array([0.2535, 0.2388, 0.2318], dtype=np.float32)
+        # self.mean = np.array([0.5580, 0.5766, 0.5538], dtype=np.float32)
+        # self.std = np.array([0.1309, 0.1253, 0.1002], dtype=np.float32)
         
     def __len__(self):
         return len(self.img_dem_label)
@@ -45,13 +50,18 @@ class SwissImage(Dataset):
             
         basic_transform = transforms.Compose([
             transforms.ToTensor(),
-            transforms.Normalize(self.mean, self.std)
+            # transforms.Normalize(self.mean, self.std)
         ])
         
+        dem_transform = transforms.Compose([
+            transforms.ToTensor(),
+            MinMaxScaler(self.dem_max, self.dem_min),
+            # transforms.Normalize(self.dem_mean, self.dem_std)
+        ])
+                                         
         image = basic_transform(image)
-        dem = transforms.ToTensor()(dem)
+        dem = dem_transform(dem)
         mask = transforms.ToTensor()(mask)
-        
         return image, dem, mask
 
     def _getImbalancedCount(self):

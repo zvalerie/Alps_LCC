@@ -10,11 +10,13 @@ from lib.core.inference import get_final_preds
 from lib.utils.vis import vis_seg_mask
 from lib.utils.evaluation import MetricLogger
 # from lib.utils.evaluation import createConfusionMatrix
+from tqdm import tqdm
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
 def train(train_loader, train_dataset, model, criterion, optimizer, epoch, output_dir,
-          writer_dict, args):
+          writer_dict, lr_scheduler, args):
     '''Train one epoch
     
     Args:
@@ -45,15 +47,26 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         image = image.to(device)
         dem = dem.to(device)
         input = torch.cat((image, dem), dim=1) #[B, 4, 400, 400]
-        output = model(input) #[B,16,400,400]
+        mask = mask.to(device)#[B,10,200,200]
+        
+        if args.model=='Deeplabv3_proto':
+            output = model(input, mask) #[B,10,200,200]
+        else :
+            output = model(input)
+            
+        if isinstance(output, dict):
+            output = output['seg']
         
         if args.MLP == True:
-            [many_output_ori, few_output_ori], MLP_output= output
-            mask = mask.to(device)#[B,16,200,200]
-            loss = criterion(MLP_output, mask)
+            # [y_many, y_few], MLP_output = output
+            # few_mask = (mask >= 2) & (mask <= 4) | (mask == 6) | (mask == 7)
+            # loss = criterion(MLP_output, few_mask.float())
+            
+            [y_many, y_few], MLP_output = output
+            output = MLP_output
+            loss = criterion(output, mask)
         else:
         # compute loss
-            mask = mask.to(device)#[B,16,200,200]
             loss = criterion(output, mask)
         
         # compute gradient and update
@@ -67,6 +80,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         batch_time.update(time.time() - end)
         end = time.time()
         
+        # lr_scheduler.step()
         if i % args.frequent == 0:
             msg = 'Epoch: [{0}][{1}/{2}]\t' \
                   'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
@@ -77,7 +91,6 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                       speed=input.size(0)/batch_time.val,
                       data_time=data_time, loss=losses)
             logger.info(msg)
-    
     lr = optimizer.param_groups[0]['lr']
     if writer_dict:
         writer = writer_dict['logger']
@@ -98,7 +111,6 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
     '''
     batch_time = AverageMeter()
     losses = AverageMeter()
-    
     # switch to evaluate mode
     model.eval()
     metrics = MetricLogger(model.num_classes)
@@ -116,7 +128,10 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
             num_inputs = input.size(0)
             
             if args.MLP == True:
-                _, MLP_output= output
+                [y_many, y_few], MLP_output = output
+                # m = nn.Softmax(dim=1)
+                # MLP_output = m(MLP_output)
+                # output = (MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_few) / 2
                 output = MLP_output
                 
             mask = mask.to(device) #[B, 10, 200, 200]
@@ -182,6 +197,17 @@ def test(test_loader, test_dataset, model, output_dir,
             output = model(input)
             
             num_inputs = input.size(0)
+            if args.MLP == True:
+                # direct output
+                _, MLP_output= output
+                output = MLP_output
+                
+                ## selection probability
+                # [y_many, y_few], MLP_output= output
+                # m = nn.Softmax(dim=1)
+                # MLP_output = m(MLP_output)
+                # output = (MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_few) / 2
+                
             mask = mask.to(device)
             
             # measure accuracy
@@ -189,7 +215,7 @@ def test(test_loader, test_dataset, model, output_dir,
             # gt = torch.squeeze(mask).detach().cpu().numpy()
             gt = mask.squeeze(0).detach().cpu().numpy()
             metrics.update(gt, preds)
-            
+
             # measure elapsed time
             batch_time.update(time.time() - end)
             end = time.time()
@@ -230,6 +256,8 @@ def test(test_loader, test_dataset, model, output_dir,
         many_acc, medium_acc, few_acc = metrics.get_acc_cat()
         confusionMatrix = metrics.get_confusion_matrix()
         
+        metrics.reset()
+        
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
         logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
@@ -238,10 +266,71 @@ def test(test_loader, test_dataset, model, output_dir,
         for i in range(len(acc_cls)):
             logger.info(classes[i] + 'accuracy: {:.3f}'.format(acc_cls[i]))
         
-        logger.info('Class accuracy: {Many:.3f}\t{Medium:.3f}\t{Few:.3f}\t'.format(Many=many_acc,
-                                                                               Medium=medium_acc,
-                                                                               Few=few_acc))
+        logger.info('Many accuracy: {:.3f}'.format(many_acc))
+        logger.info('Medium accuracy: {:.3f}'.format(medium_acc))
+        logger.info('Few accuracy: {:.3f}'.format(few_acc))
+        
     return confusionMatrix
+
+def ratio_acc_test(test_loader, test_dataset, model, output_dir,
+             writer_dict, args): 
+    '''Test the model
+    Returns:
+        perf_indicator (float): performance indicator. In the case of image segmentation, we return
+                                mean IoU over all validation images.
+    '''
+    batch_time = AverageMeter()
+    
+    # switch to evaluate mode
+    model.eval()
+    metrics = MetricLogger(model.num_classes)
+    device = torch.device("cuda")
+    
+    with torch.no_grad():
+        class_id = []
+        ratio = []
+        accuracy = []
+        for i, (image, dem, mask) in tqdm(enumerate(test_loader)):
+            
+            # compute output
+            image = image.to(device)
+            dem = dem.to(device)
+            input = torch.cat((image, dem), dim=1) #[B, 4, 200, 200]
+            output = model(input)
+            
+            if args.MLP == True:
+                # direct output
+                _, MLP_output= output
+                output = MLP_output
+                
+                ## selection probability
+                # [y_many, y_few], MLP_output= output
+                # m = nn.Softmax(dim=1)
+                # MLP_output = m(MLP_output)
+                # output = (MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_few) / 2
+                
+            mask = mask.to(device)
+            
+            # measure accuracy
+            preds = get_final_preds(output.detach().cpu().numpy())
+            # gt = torch.squeeze(mask).detach().cpu().numpy()
+            gt = mask.squeeze(0).detach().cpu().numpy()
+            metrics.update(gt, preds)
+            classes, counts = np.unique(gt, return_counts=True)
+            counts = counts / counts.sum()
+            classes = classes.astype(int)
+            acc = metrics.get_class_acc(classes)
+            
+            class_id.extend(classes)
+            ratio.extend(counts)
+            accuracy.extend(acc)
+
+            metrics.reset()
+        dict = {'class': class_id, 'ratio':ratio, 'accuracy':accuracy}
+        df = pd.DataFrame(dict)
+        df.to_csv('/data/xiaolong/master_thesis/ratio_acc.csv',index=False)
+        
+    return 
 
 class AverageMeter(object):
     """Computes and stores the average and current value."""

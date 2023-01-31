@@ -32,6 +32,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     data_time = AverageMeter()
     losses = AverageMeter()
     comlosses = AverageMeter()
+    fewlosses = AverageMeter()
     batch_time = AverageMeter()
     
     # switch to train mode
@@ -73,24 +74,31 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         if args.experts == 2:
             [many_loss, few_loss], comloss = criterion(output, mask)
             loss = many_loss + few_loss 
-            # compute gradient and update
-            optimizer.zero_grad()
-            # if train seperately:
+            # # compute gradient and update
+            # optimizer.zero_grad()
+            # # if train seperately:
             if args.TRAIN_SEP:
-                many_loss.backward(retain_graph=True)
-                for name, param in model.named_parameters():
-                    if not ('few' in name):
-                        param.requires_grad = False
+                optimizer[0].zero_grad()
+                optimizer[1].zero_grad()
+                many_loss.backward()
+                optimizer[0].step()
+                few_loss.backward()
+                optimizer[1].step()
+            #     many_loss.backward(retain_graph=True)
+            #     for name, param in model.named_parameters():
+            #         if not ('few' in name):
+            #             param.requires_grad = False
                                   
-                (few_loss).backward()
-                for name, param in model.named_parameters():
-                    param.requires_grad = True
-            else:
-                loss.backward()
-            optimizer.step()
+            #     (few_loss).backward()
+            #     for name, param in model.named_parameters():
+            #         param.requires_grad = True
+            # else:
+            #     loss.backward()
+            # optimizer.step()
         
         # record loss
         losses.update(loss.item(), input.size(0))
+        fewlosses.update(few_loss.item(), input.size(0))
         comlosses.update(comloss.item(), input.size(0))
         
         batch_time.update(time.time() - end)
@@ -108,13 +116,15 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                       data_time=data_time, loss=losses, comloss=comlosses)
             logger.info(msg)
     
-    lr = optimizer.param_groups[0]['lr']
+    # lr = optimizer.param_groups[0]['lr']
+    lr = optimizer[0].param_groups[0]['lr']
     if writer_dict:
         writer = writer_dict['logger']
         global_steps = writer_dict['train_global_steps']
 
         writer.add_scalar('train_loss', losses.avg, global_steps)
         writer.add_scalar('com_loss', comlosses.avg, global_steps)
+        writer.add_scalar('few_loss', fewlosses.avg, global_steps)
         writer.add_scalar('learning_rate', lr, global_steps)
         writer_dict['train_global_steps'] = global_steps + 1
         
@@ -129,6 +139,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
     batch_time = AverageMeter()
     losses = AverageMeter()
     comlosses = AverageMeter()
+    fewlosses = AverageMeter()
     
     # switch to evaluate mode
     model.eval()
@@ -199,7 +210,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
                 loss = many_loss + medium_loss + few_loss
                 
-                [many_output, medium_output, few_output] = output
+                [many_output, medium_output, few_output],_ = output
                 medium_output[:,many_index] = 0
                 few_output[:,many_index + medium_index] = 0
                 final_output = many_output + medium_output * m_scale + few_output * f_scale
@@ -223,6 +234,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
+            fewlosses.update(few_loss.item(), num_inputs)
             comlosses.update(comloss.item(), num_inputs)
             
             preds = get_final_preds(final_output.detach().cpu().numpy())
@@ -273,7 +285,8 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
             #                                     'ACE':acc_ACE_medium}, global_steps) 
             # writer.add_scalars('accuracy_few', {'expert_1':acc_exp1_few,
             #                                     'expert_2':acc_exp2_few,
-            #                                     'ACE':acc_ACE_few}, global_steps)            
+            #                                     'ACE':acc_ACE_few}, global_steps)   
+            writer.add_scalar('val_few_loss', fewlosses.avg, global_steps)         
             writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
@@ -303,7 +316,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         for k, v in model.named_parameters():
             if k.startswith("classifier.SegHead"):
                 new_dict[k] = v
-    else: 
+    elif args.model =='Unet': 
         for k, v in model.named_parameters():
             if k.startswith("SegHead"):
                 new_dict[k] = v
@@ -337,6 +350,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         weight_norm_few = LA.norm(weight_few, axis=1)
     
         f_scale = (np.mean(weight_norm_many) / np.mean(weight_norm_few[few_index,:]))
+        # f_scale = 1
     
     with torch.no_grad():
         end = time.time()
@@ -349,22 +363,27 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             output = model(input)
             
             if args.experts == 3:
-                [many_output, medium_output, few_output] = output
-                medium_output[:,many_index] = 0
-                few_output[:,many_index + medium_index] = 0
-                final_output = many_output + medium_output * m_scale + few_output * f_scale
+                [many_output, medium_output, few_output], _ = output
+                new_few_output = few_output.clone()
+                new_medium_output = medium_output.clone()
+                
+                new_medium_output[:,many_index] = 0
+                new_few_output[:,many_index + medium_index] = 0
+                final_output = many_output + new_medium_output * m_scale + new_few_output * f_scale
                 final_output[:,medium_index] /= 2
                 final_output[:,few_index] /= 3
                 
             if args.experts == 2:
-                [many_output, few_output] = output
+                [many_output, few_output], _ = output
                 new_few_output = few_output.clone()
+                new_many_output = many_output.clone()
                 new_few_output[:,many_index] = 0
+                new_many_output[:,few_index] = 0
                 # many_output[:, few_index] = 0
                 # few_output *= f_scale
                 final_output = many_output + new_few_output * f_scale
-                final_output[:,few_index] /= 2
-                # final_output = torch.maximum(many_output, few_output)
+                # final_output[:,few_index] /= 2
+                # final_output = torch.maximum(many_output, new_few_output)
             
             num_inputs = input.size(0)
             mask = mask.to(device)

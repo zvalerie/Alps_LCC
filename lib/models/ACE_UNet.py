@@ -234,7 +234,8 @@ class ACE_Res50_UNet(nn.Module):
             self.SegHead_many = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_medium = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
-        self.MLP = MLP(num_inputs=2, hidden_layers=8)
+        if self.train_MLP:
+            self.MLP = MLP(num_inputs=20, hidden_layers=64)
         
     def forward(self, x):
         [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
@@ -245,20 +246,27 @@ class ACE_Res50_UNet(nn.Module):
         up1 = self.up1(feat1, up2) 
         y = self.up_conv(up1)
         if self.num_experts == 2:
-            y_few = self.SegHead_few(y)
             y_many = self.SegHead_many(y)
+            y_few = self.SegHead_few(y.detach()) 
             MLP_output = None
             if self.train_MLP==True:
-                y_stack = torch.stack((y_many, y_few), -1)
-                MLP_output = self.MLP(y_stack)
-                MLP_output = torch.squeeze(MLP_output, -1)
+                # y_stack = torch.stack((y_many, y_few), -1)
+                # MLP_output = self.MLP(y_stack)
+                # MLP_output = torch.squeeze(MLP_output, -1)
+                y_stack = torch.cat((y_many, y_few), 1)
+                y_stack = y_stack.permute(0, 2, 3, 1) #[B,H,W,20]
+                exp_prob = self.MLP(y_stack) #[B,H,W,2]
+                exp_prob = exp_prob.permute(0, 3, 1, 2) #[B,2,H,W]
+                MLP_output = exp_prob
+                # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
+                
             return [y_many, y_few], MLP_output
         
         elif self.num_experts == 3:
             y_few = self.SegHead_few(y)
             y_medium = self.SegHead_medium(y)
             y_many = self.SegHead_many(y)
-            return [y_many, y_medium, y_few]
+            return [y_many, y_medium, y_few], None
         
 # class SegmentationHead(nn.Sequential):
 #     '''set up a segmentation head'''
@@ -286,14 +294,28 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.mlp = nn.Sequential(nn.Linear(num_inputs, hidden_layers),
                                  nn.ReLU(),
-                                 nn.Linear(hidden_layers, 1))
-
+                                 nn.Linear(hidden_layers, 10),
+                                )
+        self.softmax = nn.Softmax(dim=-1)
     def forward(self, x):
         x = self.mlp(x)
+        # x = self.softmax(x)
         return x
 
+# class MLP(nn.Module):
+#     def __init__(self, in_channels, out_channels,):
+#         super(MLP, self).__init__()
+#         self.conv = nn.Conv2d(in_channels, out_channels, 1, 1, 0)
+#         self.relu = nn.ReLU()
+#         self.classifer = nn.Linear(out_channels, 2)
+#         self.softmax = nn.Softmax(dim=-1)
+#     def forward(self, x):
+#         x = self.mlp(x)
+#         # x = self.softmax(x)
+#         return x
+
 if __name__ == '__main__':
-    model = ACE_Res50_UNet(10, 2, False, True)
+    model = ACE_Res50_UNet(10, 2, False, False)
     for k, v in model.named_parameters():
         # if k.startswith("SegHead"):
             print(k)

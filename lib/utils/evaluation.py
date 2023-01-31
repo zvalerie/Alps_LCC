@@ -82,7 +82,14 @@ class MetricLogger(object):
             medium_acc = np.diag(hist)[self.medium_idx].sum() / hist.sum(axis=1)[self.medium_idx].sum()
             few_acc = np.diag(hist)[self.few_idx].sum() / hist.sum(axis=1)[self.few_idx].sum()
             return many_acc, medium_acc, few_acc
-        
+    
+    def get_class_acc(self, idx_array):
+        hist = self.confusion_matrix
+        acc = []
+        for i in range(len(idx_array)):
+            acc.append(np.diag(hist)[idx_array[i]].sum() / hist.sum(axis=1)[idx_array[i]])
+
+        return acc
     def reset(self):
         self.confusion_matrix = np.zeros((self.n_classes, self.n_classes))
         

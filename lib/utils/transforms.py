@@ -46,6 +46,7 @@ class MyRandomHorizontalFlip(object):
         return image, dem, mask
     
 class MyRandomVerticalFlip(object):
+    """Randomly vertically flips the given PIL.Image with a probability of 0.5."""
     def __init__(self, p = 0.5):
         self.p = p
  
@@ -56,3 +57,14 @@ class MyRandomVerticalFlip(object):
             mask = F.vflip(mask)
         return image, dem, mask
     
+class MinMaxScaler(object):
+    '''
+        Transform the input data to be in the range of [0, 1]
+    '''
+    def __init__(self, max, min):
+        self.max = max
+        self.min = min
+
+    def __call__(self, dem):        
+        normalized_dem = (dem - self.min) / (self.max - self.min)  
+        return normalized_dem
