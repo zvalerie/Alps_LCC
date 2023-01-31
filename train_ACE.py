@@ -49,7 +49,7 @@ def parse_args():
                         type=float)      
     parser.add_argument('--bs',
                         help='batch size',
-                        default=32,
+                        default=16,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
@@ -122,7 +122,7 @@ def main():
     logger.info(pprint.pformat(args))
 
     if args.model == 'Unet':
-        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, pretrained = True, args=args)
+        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP = False, pretrained = True)
     elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
         
@@ -140,6 +140,8 @@ def main():
     if args.experts == 2: 
         many_index = [1, 5, 8, 9]
         few_index = [2, 3, 4, 6, 7]
+        # many_index = [1, 5, 7, 8, 9]
+        # few_index = [2, 3, 4, 6]
         ls_index = [many_index, few_index]
         criterion = ResCELoss(many_index, few_index, args=args).to(device)
         lr_ratio = [0.03] ## ratio of rare categories to frequent categories
@@ -149,20 +151,27 @@ def main():
         elif args.optimizer == 1.5:
             optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
         elif args.optimizer == 2:
-            many_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-            few_optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    
+            few_params = list(map(id, model.SegHead_few.parameters())) 
+            many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
+            many_optimizer = optim.Adam(many_paramas, lr=args.lr, weight_decay=args.wd)
+            few_optimizer = optim.Adam(model.SegHead_few.parameters(), lr=args.lr, weight_decay=args.wd)
+            optimizer = [many_optimizer, few_optimizer]
+            
     if args.experts == 3: 
-        many_index = [1, 5, 8, 9]
-        medium_index = [6, 7]
-        few_index = [2, 3, 4]
+        many_index = [1, 5, 7, 8, 9]
+        medium_index = [2, 6]
+        few_index = [3, 4]
         ls_index = [many_index, medium_index, few_index]
         criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
         lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
-        optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
-        # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-        
-    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
+        if args.optimizer == 1:
+            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        elif args.optimizer == 1.5:
+            optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
+    
+    # scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)    
+    scheduler_1 = StepLR(optimizer[0], step_size=args.step_size, gamma=args.lr_decay_rate)
+    scheduler_2 = StepLR(optimizer[1], step_size=args.step_size, gamma=args.lr_decay_rate)
     
     # Create training and validation datasets
     if args.tune:
@@ -245,8 +254,11 @@ def main():
         else:
             perf_indicator = -1
             best_model = False
-
-        scheduler.step()
+        
+        # scheduler.step()
+        
+        scheduler_1.step()
+        scheduler_2.step()
         
         # update best model so far
         folder_path = os.path.join(args.out_dir, folder_name)
@@ -256,7 +268,9 @@ def main():
             'state_dict': model.state_dict(),
             'perf': perf_indicator,
             'last_epoch': epoch,
-            'optimizer': optimizer.state_dict(),
+            # 'optimizer': optimizer.state_dict(),
+            'many_optimizer': optimizer[0].state_dict(),
+            'few_optimizer': optimizer[1].state_dict(),
         }, best_model, folder_path)
 
     final_model_state_file = os.path.join(folder_path,

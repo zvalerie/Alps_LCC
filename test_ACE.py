@@ -41,7 +41,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--model',
                         help='backbone of encoder',
-                        default='resnet50',
+                        default='Unet',
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
@@ -82,7 +82,7 @@ def main():
     logger.info('Test ACE model')
     
     if args.model == 'Unet':
-        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False)
+        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP=False, pretrained = True)
         if args.LWS:
             model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
             
@@ -96,12 +96,17 @@ def main():
     if args.experts==2:
         many_index = [0, 1, 5, 8, 9]
         few_index = [2, 3, 4, 6, 7]
+        # many_index = [0, 1, 5, 7, 8, 9]
+        # few_index = [2, 3, 4, 6]
         ls_index = [many_index, few_index]
         
     if args.experts==3:
         many_index = [0, 1, 5, 8, 9]
         medium_index = [6, 7]
         few_index = [2, 3, 4]
+        # many_index = [1, 5, 7, 8, 9]
+        # medium_index = [2, 6]
+        # few_index = [3, 4]
         ls_index = [many_index, medium_index, few_index]
         
     if tb_logger:
@@ -118,7 +123,7 @@ def main():
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
     bestmodel = torch.load(model_state_file)
-    model.load_state_dict(bestmodel)
+    model.load_state_dict(bestmodel, strict=False)
 
     if args.tune:
         test_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv'

@@ -146,8 +146,10 @@ def main():
     if args.MLP==True:
         model.load_state_dict(pretrained_dict, strict=False)
         for k, v in model.named_parameters():
-                if not k.startswith("MLP"):
-                    v.requires_grad=False
+            if not k.startswith("MLP"):
+                v.requires_grad=False
+            # if not k.startswith("MLP"):
+            #     print(v)   
         
         # for name, param in model.named_parameters():
         #     if param.requires_grad:
@@ -165,7 +167,9 @@ def main():
     model = model.to(device)
     
     if args.MLP == True:
-        criterion = CrossEntropy2D().to(device)
+        # criterion_exp = CrossEntropy2D(ignore_index=-1).to(device)
+        criterion = CrossEntropy2D(ignore_index=0).to(device)
+        # criterion = SeesawLoss().to(device)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)    
     elif args.experts == 2: 
         many_index = [1, 5, 8, 9]

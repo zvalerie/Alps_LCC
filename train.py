@@ -8,18 +8,18 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
-from torch.optim.lr_scheduler import StepLR
-# from torch.optim.lr_scheduler import MultiStepLR
+from torch.optim.lr_scheduler import StepLR, LambdaLR
 
 from lib.core.function import train
 from lib.core.function import validate
 # from lib.core.loss import FocalLoss
-from lib.core.loss import CrossEntropy2D
+from lib.core.loss import CrossEntropy2D, SeesawLoss, PixelPrototypeCELoss
 from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
 from lib.models.Unet import Res50_UNet
 from lib.models.DeepLabv3Plus import deeplabv3P_resnet
+from lib.models.DeepLabv3Proto import deeplabv3P_resnet_proto
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -55,6 +55,10 @@ def parse_args():
                         help='scheduler_decay_rate',
                         default=0.1,
                         type=float)
+    parser.add_argument('--loss',
+                        help='which loss',
+                        default='celoss',
+                        type=str)
     # parser.add_argument('--patience',
     #                     help='scheduler_patience',
     #                     default=10,
@@ -100,6 +104,10 @@ def parse_args():
                         help='is_weighted_sampler',
                         default=False,
                         type=bool)
+    parser.add_argument('--MLP',
+                        help='Train MLP layer to combine the results of experts',
+                        default=False,
+                        type=bool)
     args = parser.parse_args()
     
     return args
@@ -114,7 +122,8 @@ def main():
         model = Res50_UNet(num_classes=10)
     elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
-    
+    elif args.model == 'Deeplabv3_proto':
+        model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
     writer_dict = {
             'logger': tb_logger,
             'train_global_steps': 0,
@@ -125,15 +134,36 @@ def main():
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")
     model = model.to(device)
-    criterion = CrossEntropy2D(ignore_index=0).to(device)
-    
+
+    if args.loss == 'celoss':
+        criterion = CrossEntropy2D(ignore_index=0).to(device)
+    elif args.loss == 'seesawloss':
+        criterion = SeesawLoss(ignore_index=0).to(device)
+    elif args.model =='Deeplabv3_proto':
+        criterion = PixelPrototypeCELoss().to(device)
+        
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     lr_scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
+    
+    if args.model=='Deeplabv3_proto':
+        optimizer = optim.SGD(model.parameters(),
+                            lr=0.01,
+                            momentum=0.9,
+                            weight_decay=0.0005,
+                            nesterov=False)
+        # lambda_poly = lambda iters: pow((1.0 - iters / 86100),
+        #                                         0.9)
+        lambda_poly = lambda iters: pow(1 / (iters + 1), 0.9)
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda_poly)
+
+    
     # lr_scheduler = MultiStepLR(optimizer, milestones=args.milestones, gamma=args.lr_decay_rate)
     # Create training and validation datasets
     if args.tune:
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset_few.csv'
         val_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
+        # train_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_train_dataset.csv'
+        # val_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_val_dataset.csv'
     else : 
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/train_dataset.csv'
         val_csv = '/data/xiaolong/master_thesis/data_preprocessing/val_dataset.csv'
@@ -195,7 +225,7 @@ def main():
     for epoch in range(start_epoch, args.epoch):
         # train for one epoch
         train(train_loader,train_dataset, model, criterion, optimizer, epoch,
-              args.out_dir, writer_dict, args)
+              args.out_dir, writer_dict, lr_scheduler, args)
 
         if (epoch + 1) % 1 == 0:
             # evaluate on validation set
