@@ -113,7 +113,7 @@ class DeepLabV3(nn.Module):
             return {'seg': out_seg, 'logits': contrast_logits, 'target': contrast_target}
         
         # x = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-        out_seg = F.interpolate(out_seg, size=input_shape, mode='nearest')
+        out_seg = F.interpolate(out_seg, size=input_shape, mode='bicubic')
         return out_seg
 
 class DeepLabHeadV3Plus(nn.Module):

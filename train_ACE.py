@@ -19,7 +19,7 @@ from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
 from lib.models.ACE_UNet import ACE_Res50_UNet
-from lib.models.ACE_DeepLabv3P import deeplabv3P_resnet
+from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -111,6 +111,10 @@ def parse_args():
                         help='number of optimizer',
                         default=1,
                         type=float)
+    parser.add_argument('--fewloss_factor',
+                        help='factor to adjust the weight of few loss',
+                        default=1,
+                        type=float)
     args = parser.parse_args()
     
     return args
@@ -124,7 +128,7 @@ def main():
     if args.model == 'Unet':
         model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP = False, pretrained = True)
     elif args.model == 'Deeplabv3':
-        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
         
     writer_dict = {
             'logger': tb_logger,
@@ -169,9 +173,9 @@ def main():
         elif args.optimizer == 1.5:
             optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
     
-    # scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)    
-    scheduler_1 = StepLR(optimizer[0], step_size=args.step_size, gamma=args.lr_decay_rate)
-    scheduler_2 = StepLR(optimizer[1], step_size=args.step_size, gamma=args.lr_decay_rate)
+    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)    
+    # scheduler_1 = StepLR(optimizer[0], step_size=args.step_size, gamma=args.lr_decay_rate)
+    # scheduler_2 = StepLR(optimizer[1], step_size=args.step_size, gamma=args.lr_decay_rate)
     
     # Create training and validation datasets
     if args.tune:
@@ -255,10 +259,10 @@ def main():
             perf_indicator = -1
             best_model = False
         
-        # scheduler.step()
+        scheduler.step()
         
-        scheduler_1.step()
-        scheduler_2.step()
+        # scheduler_1.step()
+        # scheduler_2.step()
         
         # update best model so far
         folder_path = os.path.join(args.out_dir, folder_name)
@@ -268,9 +272,9 @@ def main():
             'state_dict': model.state_dict(),
             'perf': perf_indicator,
             'last_epoch': epoch,
-            # 'optimizer': optimizer.state_dict(),
-            'many_optimizer': optimizer[0].state_dict(),
-            'few_optimizer': optimizer[1].state_dict(),
+            'optimizer': optimizer.state_dict(),
+            # 'many_optimizer': optimizer[0].state_dict(),
+            # 'few_optimizer': optimizer[1].state_dict(),
         }, best_model, folder_path)
 
     final_model_state_file = os.path.join(folder_path,

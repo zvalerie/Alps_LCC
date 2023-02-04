@@ -115,6 +115,21 @@ def get_scheduler(optimizer, type, args):
             args.step_size,
             gamma=args.lr_decay_rate,
         )
+    elif type == "cosine":
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer,
+            args.step_size,
+            eta_min=0.0,
+        )
+    elif type == "poly":
+        scheduler = torch.optim.lr_scheduler.PolyLR(
+            optimizer,
+            args.step_size,
+            gamma=args.lr_decay_rate,
+        )
+    else:
+        raise NotImplementedError("Unsupported LR Scheduler: {}".format(type))
+    
     # elif type == "warmup":
     #     scheduler = WarmupMultiStepLR(
     #         optimizer,
@@ -122,8 +137,8 @@ def get_scheduler(optimizer, type, args):
     #         gamma=args.lr_decay_rate,
     #         warmup_epochs=args.warm_epoch,
     #     )
-    else:
-        raise NotImplementedError("Unsupported LR Scheduler: {}".format(type))
+    # else:
+    #     raise NotImplementedError("Unsupported LR Scheduler: {}".format(type))
 
     return scheduler
 
@@ -170,12 +185,20 @@ def get_lr_ratio(label_path, csv_path, expert_idx):
 
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier, num_classes):
+        """Constructor of the class
+        
+        Args:
+            backbone (nn.Module): the network used to compute the features for the model.
+            classifier (nn.Module): the module that takes the features of the model and outputs predictions.
+            num_classes (int): the number of classes to predict (output channels of the model)
+        """
         super(_SimpleSegmentationModel, self).__init__()
         self.backbone = backbone
         self.classifier = classifier
         self.num_classes = num_classes
         
     def forward(self, x):
+        """Forward pass of the model."""
         input_shape = x.shape[-2:]
         features = self.backbone(x)
         x = self.classifier(features)
@@ -259,23 +282,23 @@ def get_Proto_optimizer(net_params, lr=0.01, momentum=0.9, weight_decay=0.0005, 
                             weight_decay=weight_decay,
                             nesterov=nesterov)
     
-def _get_parameters(model, base_lr):
-    bb_lr = []
-    nbb_lr = []
-    fcn_lr = []
-    params_dict = dict(model.named_parameters())
-    for key, value in params_dict.items():
-        if 'backbone' in key:
-            bb_lr.append(value)
-        elif 'aux_layer' in key or 'upsample_proj' in key:
-            fcn_lr.append(value)
-        else:
-            nbb_lr.append(value)
+# def _get_parameters(model, base_lr):
+#     bb_lr = []
+#     nbb_lr = []
+#     fcn_lr = []
+#     params_dict = dict(model.named_parameters())
+#     for key, value in params_dict.items():
+#         if 'backbone' in key:
+#             bb_lr.append(value)
+#         elif 'aux_layer' in key or 'upsample_proj' in key:
+#             fcn_lr.append(value)
+#         else:
+#             nbb_lr.append(value)
 
-    params = [{'params': bb_lr, 'lr': base_lr},
-                {'params': fcn_lr, 'lr': base_lr * 10},
-                {'params': nbb_lr, 'lr': base_lr * self.configer.get('lr', 'nbb_mult')}]
-    return params
+#     params = [{'params': bb_lr, 'lr': base_lr},
+#                 {'params': fcn_lr, 'lr': base_lr * 10},
+#                 {'params': nbb_lr, 'lr': base_lr * self.configer.get('lr', 'nbb_mult')}]
+#     return params
 
 
 # if __name__ == '__main__':

@@ -235,7 +235,7 @@ class ACE_Res50_UNet(nn.Module):
             self.SegHead_medium = nn.Conv2d(out_channels[0], self.num_classes, 1)
             self.SegHead_few = nn.Conv2d(out_channels[0], self.num_classes, 1)
         if self.train_MLP:
-            self.MLP = MLP(num_inputs=20, hidden_layers=64)
+            self.MLP = MLP(num_inputs=20, hidden_layers=128)
         
     def forward(self, x):
         [feat1, feat2, feat3, feat4, feat5] = self.resnet.forward(x)
@@ -247,7 +247,7 @@ class ACE_Res50_UNet(nn.Module):
         y = self.up_conv(up1)
         if self.num_experts == 2:
             y_many = self.SegHead_many(y)
-            y_few = self.SegHead_few(y.detach()) 
+            y_few = self.SegHead_few(y) 
             MLP_output = None
             if self.train_MLP==True:
                 # y_stack = torch.stack((y_many, y_few), -1)
@@ -257,8 +257,8 @@ class ACE_Res50_UNet(nn.Module):
                 y_stack = y_stack.permute(0, 2, 3, 1) #[B,H,W,20]
                 exp_prob = self.MLP(y_stack) #[B,H,W,2]
                 exp_prob = exp_prob.permute(0, 3, 1, 2) #[B,2,H,W]
-                MLP_output = exp_prob
-                # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
+                # MLP_output = exp_prob
+                MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
                 
             return [y_many, y_few], MLP_output
         
@@ -278,6 +278,12 @@ class ACE_Res50_UNet(nn.Module):
 
 class LWS(nn.Module):
     def __init__(self, num_features, num_classes):
+        """Initialize the LWS layer.
+        
+        Args:
+            num_features: number of features in the input tensor.
+            num_classes: number of classes in the dataset.
+        """
         super(LWS, self).__init__()
         self.conv2d = nn.Conv2d(num_features, num_classes, 1)
         self.scales = nn.Parameter(torch.ones(num_classes, 200, 200))
@@ -285,6 +291,7 @@ class LWS(nn.Module):
             param.requires_grad = False
 
     def forward(self, x):
+        """Forward pass of the LWS layer."""
         x = self.conv2d(x)
         x *= self.scales
         return x
@@ -294,12 +301,12 @@ class MLP(nn.Module):
         super(MLP, self).__init__()
         self.mlp = nn.Sequential(nn.Linear(num_inputs, hidden_layers),
                                  nn.ReLU(),
-                                 nn.Linear(hidden_layers, 10),
+                                 nn.Linear(hidden_layers, 2),
                                 )
         self.softmax = nn.Softmax(dim=-1)
     def forward(self, x):
         x = self.mlp(x)
-        # x = self.softmax(x)
+        x = self.softmax(x)
         return x
 
 # class MLP(nn.Module):

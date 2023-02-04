@@ -319,7 +319,7 @@ def seesaw_logit(cls_score,
 
     cls_score = cls_score + (seesaw_weights.log() * (1 - onehot_labels))
 
-    loss = F.cross_entropy(cls_score, labels.long(), weight=None, reduction='none')
+    # loss = F.cross_entropy(cls_score, labels.long(), weight=None, reduction='none')
     
     return cls_score
 
@@ -439,6 +439,7 @@ class PixelPrototypeCELoss(nn.Module, ABC):
         self.loss_ppc_weight = loss_ppc_weight
         self.loss_ppd_weight = loss_ppd_weight
         self.seg_criterion = CrossEntropy2D()
+        # self.seg_criterion = SeesawLoss()
 
         self.ppc_criterion = PPC()
         self.ppd_criterion = PPD()

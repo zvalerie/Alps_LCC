@@ -12,7 +12,7 @@ from lib.utils.utils import create_logger
 from lib.core.function_ACE import test
 
 from lib.models.ACE_UNet import ACE_Res50_UNet
-from lib.models.ACE_DeepLabv3P import deeplabv3P_resnet
+from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 
 
@@ -31,7 +31,7 @@ def parse_args():
                         help='directory to save outputs',
                         default='out/ACE',
                         type=str)
-    parser.add_argument('--foldername',
+    parser.add_argument('--model_name',
                         help='time_str when trainning model ',
                         default='',
                         type=str)
@@ -87,7 +87,7 @@ def main():
             model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
             
     if args.model == 'Deeplabv3':
-        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
 
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")
@@ -119,7 +119,7 @@ def main():
         writer_dict = None
 
     # Load best model
-    model_state_file = os.path.join(args.out_dir, args.foldername,
+    model_state_file = os.path.join(args.out_dir, args.model_name,
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
     bestmodel = torch.load(model_state_file)
@@ -147,7 +147,7 @@ def main():
                          args.out_dir, writer_dict, args)
 
     
-    np.save('/data/xiaolong/master_thesis/confusion_matrix/' + 'ACE_cm' + time_str, confusionMatrix)
+    # np.save('/data/xiaolong/master_thesis/confusion_matrix/' + 'ACE_cm' + time_str, confusionMatrix)
     writer_dict['logger'].close()
 
 if __name__ == '__main__':

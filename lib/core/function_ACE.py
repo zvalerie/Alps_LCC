@@ -73,10 +73,10 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         
         if args.experts == 2:
             [many_loss, few_loss], comloss = criterion(output, mask)
-            loss = many_loss + few_loss 
-            # # compute gradient and update
-            # optimizer.zero_grad()
-            # # if train seperately:
+            loss = many_loss + few_loss * args.fewloss_factor
+            # compute gradient and update
+            optimizer.zero_grad()
+            # if train seperately:
             if args.TRAIN_SEP:
                 optimizer[0].zero_grad()
                 optimizer[1].zero_grad()
@@ -84,17 +84,17 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                 optimizer[0].step()
                 few_loss.backward()
                 optimizer[1].step()
-            #     many_loss.backward(retain_graph=True)
-            #     for name, param in model.named_parameters():
-            #         if not ('few' in name):
-            #             param.requires_grad = False
+                # many_loss.backward(retain_graph=True)
+                # for name, param in model.named_parameters():
+                #     if not ('few' in name):
+                #         param.requires_grad = False
                                   
-            #     (few_loss).backward()
-            #     for name, param in model.named_parameters():
-            #         param.requires_grad = True
-            # else:
-            #     loss.backward()
-            # optimizer.step()
+                # (few_loss).backward()
+                # for name, param in model.named_parameters():
+                #     param.requires_grad = True
+            else:
+                loss.backward()
+            optimizer.step()
         
         # record loss
         losses.update(loss.item(), input.size(0))
@@ -116,8 +116,8 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                       data_time=data_time, loss=losses, comloss=comlosses)
             logger.info(msg)
     
-    # lr = optimizer.param_groups[0]['lr']
-    lr = optimizer[0].param_groups[0]['lr']
+    lr = optimizer.param_groups[0]['lr']
+    # lr = optimizer[0].param_groups[0]['lr']
     if writer_dict:
         writer = writer_dict['logger']
         global_steps = writer_dict['train_global_steps']
@@ -219,7 +219,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 
             if args.experts == 2:
                 [many_loss, few_loss], comloss = criterion(output, mask)
-                loss = many_loss + few_loss
+                loss = many_loss + few_loss * args.fewloss_factor
                 
                 [many_output, few_output], _ = output
                 
@@ -378,11 +378,11 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
                 new_few_output = few_output.clone()
                 new_many_output = many_output.clone()
                 new_few_output[:,many_index] = 0
-                new_many_output[:,few_index] = 0
+                # new_many_output[:,few_index] = 0
                 # many_output[:, few_index] = 0
                 # few_output *= f_scale
                 final_output = many_output + new_few_output * f_scale
-                # final_output[:,few_index] /= 2
+                final_output[:,few_index] /= 2
                 # final_output = torch.maximum(many_output, new_few_output)
             
             num_inputs = input.size(0)

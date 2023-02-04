@@ -50,13 +50,13 @@ class SwissImage(Dataset):
             
         basic_transform = transforms.Compose([
             transforms.ToTensor(),
-            # transforms.Normalize(self.mean, self.std)
+            transforms.Normalize(self.mean, self.std)
         ])
         
         dem_transform = transforms.Compose([
             transforms.ToTensor(),
             MinMaxScaler(self.dem_max, self.dem_min),
-            # transforms.Normalize(self.dem_mean, self.dem_std)
+            transforms.Normalize(self.dem_mean, self.dem_std)
         ])
                                          
         image = basic_transform(image)

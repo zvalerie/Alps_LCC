@@ -13,6 +13,7 @@ from lib.core.function import test, ratio_acc_test
 
 from lib.models.Unet import Res50_UNet
 from lib.models.ACE_UNet import ACE_Res50_UNet
+from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
 from lib.models.DeepLabv3Plus import deeplabv3P_resnet
 from lib.models.DeepLabv3Proto import deeplabv3P_resnet_proto
 from lib.dataset.SwissImage import SwissImage
@@ -84,9 +85,12 @@ def main():
     
     if args.model == 'Unet':
         model = Res50_UNet(num_classes=10)
-        # model = ACE_Res50_UNet(num_classes=10, train_LWS = False, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
+        if args.MLP == True:
+            model = ACE_Res50_UNet(num_classes=10, train_LWS = False, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
     elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        if args.MLP == True:
+            model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
     elif args.model == 'Deeplabv3_proto':
         model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
     # Define loss function (criterion) and optimizer  

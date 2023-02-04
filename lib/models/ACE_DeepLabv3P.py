@@ -17,12 +17,13 @@ class _SimpleSegmentationModel(nn.Module):
     def forward(self, x):
         input_shape = x.shape[-2:]
         features = self.backbone(x)
-        x = self.classifier(features)
+        x,MLP_output = self.classifier(features)
         if isinstance(x, list):
             output = [F.interpolate(y, size=input_shape, mode='bilinear', align_corners=False) for y in x]
         else:
             output = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-        return output
+        # MLP_output = F.interpolate(MLP_output, size=input_shape, mode='bilinear', align_corners=False)
+        return output, MLP_output
     
 class DeepLabV3(_SimpleSegmentationModel):
     """
@@ -56,6 +57,7 @@ class DeepLabHeadV3Plus(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
         )
+        self.MLP = MLP(20,128)
         self.num_experts = num_experts
         if num_experts == 2:
             self.SegHead_many = nn.Conv2d(256, num_classes, 1)
@@ -71,12 +73,18 @@ class DeepLabHeadV3Plus(nn.Module):
         low_level_feature = self.project( feature['low_level'] )
         output_feature = self.aspp(feature['out'])
         output_feature = F.interpolate(output_feature, size=low_level_feature.shape[2:], mode='bilinear', align_corners=False)
-        # final_feature = self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
-        final_feature = torch.cat( [ low_level_feature, output_feature ], dim=1 )
+        final_feature = self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
+        # final_feature = torch.cat( [ low_level_feature, output_feature ], dim=1 )
+        MLP_output = None
         if self.num_experts == 2:
             y_few = self.SegHead_few(final_feature)
             y_many = self.SegHead_many(final_feature)
-            return [y_many, y_few]
+            # y_stack = torch.cat((y_many, y_few), 1)
+            # y_stack = y_stack.permute(0, 2, 3, 1) #[B,H,W,20]
+            # exp_prob = self.MLP(y_stack) #[B,H,W,2]
+            # exp_prob = exp_prob.permute(0, 3, 1, 2)
+            # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
+            return [y_many, y_few], MLP_output
         
         elif self.num_experts == 3:
             y_few = self.SegHead_few(final_feature)
@@ -198,7 +206,20 @@ class ASPP(nn.Module):
         res = torch.cat(res, dim=1)
         return self.project(res)
 
-def deeplabv3P_resnet(num_classes, output_stride, pretrained_backbone, num_experts):
+class MLP(nn.Module):
+    def __init__(self, num_inputs, hidden_layers):
+        super(MLP, self).__init__()
+        self.mlp = nn.Sequential(nn.Linear(num_inputs, hidden_layers),
+                                 nn.ReLU(),
+                                 nn.Linear(hidden_layers, 2),
+                                )
+        self.softmax = nn.Softmax(dim=-1)
+    def forward(self, x):
+        x = self.mlp(x)
+        x = self.softmax(x)
+        return x
+
+def ACE_deeplabv3P_resnet(num_classes, output_stride, pretrained_backbone, num_experts):
 
     if output_stride==8:
         replace_stride_with_dilation=[False, True, True]
