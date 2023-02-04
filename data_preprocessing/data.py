@@ -12,7 +12,8 @@ from lib.dataset.SwissImage import SwissImage
 
 def label_selection(label_path, rgb_path, threshold):
     '''Select the labels, rgb and dem imgs with the proportion of background 
-    pixels less than the threshold and save them to a csv file'''
+    pixels less than the threshold and save them to a csv file; find the main class of each tile
+    adnd add it in the last column of the csv file'''
     labels_list = []
     rgb_list = []
     dem_list = []
