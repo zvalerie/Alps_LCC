@@ -93,7 +93,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--comFactor',
                         help='factor for comLoss',
-                        default=10,
+                        default=0,
                         type=float)
     parser.add_argument('--TRAIN_SEP',
                         help='train experts seperately',
@@ -112,6 +112,10 @@ def parse_args():
                         default=1,
                         type=float)
     parser.add_argument('--fewloss_factor',
+                        help='factor to adjust the weight of few loss',
+                        default=1,
+                        type=float)
+    parser.add_argument('--mediumloss_factor',
                         help='factor to adjust the weight of few loss',
                         default=1,
                         type=float)
@@ -155,15 +159,15 @@ def main():
         elif args.optimizer == 1.5:
             optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
         elif args.optimizer == 2:
-            few_params = list(map(id, model.SegHead_few.parameters())) 
+            few_params = list(map(id, model.classifier.SegHead_few.parameters())) 
             many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
             many_optimizer = optim.Adam(many_paramas, lr=args.lr, weight_decay=args.wd)
-            few_optimizer = optim.Adam(model.SegHead_few.parameters(), lr=args.lr, weight_decay=args.wd)
+            few_optimizer = optim.Adam(model.classifier.SegHead_few.parameters(), lr=args.lr, weight_decay=args.wd)
             optimizer = [many_optimizer, few_optimizer]
             
     if args.experts == 3: 
-        many_index = [1, 5, 7, 8, 9]
-        medium_index = [2, 6]
+        many_index = [1, 5, 8, 9]
+        medium_index = [2, 6, 7]
         few_index = [3, 4]
         ls_index = [many_index, medium_index, few_index]
         criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
