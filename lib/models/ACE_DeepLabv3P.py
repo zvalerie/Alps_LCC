@@ -90,7 +90,7 @@ class DeepLabHeadV3Plus(nn.Module):
             y_few = self.SegHead_few(final_feature)
             y_medium = self.SegHead_medium(final_feature)
             y_many = self.SegHead_many(final_feature)
-            return [y_many, y_medium, y_few]
+            return [y_many, y_medium, y_few], MLP_output
         else:
             return self.segHead(final_feature)
         
@@ -241,3 +241,9 @@ def ACE_deeplabv3P_resnet(num_classes, output_stride, pretrained_backbone, num_e
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
     model = DeepLabV3(backbone, classifier, num_classes)
     return model
+
+if __name__ == '__main__':
+    model = ACE_deeplabv3P_resnet(10, 2, False, False)
+    for k, v in model.named_parameters():
+        # if k.startswith("SegHead"):
+            print(k)

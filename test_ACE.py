@@ -102,8 +102,8 @@ def main():
         
     if args.experts==3:
         many_index = [0, 1, 5, 8, 9]
-        medium_index = [6, 7]
-        few_index = [2, 3, 4]
+        medium_index = [2, 6, 7]
+        few_index = [3, 4]
         # many_index = [1, 5, 7, 8, 9]
         # medium_index = [2, 6]
         # few_index = [3, 4]

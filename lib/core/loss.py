@@ -167,7 +167,7 @@ class ResCELoss_3exp(CrossEntropy2D):
         self.many_index = many_index
         self.args = args
         # self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
-        self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=torch.float).cuda()
+        self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
         # self.few_weight = torch.tensor([0, 0, 1, 1, 1, 0, 0, 0, 0, 0], dtype=torch.float).cuda()
         self.few_weight = torch.tensor([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], dtype=torch.float).cuda()
         self.celoss= CrossEntropy2D()
@@ -180,31 +180,30 @@ class ResCELoss_3exp(CrossEntropy2D):
         few_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         medium_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         many_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
-        medium_comLoss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         targets_cpu = targets.cpu().numpy()
         
         ## among batch, return the idx that the mask contains few category
-        medium_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.medium_index + self.few_index, targets_cpu[j]))] 
+        medium_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(np.concatenate((self.few_index,self.medium_index)), targets_cpu[j]))] 
         few_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
         
         if len(medium_idx_cpu):
         # compute weight celoss   
             medium_claLoss = self.medium_weight_celoss(medium_output_ori, targets)
-            medium_comLoss = self._get_medium_comLoss(medium_output_ori, targets)
-            medium_loss = medium_claLoss + medium_comLoss
+            # medium_comLoss = self._get_medium_comLoss(medium_output_ori, targets)
+            medium_loss = medium_claLoss
             # few_head_loss = claLoss
             
         if len(few_idx_cpu):
         # compute weight celoss   
             few_claLoss = self.few_weight_celoss(few_output_ori, targets)
-            few_comLoss = self._get_few_comLoss(few_output_ori, targets)
-            few_loss = few_claLoss + few_comLoss
+            # few_comLoss = self._get_few_comLoss(few_output_ori, targets)
+            few_loss = few_claLoss 
             # few_head_loss = claLoss
         
         many_loss = self.celoss(many_output_ori, targets)
         # few_head_loss = self.celoss(few_output_ori, targets)
         
-        return [many_loss, medium_loss, few_loss], medium_comLoss
+        return [many_loss, medium_loss, few_loss], None
     
     def _get_few_comLoss(self, output, targets):
         few_mask = (targets >= 3) & (targets <= 4) #[16,1,200,200]

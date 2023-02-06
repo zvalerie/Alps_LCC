@@ -151,7 +151,7 @@ def main():
                          writer_dict, args)
 
     
-    np.save('/data/xiaolong/master_thesis/confusion_matrix/' + 'ACE_cm' + time_str, confusionMatrix)
+    # np.save('/data/xiaolong/master_thesis/confusion_matrix/' + 'ACE_cm' + time_str, confusionMatrix)
     writer_dict['logger'].close()
 
 

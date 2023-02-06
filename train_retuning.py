@@ -13,12 +13,13 @@ from torch.optim.lr_scheduler import StepLR
 from lib.core.function import train
 from lib.core.function import validate
 # from lib.core.loss import FocalLoss
-from lib.core.loss import CrossEntropy2D, ResCELoss, ResCELoss_3exp
+from lib.core.loss import CrossEntropy2D, ResCELoss, ResCELoss_3exp, SeesawLoss
 from lib.utils.utils import get_optimizer
 from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
 from lib.models.ACE_UNet import ACE_Res50_UNet
+from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -119,12 +120,13 @@ def main():
 
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
-    logger.info('Learnable weight scaling, experts:{0}'.format(args.experts))
+    logger.info('MLP, experts:{}'.format(args.experts))
     if args.model == 'Unet':
         model = ACE_Res50_UNet(num_classes=10, train_LWS = args.LWS, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
-        model_path = '/data/xiaolong/master_thesis/out/ACE/' + args.model_name + '/model_best.pth.tar'
-        
-        pretrained_dict = torch.load(model_path)
+    elif args.model =='Deeplabv3':
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=False, num_experts=args.experts)
+    model_path = '/data/xiaolong/master_thesis/out/ACE/' + args.model_name + '/model_best.pth.tar'
+    pretrained_dict = torch.load(model_path)
         
     if args.LWS==True:
         for k in list(pretrained_dict.keys()):
@@ -149,7 +151,7 @@ def main():
             if not k.startswith("MLP"):
                 v.requires_grad=False
             # if not k.startswith("MLP"):
-            #     print(v)   
+                # print(v)   
         
         # for name, param in model.named_parameters():
         #     if param.requires_grad:
@@ -239,7 +241,7 @@ def main():
     for epoch in range(start_epoch, args.epoch):
         # train for one epoch
         train(train_loader,train_dataset, model, criterion, optimizer, epoch,
-              args.out_dir, writer_dict, args)
+              args.out_dir, writer_dict, scheduler, args=args)
 
         if (epoch + 1) % 1 == 0:
             # evaluate on validation set

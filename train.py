@@ -160,10 +160,10 @@ def main():
     # lr_scheduler = MultiStepLR(optimizer, milestones=args.milestones, gamma=args.lr_decay_rate)
     # Create training and validation datasets
     if args.tune:
-        # train_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset_few.csv'
-        # val_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
-        train_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_train_dataset.csv'
-        val_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_val_dataset.csv'
+        train_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset_few.csv'
+        val_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
+        # train_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_train_dataset.csv'
+        # val_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_val_dataset.csv'
     else : 
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/train_dataset.csv'
         val_csv = '/data/xiaolong/master_thesis/data_preprocessing/val_dataset.csv'

@@ -31,7 +31,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     
     data_time = AverageMeter()
     losses = AverageMeter()
-    comlosses = AverageMeter()
+    mediumlosses = AverageMeter()
     fewlosses = AverageMeter()
     batch_time = AverageMeter()
     
@@ -54,7 +54,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         mask = mask.to(device)#[B,16,200,200]
         if args.experts == 3:
             [many_loss, medium_loss, few_loss], comloss = criterion(output, mask)
-            loss = many_loss + medium_loss + few_loss           
+            loss = many_loss + medium_loss * args.mediumloss_factor + few_loss * args.fewloss_factor          
             # compute gradient and update
             optimizer.zero_grad()
             # if train seperately:
@@ -72,10 +72,10 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
             optimizer.step()
         
         if args.experts == 2:
+            medium_loss = 0
             [many_loss, few_loss], comloss = criterion(output, mask)
             loss = many_loss + few_loss * args.fewloss_factor
             # compute gradient and update
-            optimizer.zero_grad()
             # if train seperately:
             if args.TRAIN_SEP:
                 optimizer[0].zero_grad()
@@ -93,13 +93,16 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                 # for name, param in model.named_parameters():
                 #     param.requires_grad = True
             else:
+                optimizer.zero_grad()
                 loss.backward()
-            optimizer.step()
+                optimizer.step()
         
         # record loss
         losses.update(loss.item(), input.size(0))
-        fewlosses.update(few_loss.item(), input.size(0))
-        comlosses.update(comloss.item(), input.size(0))
+        if few_loss != 0:
+            fewlosses.update(few_loss.item(), input.size(0))
+        if medium_loss != 0:  
+            mediumlosses.update(medium_loss.item(), input.size(0))
         
         batch_time.update(time.time() - end)
         end = time.time()
@@ -110,10 +113,11 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
                   'Speed {speed:.1f} samples/s\t' \
                   'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
                   'Loss {loss.val:.5f} ({loss.avg:.5f})\t'\
-                  'ComLoss {comloss.val:.5f} ({comloss.avg:.5f})\t'.format(
+                  'MediumLoss {mediumloss.val:.5f} ({mediumloss.avg:.5f})\t'\
+                  'FewLoss {fewloss.val:.5f} ({fewloss.avg:.5f})\t'.format(
                       epoch, i, len(train_loader), batch_time=batch_time,
                       speed=input.size(0)/batch_time.val,
-                      data_time=data_time, loss=losses, comloss=comlosses)
+                      data_time=data_time, loss=losses, mediumloss=mediumlosses, fewloss=fewlosses)
             logger.info(msg)
     
     lr = optimizer.param_groups[0]['lr']
@@ -123,7 +127,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
         global_steps = writer_dict['train_global_steps']
 
         writer.add_scalar('train_loss', losses.avg, global_steps)
-        writer.add_scalar('com_loss', comlosses.avg, global_steps)
+        writer.add_scalar('medium_loss', mediumlosses.avg, global_steps)
         writer.add_scalar('few_loss', fewlosses.avg, global_steps)
         writer.add_scalar('learning_rate', lr, global_steps)
         writer_dict['train_global_steps'] = global_steps + 1
@@ -138,7 +142,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
     '''
     batch_time = AverageMeter()
     losses = AverageMeter()
-    comlosses = AverageMeter()
+    mediumlosses = AverageMeter()
     fewlosses = AverageMeter()
     
     # switch to evaluate mode
@@ -162,10 +166,15 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 
     if args.experts == 3:
         [many_index, medium_index, few_index] = ls_index
-        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-        weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
-        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
-
+        if args.model=='Unet':
+            weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+            weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+        elif args.model=='Deeplabv3':
+            weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
+            weight_medium = new_dict['classifier.SegHead_medium.weight'].detach().cpu().numpy()
+            weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
+            
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_medium = LA.norm(weight_medium, axis=1)
         weight_norm_few = LA.norm(weight_few, axis=1)
@@ -218,6 +227,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 final_output[:,few_index] /= 3
                 
             if args.experts == 2:
+                medium_loss =0
                 [many_loss, few_loss], comloss = criterion(output, mask)
                 loss = many_loss + few_loss * args.fewloss_factor
                 
@@ -234,8 +244,10 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 
             # measure accuracy and record loss
             losses.update(loss.item(), num_inputs)
-            fewlosses.update(few_loss.item(), num_inputs)
-            comlosses.update(comloss.item(), num_inputs)
+            if few_loss != 0:
+                fewlosses.update(few_loss.item(), num_inputs)
+            if medium_loss != 0:
+                mediumlosses.update(medium_loss.item(), num_inputs)
             
             preds = get_final_preds(final_output.detach().cpu().numpy())
             # preds_many = get_final_preds(many_output.detach().cpu().numpy())
@@ -255,9 +267,10 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
                 msg = 'Validate: [{0}/{1}]\t' \
                       'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t' \
                       'Loss {loss.val:.4f} ({loss.avg:.4f})\t' \
-                      'ComLoss {comloss.val:.4f} ({comloss.avg:.4f})'.format(
+                      'MediumLoss {mediumloss.val:.5f} ({mediumloss.avg:.5f})\t'\
+                      'FewLoss {fewloss.val:.5f} ({fewloss.avg:.5f})\t'.format(
                           i, len(val_loader), batch_time=batch_time,
-                          loss=losses, comloss=comlosses)
+                          loss=losses, mediumloss=mediumlosses, fewloss=fewlosses)
 
                 logger.info(msg)
                            
@@ -287,7 +300,7 @@ def validate(val_loader, val_dataset, model, criterion, ls_index, output_dir,
             #                                     'expert_2':acc_exp2_few,
             #                                     'ACE':acc_ACE_few}, global_steps)   
             writer.add_scalar('val_few_loss', fewlosses.avg, global_steps)         
-            writer.add_scalar('val_com_loss', comlosses.avg, global_steps)
+            writer.add_scalar('val_medium_loss', mediumlosses.avg, global_steps)
             writer.add_scalar('valid_loss', losses.avg, global_steps)
             writer.add_scalar('valid_iou_score', mean_iou, global_steps)
             writer_dict['valid_global_steps'] = global_steps + 1
@@ -308,6 +321,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
     metrics = MetricLogger(model.num_classes)
     metrics_exp1 = MetricLogger(model.num_classes)
     metrics_exp2 = MetricLogger(model.num_classes)
+    metrics_exp3 = MetricLogger(model.num_classes)
     device = torch.device("cuda")
     
     from collections import OrderedDict
@@ -323,9 +337,14 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
     
     if args.experts == 3:
         [many_index, medium_index, few_index] = ls_index
-        weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
-        weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
-        weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+        if args.model=='Unet':
+            weight_many = new_dict['SegHead_many.weight'].detach().cpu().numpy()
+            weight_medium = new_dict['SegHead_medium.weight'].detach().cpu().numpy()
+            weight_few = new_dict['SegHead_few.weight'].detach().cpu().numpy()
+        elif args.model=='Deeplabv3':
+            weight_many = new_dict['classifier.SegHead_many.weight'].detach().cpu().numpy()
+            weight_medium = new_dict['classifier.SegHead_medium.weight'].detach().cpu().numpy()
+            weight_few = new_dict['classifier.SegHead_few.weight'].detach().cpu().numpy()
 
         weight_norm_many = LA.norm(weight_many, axis=1)
         weight_norm_medium = LA.norm(weight_medium, axis=1)
@@ -376,12 +395,13 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             if args.experts == 2:
                 [many_output, few_output], _ = output
                 new_few_output = few_output.clone()
-                new_many_output = many_output.clone()
+                # new_many_output = many_output.clone()
                 new_few_output[:,many_index] = 0
                 # new_many_output[:,few_index] = 0
                 # many_output[:, few_index] = 0
                 # few_output *= f_scale
                 final_output = many_output + new_few_output * f_scale
+                # final_output /= 2
                 final_output[:,few_index] /= 2
                 # final_output = torch.maximum(many_output, new_few_output)
             
@@ -392,11 +412,19 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
             preds = get_final_preds(final_output.detach().cpu().numpy())
             preds_many = get_final_preds(many_output.detach().cpu().numpy())
             preds_few = get_final_preds(few_output.detach().cpu().numpy())
+            if args.experts == 3: 
+                preds_medium = get_final_preds(medium_output.detach().cpu().numpy())
+                gt = mask.squeeze(0).detach().cpu().numpy()
+                metrics.update(gt, preds)
+                metrics_exp1.update(gt, preds_many)
+                metrics_exp2.update(gt, preds_medium)
+                metrics_exp3.update(gt, preds_few)
             # gt = torch.squeeze(mask).detach().cpu().numpy()
-            gt = mask.squeeze(0).detach().cpu().numpy()
-            metrics.update(gt, preds)
-            metrics_exp1.update(gt, preds_many)
-            metrics_exp2.update(gt, preds_few)        
+            else:
+                gt = mask.squeeze(0).detach().cpu().numpy()
+                metrics.update(gt, preds)
+                metrics_exp1.update(gt, preds_many)
+                metrics_exp2.update(gt, preds_few)        
                 
             # measure elapsed time
             batch_time.update(time.time() - end)
@@ -446,20 +474,37 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         acc_ACE_many, acc_ACE_medium, acc_ACE_few = metrics.get_acc_cat()
         acc_exp1_many, acc_exp1_medium, acc_exp1_few = metrics_exp1.get_acc_cat()
         acc_exp2_many, acc_exp2_medium, acc_exp2_few = metrics_exp2.get_acc_cat()
+        if args.experts==3:
+            acc_exp3_many, acc_exp3_medium, acc_exp3_few = metrics_exp3.get_acc_cat()
         _, _, exp2_acc_cls, _ = metrics_exp2.get_scores()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))
         logger.info('Overall accuracy: {:.3f}'.format(overall_acc))
-        logger.info('Many accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_many,
+        if args.experts==3:
+            logger.info('Many accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t{expert3:.3f}\t'.format(ACE=acc_ACE_many,
+                                                                                expert1=acc_exp1_many,
+                                                                                expert2=acc_exp2_many,
+                                                                                expert3=acc_exp3_many))
+            logger.info('Medium accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t{expert3:.3f}\t'.format(ACE=acc_ACE_medium,
+                                                                                expert1=acc_exp1_medium,
+                                                                                expert2=acc_exp2_medium,
+                                                                                expert3=acc_exp3_medium))        
+            logger.info('Few accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t{expert3:.3f}\t'.format(ACE=acc_ACE_few,
+                                                                                expert1=acc_exp1_few,
+                                                                                expert2=acc_exp2_few,
+                                                                                expert3=acc_exp3_few))
+        elif args.experts==2:
+            logger.info('Many accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_many,
                                                                                expert1=acc_exp1_many,
                                                                                expert2=acc_exp2_many))
-        logger.info('Medium accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_medium,
-                                                                               expert1=acc_exp1_medium,
-                                                                               expert2=acc_exp2_medium))        
-        logger.info('Few accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_few,
-                                                                               expert1=acc_exp1_few,
-                                                                               expert2=acc_exp2_few))
+            logger.info('Medium accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_medium,
+                                                                                expert1=acc_exp1_medium,
+                                                                                expert2=acc_exp2_medium))        
+            logger.info('Few accuracy: {ACE:.3f}\t{expert1:.3f}\t{expert2:.3f}\t'.format(ACE=acc_ACE_few,
+                                                                                expert1=acc_exp1_few,
+                                                                                expert2=acc_exp2_few))
+            
         classes = ["Background","Bedrock", "Bedrock with grass", "Large blocks", "Large blocks with grass", 
          "Scree", "Scree with grass", "Water area", "Forest", "Glacier"]
         for i in range(len(acc_cls)):
