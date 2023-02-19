@@ -1,1 +1,1 @@
-Landues classification in Alps area
+Landues classification in the Alps area
