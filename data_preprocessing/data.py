@@ -85,6 +85,7 @@ def data_split(csv_path, train_ratio, val_ratio, test_ratio):
 def creat_few_categories_dataset(csv_path, class_id):
     ls = ['train', 'val', 'test']
     for i in range(3):
+        cnt = 0
         df = pd.read_csv(csv_path[i])
         new_df = pd.DataFrame(columns=['rbg','dem','mask','mainclass'])
         mask_dir = '/data/xiaolong/mask'
@@ -95,8 +96,10 @@ def creat_few_categories_dataset(csv_path, class_id):
             classes, counts = np.unique(img, return_counts=True)
             inter = [j for j in classes if j == 4]
             if inter:
+                cnt += 1
                 new_df = pd.concat([new_df, df.iloc[idx, :].to_frame().T], axis=0, ignore_index=True)
-        new_df.to_csv('{}_{}_dataset.csv'.format(class_id, ls[i]),index=False)
+        print(cnt)
+        # new_df.to_csv('{}_{}_dataset.csv'.format(class_id, ls[i]),index=False)
 
 def subset(csv_list, name_list, frac):
     '''
@@ -107,24 +110,24 @@ def subset(csv_list, name_list, frac):
         subset = dataset.groupby('mainclass').sample(frac = frac, random_state = 1)
         subset.to_csv('./subset/'+name_list[i]+'_subset.csv',index = False)
 
-def getStat(dataset, channel):
-    '''
-    Compute mean and variance for training data
-    param: train_data: Dataset
-    return: mean, std
-    '''
-    train_loader = torch.utils.data.DataLoader(
-        dataset, batch_size=1, shuffle=False, num_workers=0,
-        pin_memory=True)
-    mean = torch.zeros(channel)
-    std = torch.zeros(channel)
-    for _, X, _ in tqdm(train_loader):
-        for d in range(channel):
-            mean[d] += X[:, d, :, :].mean()
-            std[d] += X[:, d, :, :].std()
-    mean.div_(len(dataset))
-    std.div_(len(dataset))
-    return list(mean.numpy()), list(std.numpy())
+# def getStat(dataset, channel):
+#     '''
+#     Compute mean and variance for training data
+#     param: train_data: Dataset
+#     return: mean, std
+#     '''
+#     train_loader = torch.utils.data.DataLoader(
+#         dataset, batch_size=1, shuffle=False, num_workers=0,
+#         pin_memory=True)
+#     mean = torch.zeros(channel)
+#     std = torch.zeros(channel)
+#     for _, X, _ in tqdm(train_loader):
+#         for d in range(channel):
+#             mean[d] += X[:, d, :, :].mean()
+#             std[d] += X[:, d, :, :].std()
+#     mean.div_(len(dataset))
+#     std.div_(len(dataset))
+#     return list(mean.numpy()), list(std.numpy())
 
 def searchnoValue(dataset_csv):
     '''
@@ -160,8 +163,6 @@ def get_min_max(dataset):
     
     print(max_value, min_value)
 
-
-
 def calculate_mean_std(dataset):
     mean = np.array([0.,0.,0.])
     stdTemp = np.array([0.,0.,0.])
@@ -194,6 +195,23 @@ def calculate_mean_std(dataset):
     print(mean)
     print(std)
     
+def cal_pixel_frequency(csv_path):
+    '''
+    return the pixel frequency of each class
+    '''
+    df = pd.read_csv(csv_path)
+    array = np.zeros((10))
+    mask_dir = '/data/xiaolong/mask'
+    for idx in tqdm(range(len(df))):
+        mask_path = os.path.join(mask_dir, df.iloc[idx, 2])
+        img = Image.open(mask_path)
+        img = np.array(img)
+        classes, counts = np.unique(img, return_counts=True)
+        for i in range(len(classes)):
+            array[int(classes[i])] += counts[i]
+    
+    print(array)
+    
     
 if __name__ == '__main__':
     
@@ -223,8 +241,8 @@ if __name__ == '__main__':
     mask_dir = '/data/xiaolong/mask'
     train_dataset = SwissImage(train_csv, img_dir, dem_dir, mask_dir)
     # get_min_max(train_dataset)
-    mean, std = getStat(train_dataset, 1)
-    print(mean, std)
+    # mean, std = getStat(train_dataset, 1)
+    # print(mean, std)
     # np.savetxt("mean.txt", mean, fmt='%.04f')
     # np.savetxt("std.txt", std, fmt='%.04f')
     
@@ -239,3 +257,4 @@ if __name__ == '__main__':
     #             '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv',
     #             '/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv']
     # creat_few_categories_dataset(csv_list, 4)
+    cal_pixel_frequency('/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv')

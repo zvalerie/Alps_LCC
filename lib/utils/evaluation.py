@@ -35,8 +35,10 @@ class MetricLogger(object):
     def __init__(self, n_classes):
         self.n_classes = n_classes
         self.many_idx = [1, 5, 8, 9]
-        self.medium_idx = [6, 7]
-        self.few_idx = [2, 3, 4]
+        # self.medium_idx = [6, 7]
+        # self.few_idx = [2, 3, 4]
+        self.medium_idx = [2, 6, 7]
+        self.few_idx = [3, 4]
         self.confusion_matrix = np.zeros((n_classes, n_classes))
 
     def _fast_hist(self, label_true, label_pred, n_class):

@@ -87,7 +87,7 @@ def main():
             model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
             
     if args.model == 'Deeplabv3':
-        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=False)
 
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")

@@ -90,7 +90,7 @@ def main():
     elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         if args.MLP == True:
-            model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
+            model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=True)
     elif args.model == 'Deeplabv3_proto':
         model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
     # Define loss function (criterion) and optimizer  

@@ -58,13 +58,22 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
             output = output['seg']
         
         if args.MLP == True:
+            if args.experts==2:
             # [y_many, y_few], MLP_output = output
             # few_mask = (mask >= 2) & (mask <= 4) | (mask == 6) | (mask == 7)
             # loss = criterion(MLP_output, few_mask.float())
-            
-            [y_many, y_few], MLP_output = output
-            output = MLP_output
-            loss = criterion(output, mask)
+                [y_many, y_few], MLP_output = output
+            elif args.experts==3:
+                [y_many, y_medium, y_few], MLP_output = output
+                # output = MLP_output
+                few_mask = (mask >= 2) & (mask <= 4)
+                few_mask = few_mask.float()
+                few_mask[few_mask==1] = 2
+                medium_mask = (mask == 6) | (mask == 7)
+                medium_mask = medium_mask.float()
+                mask = few_mask + medium_mask
+                # print(mask)
+                loss = criterion(MLP_output, mask)
         else:
         # compute loss
             loss = criterion(output, mask)
@@ -128,11 +137,14 @@ def validate(val_loader, val_dataset, model, criterion, output_dir,
             num_inputs = input.size(0)
             
             if args.MLP == True:
-                [y_many, y_few], MLP_output = output
-                # m = nn.Softmax(dim=1)
-                # MLP_output = m(MLP_output)
-                # output = (MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_few) / 2
-                output = MLP_output
+                if args.experts==2:
+                    [y_many, y_few], MLP_output = output
+                elif args.experts==3:
+                    [y_many, y_medium, y_few], MLP_output = output
+                m = nn.Softmax(dim=1)
+                MLP_output = m(MLP_output)
+                output = MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_medium + MLP_output[:,2:3,:,:] * y_few
+                # output = MLP_output
                 
             mask = mask.to(device) #[B, 10, 200, 200]
             loss = criterion(output, mask)
@@ -198,15 +210,13 @@ def test(test_loader, test_dataset, model, output_dir,
             
             num_inputs = input.size(0)
             if args.MLP == True:
-                # direct output
-                _, MLP_output= output
-                output = MLP_output
-                
-                ## selection probability
-                # [y_many, y_few], MLP_output= output
-                # m = nn.Softmax(dim=1)
-                # MLP_output = m(MLP_output)
-                # output = (MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_few) / 2
+                if args.experts==2:
+                    [y_many, y_few], MLP_output = output
+                elif args.experts==3:
+                    [y_many, y_medium, y_few], MLP_output = output
+                m = nn.Softmax(dim=1)
+                MLP_output = m(MLP_output)
+                output = MLP_output[:,:1,:,:] * y_many + MLP_output[:,1:2,:,:] * y_medium + MLP_output[:,2:3,:,:] * y_few
                 
             mask = mask.to(device)
             

@@ -93,7 +93,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--comFactor',
                         help='factor of comLoss',
-                        default=10,
+                        default=0,
                         type=int)
     parser.add_argument('--TRAIN_SEP',
                         help='train experts seperately',
@@ -124,34 +124,38 @@ def main():
     if args.model == 'Unet':
         model = ACE_Res50_UNet(num_classes=10, train_LWS = args.LWS, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
     elif args.model =='Deeplabv3':
-        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=False, num_experts=args.experts)
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=False, num_experts=args.experts, is_MLP=True)
     model_path = '/data/xiaolong/master_thesis/out/ACE/' + args.model_name + '/model_best.pth.tar'
     pretrained_dict = torch.load(model_path)
+    
+    # if args.LWS==True:
+    #     for k in list(pretrained_dict.keys()):
+    #         if k.startswith("SegHead"):
+    #             k_split = k.split('.')
+    #             new_k = k_split[0] + '.conv2d.' + k_split[1]
+    #             pretrained_dict[new_k] = pretrained_dict.pop(k)
         
-    if args.LWS==True:
-        for k in list(pretrained_dict.keys()):
-            if k.startswith("SegHead"):
-                k_split = k.split('.')
-                new_k = k_split[0] + '.conv2d.' + k_split[1]
-                pretrained_dict[new_k] = pretrained_dict.pop(k)
-        
-        # only train the scales in LWS (by setting requires_grad of all the other layers to False)
-        model.load_state_dict(pretrained_dict, strict=False)
-        for k, v in model.named_parameters():
-            if not k.startswith("SegHead"):
-                v.requires_grad=False
+    #     # only train the scales in LWS (by setting requires_grad of all the other layers to False)
+    #     model.load_state_dict(pretrained_dict, strict=False)
+    #     for k, v in model.named_parameters():
+    #         if not k.startswith("SegHead"):
+    #             v.requires_grad=False
                 
         # for name, param in model.named_parameters():
         #     if param.requires_grad:
         #         print(name, param)
     
     if args.MLP==True:
+        pretrained_dict.pop('classifier.MLP.mlp.0.weight')
+        pretrained_dict.pop('classifier.MLP.mlp.0.bias')
+        pretrained_dict.pop('classifier.MLP.mlp.2.weight')
+        pretrained_dict.pop('classifier.MLP.mlp.2.bias')
         model.load_state_dict(pretrained_dict, strict=False)
         for k, v in model.named_parameters():
-            if not k.startswith("MLP"):
+            if not k.startswith("classifier.MLP"):
                 v.requires_grad=False
-            # if not k.startswith("MLP"):
-                # print(v)   
+            # if k.startswith("classifier"):
+            #     print(k)   
         
         # for name, param in model.named_parameters():
         #     if param.requires_grad:
@@ -170,26 +174,26 @@ def main():
     
     if args.MLP == True:
         # criterion_exp = CrossEntropy2D(ignore_index=-1).to(device)
-        criterion = CrossEntropy2D(ignore_index=0).to(device)
+        criterion = CrossEntropy2D(ignore_index=-1).to(device)
         # criterion = SeesawLoss().to(device)
         optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)    
-    elif args.experts == 2: 
-        many_index = [1, 5, 8, 9]
-        few_index = [2, 3, 4, 6, 7]
-        ls_index = [many_index, few_index]
-        criterion = ResCELoss(many_index, few_index, args=args).to(device)
-        lr_ratio = [0.03] ## ratio of rare categories to frequent categories
-        optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)
-        # optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
-    elif args.experts == 3: 
-        many_index = [1, 5, 8, 9]
-        medium_index = [6, 7]
-        few_index = [2, 3, 4]
-        ls_index = [many_index, medium_index, few_index]
-        criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
-        lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
-        optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
-        # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    # elif args.experts == 2: 
+    #     many_index = [1, 5, 8, 9]
+    #     few_index = [2, 3, 4, 6, 7]
+    #     ls_index = [many_index, few_index]
+    #     criterion = ResCELoss(many_index, few_index, args=args).to(device)
+    #     lr_ratio = [0.03] ## ratio of rare categories to frequent categories
+    #     optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)
+    #     # optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
+    # elif args.experts == 3: 
+    #     many_index = [1, 5, 8, 9]
+    #     medium_index = [6, 7]
+    #     few_index = [2, 3, 4]
+    #     ls_index = [many_index, medium_index, few_index]
+    #     criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
+    #     lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
+    #     optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio)
+    #     # optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     
     scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
     

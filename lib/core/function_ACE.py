@@ -477,6 +477,7 @@ def test(test_loader, test_dataset, model, ls_index, output_dir,
         if args.experts==3:
             acc_exp3_many, acc_exp3_medium, acc_exp3_few = metrics_exp3.get_acc_cat()
         _, _, exp2_acc_cls, _ = metrics_exp2.get_scores()
+        # _, _, exp3_acc_cls, _ = metrics_exp3.get_scores()
         
         logger.info('Mean IoU score: {:.3f}'.format(mean_iou))
         logger.info('Mean accuracy: {:.3f}'.format(mean_cls))

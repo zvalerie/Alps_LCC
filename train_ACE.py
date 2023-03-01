@@ -132,8 +132,7 @@ def main():
     if args.model == 'Unet':
         model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP = False, pretrained = True)
     elif args.model == 'Deeplabv3':
-        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
-        
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=False)
     writer_dict = {
             'logger': tb_logger,
             'train_global_steps': 0,
