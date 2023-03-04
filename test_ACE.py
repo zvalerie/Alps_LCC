@@ -31,7 +31,7 @@ def parse_args():
                         help='directory to save outputs',
                         default='out/ACE',
                         type=str)
-    parser.add_argument('--model_name',
+    parser.add_argument('--model_path',
                         help='time_str when trainning model ',
                         default='',
                         type=str)
@@ -53,62 +53,29 @@ def parse_args():
                         default=6,
                         type=int)
     parser.add_argument('--debug',
-                        help='is debuging?',
+                        help='debug mode',
                         default=False,
                         type=bool)
     parser.add_argument('--tune',
-                        help='is tunning?',
+                        help='tune mode',
                         default=True,
                         type=bool)
     parser.add_argument('--experts',
                         help='number of experts',
                         default=2,
                         type=int)
-    parser.add_argument('--LWS',
-                        help='train LWS or not',
-                        default=False,
-                        type=bool)
     args = parser.parse_args()
     
     return args
 
 def main():
     args = parse_args()
-    
+    # create logger
     logger, tb_logger, time_str = create_logger(
         args.out_dir, phase='test', create_tf_logs=True)
     
     logger.info(pprint.pformat(args))
     logger.info('Test ACE model')
-    
-    if args.model == 'Unet':
-        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP=False, pretrained = True)
-        if args.LWS:
-            model = ACE_Res50_UNet(num_classes=10, train_LWS = True, num_experts=args.experts, pretrained = False)
-            
-    if args.model == 'Deeplabv3':
-        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=False)
-
-    # Define loss function (criterion) and optimizer  
-    device = torch.device("cuda")
-    model = model.to(device)
-    
-    if args.experts==2:
-        many_index = [0, 1, 5, 8, 9]
-        few_index = [2, 3, 4, 6, 7]
-        # many_index = [0, 1, 5, 7, 8, 9]
-        # few_index = [2, 3, 4, 6]
-        ls_index = [many_index, few_index]
-        
-    if args.experts==3:
-        many_index = [0, 1, 5, 8, 9]
-        medium_index = [2, 6, 7]
-        few_index = [3, 4]
-        # many_index = [1, 5, 7, 8, 9]
-        # medium_index = [2, 6]
-        # few_index = [3, 4]
-        ls_index = [many_index, medium_index, few_index]
-        
     if tb_logger:
         writer_dict = {
             'logger': tb_logger,
@@ -117,14 +84,40 @@ def main():
         }
     else:
         writer_dict = None
+    
+    # define model
+    if args.model == 'Unet':
+        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_MLP=False, pretrained = True)    
+    elif args.model == 'Deeplabv3':
+        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=False)
+    else:
+        raise NotImplementedError('Model not supported: {}'.format(args.model))
+    
+    device = torch.device("cuda")
+    model = model.to(device)
+    
+    # define target classes for each expert
+    if args.experts==2:
+        many_index = [0, 1, 5, 8, 9]
+        few_index = [2, 3, 4, 6, 7]
+        ls_index = [many_index, few_index]
+    elif args.experts==3:
+        many_index = [0, 1, 5, 8, 9]
+        medium_index = [2, 6, 7]
+        few_index = [3, 4]
+        ls_index = [many_index, medium_index, few_index]
+    else:
+        raise ValueError('Number of experts not supported: {}'.format(args.experts))
+    
 
-    # Load best model
-    model_state_file = os.path.join(args.out_dir, args.model_name,
+    # load best model
+    model_state_file = os.path.join(args.out_dir, args.model_path,
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
     bestmodel = torch.load(model_state_file)
     model.load_state_dict(bestmodel, strict=False)
 
+    # data path
     if args.tune:
         test_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv'
     else :
@@ -132,8 +125,9 @@ def main():
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
+    
+    # define dataset and dataloader
     test_dataset = SwissImage(test_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
-
     test_loader = DataLoader(
         test_dataset,
         batch_size=args.bs,

@@ -58,11 +58,12 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
             output = output['seg']
         
         if args.MLP == True:
+            # compute loss based on the selection probability of experts
             if args.experts==2:
-            # [y_many, y_few], MLP_output = output
-            # few_mask = (mask >= 2) & (mask <= 4) | (mask == 6) | (mask == 7)
-            # loss = criterion(MLP_output, few_mask.float())
                 [y_many, y_few], MLP_output = output
+                few_mask = (mask >= 2) & (mask <= 4) | (mask == 6) | (mask == 7)
+                loss = criterion(MLP_output, few_mask.float())
+                # [y_many, y_few], MLP_output = output
             elif args.experts==3:
                 [y_many, y_medium, y_few], MLP_output = output
                 # output = MLP_output
@@ -188,8 +189,7 @@ def test(test_loader, test_dataset, model, output_dir,
              writer_dict, args): 
     '''Test the model
     Returns:
-        perf_indicator (float): performance indicator. In the case of image segmentation, we return
-                                mean IoU over all validation images.
+        Confusion Matrix
     '''
     batch_time = AverageMeter()
     
@@ -284,10 +284,8 @@ def test(test_loader, test_dataset, model, output_dir,
 
 def ratio_acc_test(test_loader, test_dataset, model, output_dir,
              writer_dict, args): 
-    '''Test the model
-    Returns:
-        perf_indicator (float): performance indicator. In the case of image segmentation, we return
-                                mean IoU over all validation images.
+    '''
+    Return the proportion of each class in an image and its corresponding accuracy
     '''
     batch_time = AverageMeter()
     

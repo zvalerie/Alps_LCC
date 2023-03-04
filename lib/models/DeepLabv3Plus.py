@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from lib.models.resnet import resnet50
+from lib.models.ResNet import resnet50
 from lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
 
 class DeepLabV3(_SimpleSegmentationModel):

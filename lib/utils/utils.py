@@ -129,59 +129,26 @@ def get_scheduler(optimizer, type, args):
         )
     else:
         raise NotImplementedError("Unsupported LR Scheduler: {}".format(type))
-    
-    # elif type == "warmup":
-    #     scheduler = WarmupMultiStepLR(
-    #         optimizer,
-    #         args.step_size,
-    #         gamma=args.lr_decay_rate,
-    #         warmup_epochs=args.warm_epoch,
-    #     )
-    # else:
-    #     raise NotImplementedError("Unsupported LR Scheduler: {}".format(type))
 
     return scheduler
 
-def get_lr_ratio(label_path, csv_path, expert_idx):
-    '''
-    expert_idx: list, [[many],[medium],[few]]
-    '''
-    df = pd.read_csv(csv_path)
-    filename = df['mask']
-    class_dict = dict()
+def weighted_sampler(train_dataset):
+    '''Weighted sampler based on the inversed frequency of each class
     
-    for i in tqdm(range(filename.shape[0])):
-        try:
-            img = Image.open(label_path + '/' + filename[i])
-        except:
-            pass
-            continue
-        img = np.array(img)
-        classes, counts = np.unique(img, return_counts=True)
-        for i in range(len(classes)):
-            class_dict[classes[i]]=class_dict.get(classes[i],0)+counts[i]
+    Args:
+        train_dataset (torch.utils.data.Dataset): training dataset
+    Returns:
+        weight (torch.DoubleTensor): weight for each sample
+    '''
+    N = float(len(train_dataset))
+    count = train_dataset._getImbalancedCount()
+    weight_per_class = [N/count[c] for c in range(len(count))]
+    weight = [0] * int(N)
+    for idx in range(len(train_dataset)):
+        y = train_dataset._getImbalancedClass(idx)
+        weight[idx] = weight_per_class[y]
+    weight = torch.DoubleTensor(weight)
 
-    # if expert_idx != None:
-    #     num_many = 0 
-    #     num_medium =0
-    #     num_few =0
-    #     for k, v in class_dict.items():
-    #         if k == 0:
-    #             continue
-    #         num_many += v
-    #         if k not in expert_idx[0]:
-    #             num_medium += v
-    #         # if k in expert_idx[2]:
-    #         #     num_few += v
-    #     medium_ratio = num_medium/num_many
-    #     few_ratio = num_few/num_many
-    #     print(medium_ratio, few_ratio)
-    # return medium_ratio, few_ratio
-    
-    # f = open('number per class.txt', 'w')
-    # f.write(str(class_dict))
-    # f.close()
-    print(class_dict)
 
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier, num_classes):
@@ -282,27 +249,3 @@ def get_Proto_optimizer(net_params, lr=0.01, momentum=0.9, weight_decay=0.0005, 
                             weight_decay=weight_decay,
                             nesterov=nesterov)
     
-# def _get_parameters(model, base_lr):
-#     bb_lr = []
-#     nbb_lr = []
-#     fcn_lr = []
-#     params_dict = dict(model.named_parameters())
-#     for key, value in params_dict.items():
-#         if 'backbone' in key:
-#             bb_lr.append(value)
-#         elif 'aux_layer' in key or 'upsample_proj' in key:
-#             fcn_lr.append(value)
-#         else:
-#             nbb_lr.append(value)
-
-#     params = [{'params': bb_lr, 'lr': base_lr},
-#                 {'params': fcn_lr, 'lr': base_lr * 10},
-#                 {'params': nbb_lr, 'lr': base_lr * self.configer.get('lr', 'nbb_mult')}]
-#     return params
-
-
-# if __name__ == '__main__':
-#     label_path = '/data/xiaolong/mask'
-#     label_csv_path = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
-#     expert_idx=[[1, 5, 8, 9], [2, 3, 4, 6, 7]]
-#     get_lr_ratio(label_path, label_csv_path, expert_idx)

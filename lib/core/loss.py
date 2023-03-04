@@ -10,58 +10,6 @@ def _assert_no_grad(tensor):
         "nn criterions don't compute the gradient w.r.t. targets - please " \
         "mark these tensors as not requiring gradients"
         
-def softmax_focal_loss_with_logits(
-    output: torch.Tensor,
-    target: torch.Tensor,
-    gamma: float = 2.0,
-    reduction="mean",
-    normalized=False,
-    reduced_threshold: Optional[float] = None,
-    ignore_index = 0,
-    eps: float = 1e-6,
-) -> torch.Tensor:
-    """Softmax version of focal loss between target and output logits.
-    See :class:`~pytorch_toolbelt.losses.FocalLoss` for details.
-    Args:
-        output: Tensor of shape [B, C, *] (Similar to nn.CrossEntropyLoss)
-        target: Tensor of shape [B, *] (Similar to nn.CrossEntropyLoss)
-        reduction (string, optional): Specifies the reduction to apply to the output:
-            'none' | 'mean' | 'sum' | 'batchwise_mean'. 'none': no reduction will be applied,
-            'mean': the sum of the output will be divided by the number of
-            elements in the output, 'sum': the output will be summed. Note: :attr:`size_average`
-            and :attr:`reduce` are in the process of being deprecated, and in the meantime,
-            specifying either of those two args will override :attr:`reduction`.
-            'batchwise_mean' computes mean loss per sample in batch. Default: 'mean'
-        normalized (bool): Compute normalized focal loss (https://arxiv.org/pdf/1909.07829.pdf).
-        reduced_threshold (float, optional): Compute reduced focal loss (https://arxiv.org/abs/1903.01347).
-    """
-    log_softmax = F.log_softmax(output, dim=1)
-
-    loss = F.nll_loss(log_softmax, target, reduction="none", ignore_index=ignore_index)
-    pt = torch.exp(-loss)
-
-    # compute the loss
-    if reduced_threshold is None:
-        focal_term = (1.0 - pt).pow(gamma)
-    else:
-        focal_term = ((1.0 - pt) / reduced_threshold).pow(gamma)
-        focal_term[pt < reduced_threshold] = 1
-
-    loss = focal_term * loss
-
-    if normalized:
-        norm_factor = focal_term.sum().clamp_min(eps)
-        loss = loss / norm_factor
-
-    if reduction == "mean":
-        loss = loss.mean()
-    if reduction == "sum":
-        loss = loss.sum()
-    if reduction == "batchwise_mean":
-        loss = loss.sum(0)
-
-    return loss
-
 class CrossEntropy2D(nn.Module):
     def __init__(self, ignore_index = 0, reduction='mean', weight=None):
         """Initialize the module
@@ -115,11 +63,9 @@ class ResCELoss(CrossEntropy2D):
     def __init__(self, many_index, few_index, args):
         super(ResCELoss, self).__init__()
         self.num_classes = 10
-        self.args = args
         self.few_index = few_index
         self.many_index = many_index
         self.weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
-        # self.weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 0, 0, 0], dtype=torch.float).cuda()
         self.celoss= CrossEntropy2D()
         self.weight_celoss = CrossEntropy2D(weight=self.weight)
 
@@ -128,35 +74,17 @@ class ResCELoss(CrossEntropy2D):
         [many_output_ori, few_output_ori], MLP_output= output
         few_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         many_loss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
-        comLoss = torch.tensor(0.0, requires_grad=True).to(many_output_ori.device)
         targets_cpu = targets.cpu().numpy()
         
         ## among batch, return the idx that the mask contains few category
         few_idx_cpu = [j for j in range(len(targets_cpu)) if any(np.isin(self.few_index, targets_cpu[j]))] 
         
         if len(few_idx_cpu):
-        # compute weight celoss   
-            claLoss = self.weight_celoss(few_output_ori, targets)
-            comLoss = self._get_comLoss(few_output_ori, targets)
-            few_loss = claLoss + comLoss
-            # few_loss = claLoss
-        
+        # compute weighted celoss   
+            few_loss = self.weight_celoss(few_output_ori, targets)
+
         many_loss = self.celoss(many_output_ori, targets)
-        return [many_loss, few_loss], comLoss
-    
-    def _get_comLoss(self, output, targets):
-        few_mask = (targets >= 2) & (targets <= 4) | (targets == 6) | (targets == 7) #[16,1,200,200] 2 3 4 6 7
-        num_few_pixles = (few_mask == True).sum()
-        # few_output = torch.masked_select(output, few_mask)
-        few_mask = few_mask.expand(output.size()) #[16, 10, 200 ,200]
-        few_output = output * few_mask
-        if self.args.loss == 0:
-            comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index)
-        elif self.args.loss == 1:
-            comLoss = torch.norm(few_output[:,self.many_index], p=2)/num_few_pixles * self.args.comFactor
-        elif self.args.loss == 2:
-            comLoss = torch.norm(few_output[:,self.many_index], p=2)/len(self.many_index) * self.args.comFactor
-        return comLoss
+        return [many_loss, few_loss], None
     
 class ResCELoss_3exp(CrossEntropy2D):
     def __init__(self, many_index, medium_index, few_index, args):
@@ -165,10 +93,7 @@ class ResCELoss_3exp(CrossEntropy2D):
         self.few_index = few_index
         self.medium_index = medium_index
         self.many_index = many_index
-        self.args = args
-        # self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
         self.medium_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], dtype=torch.float).cuda()
-        # self.few_weight = torch.tensor([0, 0, 1, 1, 1, 0, 0, 0, 0, 0], dtype=torch.float).cuda()
         self.few_weight = torch.tensor([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], dtype=torch.float).cuda()
         self.celoss= CrossEntropy2D()
         self.medium_weight_celoss = CrossEntropy2D(weight=self.medium_weight)
@@ -188,47 +113,17 @@ class ResCELoss_3exp(CrossEntropy2D):
         
         if len(medium_idx_cpu):
         # compute weight celoss   
-            medium_claLoss = self.medium_weight_celoss(medium_output_ori, targets)
-            # medium_comLoss = self._get_medium_comLoss(medium_output_ori, targets)
-            medium_loss = medium_claLoss
-            # few_head_loss = claLoss
+            medium_loss = self.medium_weight_celoss(medium_output_ori, targets)
             
         if len(few_idx_cpu):
         # compute weight celoss   
-            few_claLoss = self.few_weight_celoss(few_output_ori, targets)
-            # few_comLoss = self._get_few_comLoss(few_output_ori, targets)
-            few_loss = few_claLoss 
-            # few_head_loss = claLoss
+            few_loss = self.few_weight_celoss(few_output_ori, targets)
         
         many_loss = self.celoss(many_output_ori, targets)
-        # few_head_loss = self.celoss(few_output_ori, targets)
         
         return [many_loss, medium_loss, few_loss], None
-    
-    def _get_few_comLoss(self, output, targets):
-        few_mask = (targets >= 3) & (targets <= 4) #[16,1,200,200]
-        num_few_pixles = (few_mask == True).sum()
-        # few_output = torch.masked_select(output, few_mask)
-        few_mask = few_mask.expand(output.size()) #[16, 10, 200 ,200]
-        few_output = output * few_mask
-        if self.args.loss == 0:
-            comLoss = torch.norm(few_output[:,self.many_index + self.medium_index], p=2)/len(self.many_index + self.medium_index)
-        elif self.args.loss == 1:
-            comLoss = torch.norm(few_output[:,self.many_index + self.medium_index], p=2)/num_few_pixles * self.args.comFactor
-        return comLoss
-    
-    def _get_medium_comLoss(self, output, targets):
-        medium_mask = (targets >= 2) & (targets <= 4) | (targets == 6) #[16,1,200,200]
-        num_medium_pixles = (medium_mask == True).sum()
-        # few_output = torch.masked_select(output, few_mask)
-        medium_mask = medium_mask.expand(output.size()) #[16, 10, 200 ,200]
-        medium_output = output * medium_mask
-        if self.args.loss == 0:
-            comLoss = torch.norm(medium_output[:,self.many_index], p=2)/len(self.many_index)
-        elif self.args.loss == 1:
-            comLoss = torch.norm(medium_output[:,self.many_index], p=2)/num_medium_pixles * self.args.comFactor
-        return comLoss
-    
+
+
 def seesaw_logit(cls_score,
                    labels,
                    cum_samples,
@@ -262,41 +157,8 @@ def seesaw_logit(cls_score,
     
     onehot_labels = F.one_hot(labels.long(), num_classes) # [(B H W) C]
     seesaw_weights = cls_score.new_ones(cls_score.size())  
-
-    # if p > 0 and q > 0:
-    #     # mitigation factor
-    #     sample_ratio_matrix = cum_samples[None, :].clamp(
-    #         min=1) / cum_samples[:, None].clamp(min=1)
-    #     index = (sample_ratio_matrix < 1.0).float()
-    #     sample_weights = sample_ratio_matrix.pow(p) * index + (1 - index)
-    #     mitigation_factor = cls_score.new_ones(cls_score.size()) 
-    #     onehot_labels = cls_score.new_ones(cls_score.size()) 
-    #     # compensation factor
-    #     scores = F.softmax(cls_score.detach(), dim=1)
-    #     self_scores = labels.new_ones(labels.size()) 
-        
-    #     for i in range(labels.shape[0]) :
-    #         for j in range(labels.shape[2]): 
-    #             for k in range(labels.shape[3]):
-    #                 label = labels[i, 0, j, k].long()
-    #                 mitigation_factor[i, :, j, k] = sample_weights[label, :]
-    #                 # compensation factor
-    #                 self_scores[i, 0, j, k] = scores[i, label, j, k]
-    #                 onehot_labels[i, label, j , k ] = 0
-        
-    #     score_matrix = scores / self_scores.clamp(min=eps)
-    #     # self_scores = scores[
-    #     #     torch.arange(0, len(scores)).to(scores.device).long(),
-    #     #     labels.long()]
-    #     # score_matrix = scores / self_scores[:, None].clamp(min=eps)
-    #     index = (score_matrix > 1.0).float()
-    #     compensation_factor = score_matrix.pow(q) * index + (1 - index)
-        
-    #     seesaw_weights = mitigation_factor * compensation_factor
-    #     print('seesaw_weight done')
-    # cls_score = cls_score + (seesaw_weights.log() * (1 - onehot_labels))
     
-      # mitigation factor
+    # mitigation factor
     if p > 0:
         sample_ratio_matrix = cum_samples[None, :].clamp(
             min=1) / cum_samples[:, None].clamp(min=1)
@@ -321,14 +183,6 @@ def seesaw_logit(cls_score,
     # loss = F.cross_entropy(cls_score, labels.long(), weight=None, reduction='none')
     
     return cls_score
-
-    def get_one_hot(label, num_classes):
-        size = list(labels.size())
-        labels= labels.view(-1)
-        ones = torch.sparse.torch.eye(10)
-        ones = ones.index_select(0, labels)
-        ones = ones.permute(1,0).unsqueeze(dim=2)
-
 
 class SeesawLoss(nn.Module):
     """
@@ -404,7 +258,6 @@ class SeesawLoss(nn.Module):
         loss = self.cls_criterion(cls_score, labels)
         return loss
     
-    
 class PPC(nn.Module, ABC):
     def __init__(self, ignore_index=0):
         super(PPC, self).__init__()
@@ -466,7 +319,6 @@ class PixelPrototypeCELoss(nn.Module, ABC):
         loss = self.seg_criterion(pred, target)
         return loss
     
-
 class CrossEntropyLoss(nn.Module):
     def __init__(self, ignore_index = 0, reduction='mean', weight=None):
         """Initialize the module
@@ -474,7 +326,6 @@ class CrossEntropyLoss(nn.Module):
         Args:
             ignore_index: specify which the label index to ignore.
             reduction (str): reduction method. See torch.nn.functional.cross_entropy for details.
-            output_dir (str): output directory to save the checkpoint
             weight: weight for samples. See torch.nn.functional.cross_entropy for details.
         """
         super(CrossEntropyLoss, self).__init__()
@@ -506,11 +357,3 @@ class CrossEntropyLoss(nn.Module):
         )
 
         return loss
-
-
-if __name__ == '__main__':
-    torch.manual_seed(1)
-    labels = torch.randint(0,10,[2,1,4,4], dtype = torch.int32)
-    cls_score = torch.randint(1,10,[2,10,4,4], dtype = torch.float32)
-    criteron = SeesawLoss()
-    loss = criteron(cls_score, labels)

@@ -34,8 +34,8 @@ def parse_args():
                         help='directory to save outputs',
                         default='out/train',
                         type=str)
-    parser.add_argument('--model_name',
-                        help='time_str when trainning model ',
+    parser.add_argument('--model_path',
+                        help='path for the best model',
                         default='',
                         type=str)
     parser.add_argument('--bs',
@@ -77,27 +77,10 @@ def parse_args():
 
 def main():
     args = parse_args()
-    
+    # create logger
     logger, tb_logger, time_str = create_logger(
         args.out_dir, phase='test', create_tf_logs=True)
-    
-    logger.info(pprint.pformat(args))
-    
-    if args.model == 'Unet':
-        model = Res50_UNet(num_classes=10)
-        if args.MLP == True:
-            model = ACE_Res50_UNet(num_classes=10, train_LWS = False, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
-    elif args.model == 'Deeplabv3':
-        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
-        if args.MLP == True:
-            model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=True)
-    elif args.model == 'Deeplabv3_proto':
-        model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
-    # Define loss function (criterion) and optimizer  
-    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
-    
-    model = model.to(device)
-        
+    logger.info(pprint.pformat(args))    
     if tb_logger:
         writer_dict = {
             'logger': tb_logger,
@@ -106,22 +89,41 @@ def main():
         }
     else:
         writer_dict = None
-
+        
+    # define model
+    if args.model == 'Unet':
+        model = Res50_UNet(num_classes=10)
+        if args.MLP == True:
+            model = ACE_Res50_UNet(num_classes=10, train_MLP = args.MLP, num_experts=args.experts, pretrained = False)
+    elif args.model == 'Deeplabv3':
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        if args.MLP == True:
+            model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts, is_MLP=True)
+    elif args.model == 'Deeplabv3_proto':
+        model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
+    else: 
+        raise NotImplementedError('Model not supported: {}'.format(args.model))
+    
+    # Define loss function (criterion) and optimizer  
+    device = ("cuda:0" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
     # Load best model
-    model_state_file = os.path.join(args.out_dir, args.model_name,
+    model_state_file = os.path.join(args.out_dir, args.model_path,
                                     'model_best.pth.tar')
     logger.info('=> loading model from {}'.format(model_state_file))
     bestmodel = torch.load(model_state_file)
     model.load_state_dict(bestmodel)
 
+    # Data path
     if args.tune:
         test_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/test_subset.csv'
-        # test_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_test_dataset.csv'
     else :
         test_csv = '/data/xiaolong/master_thesis/data_preprocessing/test_dataset.csv'
     img_dir = '/data/xiaolong/rgb'
     dem_dir = '/data/xiaolong/dem'
     mask_dir = '/data/xiaolong/mask'
+    
+    # Dataset and Dataloader
     test_dataset = SwissImage(test_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
 
     test_loader = DataLoader(
