@@ -8,18 +8,18 @@ import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from torchvision import transforms
-from torch.optim.lr_scheduler import StepLR
+from torch.optim.lr_scheduler import StepLR, LambdaLR
 
-from lib.core.function_ACE import train
-from lib.core.function_ACE import validate
+from lib.core.function import train
+from lib.core.function import validate
 # from lib.core.loss import FocalLoss
-from lib.core.loss import ResCELoss, ResCELoss_3exp
-from lib.utils.utils import get_optimizer
+from lib.core.loss import CrossEntropy2D, SeesawLoss, PixelPrototypeCELoss
 from lib.utils.utils import create_logger
 from lib.utils.utils import save_checkpoint
 
-from lib.models.ACE_UNet import ACE_Res50_UNet
-from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
+from lib.models.Unet import Res50_UNet
+from lib.models.DeepLabv3Plus import deeplabv3P_resnet
+from lib.models.DeepLabv3Proto import deeplabv3P_resnet_proto
 from lib.dataset.SwissImage import SwissImage
 from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
@@ -49,32 +49,49 @@ def parse_args():
                         type=float)      
     parser.add_argument('--bs',
                         help='batch size',
-                        default=16,
+                        default=32,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
                         default=0.1,
                         type=float)
+    parser.add_argument('--loss',
+                        help='which loss',
+                        default='celoss',
+                        type=str)
+    # parser.add_argument('--patience',
+    #                     help='scheduler_patience',
+    #                     default=10,
+    #                     type=int)
     parser.add_argument('--step_size',
                         help='step to decrease lr',
                         default = 10,
                         type=int)
+    parser.add_argument('--milestones',
+                        help='step to decrease lr',
+                        default = [10, 25],
+                        type=list)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/ACE',
+                        default='out/train',
                         type=str)
     parser.add_argument('--model',
-                        help='model with resnet50 backbone',
+                        help='backbone of encoder',
                         default='Unet',
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
                         default=100,
                         type=int)
+    # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
                         default=6,
                         type=int)
+    parser.add_argument('--continues',
+                        help='continue training from checkpoint',
+                        default=False,
+                        type=bool)
     parser.add_argument('--debug',
                         help='is debuging?',
                         default=False,
@@ -83,38 +100,14 @@ def parse_args():
                         help='is tunning?',
                         default=True,
                         type=bool)
-    parser.add_argument('--loss',
-                        help='complementary loss type',
-                        default=1,
-                        type=int)
-    parser.add_argument('--experts',
-                        help='number of experts',
-                        default=2,
-                        type=int)
-    parser.add_argument('--comFactor',
-                        help='factor for comLoss',
-                        default=10,
-                        type=float)
-    parser.add_argument('--TRAIN_SEP',
-                        help='train experts seperately',
-                        default=False,
-                        type=bool)
-    parser.add_argument('--model_path',
-                        help='model path for retuning',
-                        default=None,
-                        type=str)
     parser.add_argument('--is_weighted_sampler',
                         help='is_weighted_sampler',
                         default=False,
                         type=bool)
-    parser.add_argument('--optimizer',
-                        help='number of optimizer',
-                        default=1,
-                        type=float)
-    parser.add_argument('--fewloss_factor',
-                        help='factor to adjust the weight of few loss',
-                        default=1,
-                        type=float)
+    parser.add_argument('--MLP',
+                        help='Train MLP layer to combine the results of experts',
+                        default=False,
+                        type=bool)
     args = parser.parse_args()
     
     return args
@@ -124,12 +117,13 @@ def main():
 
     logger, tb_logger, folder_name = create_logger(args.out_dir, phase='train', create_tf_logs=True)
     logger.info(pprint.pformat(args))
-
+    
     if args.model == 'Unet':
-        model = ACE_Res50_UNet(num_classes=10, num_experts=args.experts, train_LWS = False, train_MLP = False, pretrained = True)
+        model = Res50_UNet(num_classes=10)
     elif args.model == 'Deeplabv3':
-        model = ACE_deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True, num_experts=args.experts)
-        
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+    elif args.model == 'Deeplabv3_proto':
+        model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
     writer_dict = {
             'logger': tb_logger,
             'train_global_steps': 0,
@@ -140,47 +134,36 @@ def main():
     # Define loss function (criterion) and optimizer  
     device = torch.device("cuda")
     model = model.to(device)
+
+    if args.loss == 'celoss':
+        criterion = CrossEntropy2D(ignore_index=0).to(device)
+    elif args.loss == 'seesawloss':
+        criterion = SeesawLoss(ignore_index=0).to(device)
+    elif args.model =='Deeplabv3_proto':
+        criterion = PixelPrototypeCELoss().to(device)
+        
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    lr_scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
     
-    if args.experts == 2: 
-        many_index = [1, 5, 8, 9]
-        few_index = [2, 3, 4, 6, 7]
-        # many_index = [1, 5, 7, 8, 9]
-        # few_index = [2, 3, 4, 6]
-        ls_index = [many_index, few_index]
-        criterion = ResCELoss(many_index, few_index, args=args).to(device)
-        lr_ratio = [0.03] ## ratio of rare categories to frequent categories
-        # optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.lr, weight_decay=args.wd)
-        if args.optimizer == 1:
-            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-        elif args.optimizer == 1.5:
-            optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
-        elif args.optimizer == 2:
-            few_params = list(map(id, model.SegHead_few.parameters())) 
-            many_paramas = filter(lambda p : id(p) not in few_params, model.parameters())
-            many_optimizer = optim.Adam(many_paramas, lr=args.lr, weight_decay=args.wd)
-            few_optimizer = optim.Adam(model.SegHead_few.parameters(), lr=args.lr, weight_decay=args.wd)
-            optimizer = [many_optimizer, few_optimizer]
-            
-    if args.experts == 3: 
-        many_index = [1, 5, 7, 8, 9]
-        medium_index = [2, 6]
-        few_index = [3, 4]
-        ls_index = [many_index, medium_index, few_index]
-        criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
-        lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
-        if args.optimizer == 1:
-            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-        elif args.optimizer == 1.5:
-            optimizer = get_optimizer(model, "ADAM", num_experts=args.experts, base_lr=args.lr, lr_ratio=lr_ratio, args=args)
+    if args.model=='Deeplabv3_proto':
+        optimizer = optim.SGD(model.parameters(),
+                            lr=0.01,
+                            momentum=0.9,
+                            weight_decay=0.0005,
+                            nesterov=False)
+        lambda_poly = lambda iters: pow((1.0 - iters / 86100),
+                                                2)
+        # lambda_poly = lambda iters: pow(1 / (iters + 1), 0.9)
+        lr_scheduler = LambdaLR(optimizer, lr_lambda=lambda_poly)
+
     
-    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)    
-    # scheduler_1 = StepLR(optimizer[0], step_size=args.step_size, gamma=args.lr_decay_rate)
-    # scheduler_2 = StepLR(optimizer[1], step_size=args.step_size, gamma=args.lr_decay_rate)
-    
+    # lr_scheduler = MultiStepLR(optimizer, milestones=args.milestones, gamma=args.lr_decay_rate)
     # Create training and validation datasets
     if args.tune:
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/train_subset_few.csv'
         val_csv = '/data/xiaolong/master_thesis/data_preprocessing/subset/val_subset.csv'
+        # train_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_train_dataset.csv'
+        # val_csv = '/data/xiaolong/master_thesis/data_preprocessing/4_val_dataset.csv'
     else : 
         train_csv = '/data/xiaolong/master_thesis/data_preprocessing/train_dataset.csv'
         val_csv = '/data/xiaolong/master_thesis/data_preprocessing/val_dataset.csv'
@@ -203,21 +186,21 @@ def main():
     val_dataset = SwissImage(val_csv, img_dir, dem_dir, mask_dir, debug=args.debug)
     
     if args.is_weighted_sampler:
-        N = float(len(train_dataset))
-        count = train_dataset._getImbalancedCount()
-        weight_per_class = [N/count[c] for c in range(len(count))]
-        weight = [0] * int(N)
-        for idx in range(len(train_dataset)):
-            y = train_dataset._getImbalancedClass(idx)
-            weight[idx] = weight_per_class[y]
-        weight = torch.DoubleTensor(weight)
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size=args.bs,
-            sampler=WeightedRandomSampler(weight, len(weight)),
-            num_workers=args.num_workers,
-            pin_memory=True
-        )
+            N = float(len(train_dataset))
+            count = train_dataset._getImbalancedCount()
+            weight_per_class = [N/count[c] for c in range(len(count))]
+            weight = [0] * int(N)
+            for idx in range(len(train_dataset)):
+                y = train_dataset._getImbalancedClass(idx)
+                weight[idx] = weight_per_class[y]
+            weight = torch.DoubleTensor(weight)
+            train_loader = DataLoader(
+                train_dataset,
+                batch_size=args.bs,
+                sampler=WeightedRandomSampler(weight, len(weight)),
+                num_workers=args.num_workers,
+                pin_memory=True
+            )
     else: 
         train_loader = DataLoader(
             train_dataset,
@@ -242,12 +225,12 @@ def main():
     for epoch in range(start_epoch, args.epoch):
         # train for one epoch
         train(train_loader,train_dataset, model, criterion, optimizer, epoch,
-              args.out_dir, writer_dict, args)
+              args.out_dir, writer_dict, lr_scheduler, args)
 
         if (epoch + 1) % 1 == 0:
             # evaluate on validation set
             val_loss, perf_indicator = validate(val_loader, val_dataset, model,
-                                      criterion, ls_index, args.out_dir, writer_dict, args)
+                                      criterion, args.out_dir, writer_dict, args)
 
             # update best performance
             if perf_indicator > best_perf:
@@ -258,11 +241,8 @@ def main():
         else:
             perf_indicator = -1
             best_model = False
-        
-        scheduler.step()
-        
-        # scheduler_1.step()
-        # scheduler_2.step()
+
+        lr_scheduler.step()
         
         # update best model so far
         folder_path = os.path.join(args.out_dir, folder_name)
@@ -273,9 +253,8 @@ def main():
             'perf': perf_indicator,
             'last_epoch': epoch,
             'optimizer': optimizer.state_dict(),
-            # 'many_optimizer': optimizer[0].state_dict(),
-            # 'few_optimizer': optimizer[1].state_dict(),
         }, best_model, folder_path)
+
 
     final_model_state_file = os.path.join(folder_path,
                                           'final_state.pth.tar')

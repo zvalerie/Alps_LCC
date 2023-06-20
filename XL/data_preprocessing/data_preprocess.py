@@ -172,7 +172,7 @@ def cal_mean_std(dataset =None):
             dataset, batch_size=1, shuffle=False, num_workers=0,
             pin_memory=True)
 
-    for X, _, _ in tqdm(train_loader):
+    for _, X, _ in tqdm(train_loader):
         X = np.array(X)
         for j in range(X.shape[0]):
             mean[j] += np.mean(X[:,j,:,:])
@@ -182,7 +182,7 @@ def cal_mean_std(dataset =None):
     for X, _, _ in tqdm(train_loader):
         X = np.array(X)
         for j in range(X.shape[0]):
-            stdTemp[j] += ((X[:,j,:,:] - mean[j])**2).sum()/(X.shape[3]*X.shape[2])
+            stdTemp[j] += ((X[:,j,:,:] - mean[j])**2).sum()/(X.shape[3]*X.shape[2])###########################
             
 
     std = np.sqrt(stdTemp/len(dataset)) ###############################################3
@@ -241,5 +241,5 @@ if __name__ == '__main__':
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' # /data/xiaolong/dem'
     mask_dir = '/home/valerie/data/ace_alps/mask'
     
-    ds = SwissImage(dataset_csv,img_dir,dem_dir,mask_dir,common_transform=None,img_transform=None,debug=False)
+    ds = SwissImage(dataset_csv,img_dir,dem_dir,mask_dir)
     compute_mean_std(ds)
