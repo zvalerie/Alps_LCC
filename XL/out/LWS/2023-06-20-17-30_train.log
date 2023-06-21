@@ -1,0 +1,2 @@
+2023-06-20 17:30:24,148 Namespace(lr=1e-05, epoch=10, wd=0.01, bs=32, lr_decay_rate=0.1, step_size=10, out_dir='out/LWS', backbone='resnet50', frequent=100, num_workers=6, debug=False, tune=False, loss=1, experts=2, comFactor=10, TRAIN_SEP=False, model_name=None)
+2023-06-20 17:30:24,148 Learnable weight scaling, experts:2

@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from lib.models.ResNet import resnet50
-from lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
+from XL.lib.models.ResNet import resnet50
+from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
 from timm.models.layers import trunc_normal_
 from einops import rearrange, repeat
-from lib.models.DeepLabv3Plus import ASPP
+from XL.lib.models.DeepLabv3Plus import ASPP
 
 class DeepLabV3(nn.Module):
     """

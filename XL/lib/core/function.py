@@ -6,10 +6,10 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from lib.core.inference import get_final_preds
-from lib.utils.vis import vis_seg_mask
-from lib.utils.evaluation import MetricLogger
-# from lib.utils.evaluation import createConfusionMatrix
+from XL.lib.core.inference import get_final_preds
+from XL.lib.utils.vis import vis_seg_mask
+from XL.lib.utils.evaluation import MetricLogger
+# from XL.lib.utils.evaluation import createConfusionMatrix
 from tqdm import tqdm
 import pandas as pd
 

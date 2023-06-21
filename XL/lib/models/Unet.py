@@ -4,7 +4,7 @@ import glob
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from lib.models.ResNet import resnet50
+from XL.lib.models.ResNet import resnet50
 
 class DoubleConv (nn.Module):
     '''Conv2d + BN + ReLu'''

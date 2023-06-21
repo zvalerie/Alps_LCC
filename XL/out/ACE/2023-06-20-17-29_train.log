@@ -1,0 +1,1 @@
+2023-06-20 17:29:49,550 Namespace(lr=1e-05, epoch=50, wd=0.01, bs=16, lr_decay_rate=0.1, step_size=10, out_dir='out/ACE', model='Unet', frequent=100, num_workers=6, debug=False, tune=True, loss=1, experts=2, comFactor=10, TRAIN_SEP=False, model_path=None, is_weighted_sampler=False, optimizer=1, fewloss_factor=1)
