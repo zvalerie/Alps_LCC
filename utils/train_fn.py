@@ -2,6 +2,7 @@ import time
 import os
 import numpy as np
 import torch
+import wandb
 import torch.nn as nn
 from numpy import linalg as LA
 from utils.training_utils import AverageMeter
@@ -37,11 +38,11 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
         data_time.update(time.time() - end)
         
         # move data to device
-        input = torch.cat((image, dem), dim=1).to(device) #[B, 4, 400, 400]
-        mask = mask.to(device)#[B,16,200,200]
+        input = torch.cat((image, dem), dim=1).to(device)
+        mask = mask.to(device)
         
         # Run forward pass : 
-        output = model(input) #[B,16,400,400]
+        output = model(input) 
         
         # compute loss
         if args.experts ==0:
@@ -105,22 +106,35 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
         batch_time.update(time.time() - end)
         end = time.time()
         
-        if i % args.frequent == 0:
+        if i % args.logging_frequency == 0:
             lr = optimizer.param_groups[0]['lr']
-            
+       
             msg = 'Epoch: [{0}][{1}/{2}]\t' \
-                  'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
-                  'Speed {speed:.1f} samples/s\t' \
-                  'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
-                  'Loss {loss.val:.5f} ({loss.avg:.5f})\t'\
-                  'Learning rate {lr:.2f}\t'\
-                  'MediumLoss {mediumloss.val:.5f} ({mediumloss.avg:.5f})\t'\
-                  'FewLoss {fewloss.val:.5f} ({fewloss.avg:.5f})\t'.format(
-                      epoch, i, len(train_loader), batch_time=batch_time,
-                      speed=input.size(0)/batch_time.val,
-                      data_time=data_time, loss=losses, lr=lr, 
-                      mediumloss=mediumlosses, fewloss=fewlosses)
+                'Time {batch_time.val:.3f}s ({batch_time.avg:.3f}s)\t' \
+                'Speed {speed:.1f} samples/s\t' \
+                'Data {data_time.val:.3f}s ({data_time.avg:.3f}s)\t' \
+                'Loss {loss.val:.5f} ({loss.avg:.5f})\t'\
+                'Learning rate {lr:.5f}\t'\
+                'MediumLoss {mediumloss.val:.5f} ({mediumloss.avg:.5f})\t'\
+                'FewLoss {fewloss.val:.5f} ({fewloss.avg:.5f})\t'.format(
+                epoch, i+1, 
+                len(train_loader), 
+                batch_time=batch_time,
+                speed=input.size(0)/batch_time.val,
+                data_time=data_time, loss=losses, lr=lr, 
+                mediumloss=mediumlosses, fewloss=fewlosses)
+                
             print(msg)
+             
+    # End of each epoch          
+    if args.log_wandb :
+        metrics = {
+                'train_loss':loss.avg,
+                'train_duration': batch_time.avg,
+                'lr':lr,                             
+            }
+            
+        wandb.log(metrics)
     
     
     

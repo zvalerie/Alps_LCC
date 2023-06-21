@@ -9,17 +9,17 @@ import torch
 import torch.optim as optim
 from torch.utils.data import WeightedRandomSampler
 from torch.optim.lr_scheduler import StepLR, LambdaLR
+from pprint import pprint
+from copy import deepcopy
 
-from utils.training_utils import get_dataloader, get_model, get_criterion, set_all_random_seeds
+from utils.training_utils import get_dataloader, get_model, get_criterion, set_all_random_seeds, setup_wandb_log
 from utils.argparser import parse_args
 
-#from XL.lib.core.function import train
-from XL.lib.core.function import validate
-# from XL.lib.core.loss import FocalLoss
-from utils.training_utils import save_checkpoint
 from XL.lib.core.loss import ResCELoss, ResCELoss_3exp
 
-from utils.train_fn import train_ACE, validate_ACE
+from utils.train_fn import train_ACE
+from utils.validate_fn import validate_ACE
+from utils.test_fn import test_ACE
 
 
 
@@ -27,6 +27,8 @@ def main(args):
    
     # set all random seeds :
     set_all_random_seeds(args.seed)
+    setup_wandb_log(args)
+    
     
     # Choose model and device :
     model = get_model(args)
@@ -36,6 +38,7 @@ def main(args):
     # Get dataloaders : 
     train_loader = get_dataloader(args,phase='train')
     val_loader = get_dataloader(args=args,phase='val')
+    
        
     # # Define loss function (criterion) and optimizer
     criterion = get_criterion (args)
@@ -55,45 +58,49 @@ def main(args):
     # Start model training :     
     best_miou = 0.0 # best performance so far (mean IoU)
     start_epoch = 0
-    writer_dict =None
+    miou=0.
 
     for epoch in range( args.epoch):
         
         # train for one epoch
         train_ACE(train_loader, model, criterion, optimizer, epoch, args, device)
-
+        scheduler.step()
         
         # evaluate on validation set
         val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args, device)
 
-        # update best performance
-        if miou > best_miou:
+        # update best model if best performances : 
+        miou=0
+        if miou > best_miou :
                 best_miou = miou
                 model_checkpoint = {
                         'epoch': epoch ,
-                        'state_dict': model.state_dict().deepcopy(),
+                        'state_dict': deepcopy(model.state_dict()),
                         'perf': miou,
                         'last_epoch': epoch,
                         'optimizer': optimizer.state_dict(),
                         }
-                torch.save(model_checkpoint, os.path.join( args.outdir, args.name,'ep_'{epoch},'.pt'))
+                torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'ep_{}'.format(epoch)+'.pt'))
 
-        scheduler.step()
+        
 
 
     # End of training : save final model
     model_checkpoint = {
                         'epoch': epoch ,
-                        'state_dict': model.state_dict().deepcopy(),
+                        'state_dict': deepcopy (model.state_dict()),
                         'perf': miou,
                         'last_epoch': epoch,
                         'optimizer': optimizer.state_dict(),
                         }
-    torch.save(model_checkpoint, os.path.join( args.outdir, args.name,'_final.pt'))
-    print('end of model training')
+    torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'final.pt'))
+    print('End of model training')
+    
+    test_ACE(model,args,device)
 
 
 if __name__ == '__main__':
     args = parse_args()
+    pprint(vars ( args))
     main(args)
         

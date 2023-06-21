@@ -30,39 +30,27 @@ def parse_args():
                         help='which loss',
                         default='celoss',
                         type=str)
-    # parser.add_argument('--patience',
-    #                     help='scheduler_patience',
-    #                     default=10,
-    #                     type=int)
     parser.add_argument('--step_size',
                         help='step to decrease lr',
                         default = 10,
                         type=int)
-    #parser.add_argument('--milestones',
-    #                    help='step to decrease lr',
-    #                    default = [10, 25],
-    #                    type=list)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/train',
+                        default='out/baseline/',
                         type=str)
     parser.add_argument('--model',
-                        help='backbone of encoder',
+                        help='model',
                         default='Deeplabv3',
                         type=str)
-    parser.add_argument('--frequent',
+    parser.add_argument('--logging_frequency',
                         help='frequency of logging',
-                        default=1,
+                        default=10,
                         type=int)
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
-                        default=6,
+                        default=16,
                         type=int)
-    parser.add_argument('--continues',
-                        help='continue training from checkpoint',
-                        default=False,
-                        type=bool)
     parser.add_argument('--debug',
                         help='is debuging?',
                         default=False,
@@ -91,7 +79,10 @@ def parse_args():
                         help='experiment name',
                         default='debug',
                         type=str)
-    
+    parser.add_argument('--log_wandb',
+                        help='log experiment to wandb',
+                        default=False,
+                        type=bool)  
     args = parser.parse_args()
     
     return args

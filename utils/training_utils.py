@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import random
 import os 
-
+import wandb 
 from dataset.SwissImageDataset import SwissImage
 from torch.utils.data import DataLoader
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
@@ -66,28 +66,38 @@ def get_model(args):
     elif args.model == 'Deeplabv3':
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
-    elif args.model == 'Deeplabv3_proto':
+    else:
        raise NotImplementedError
-       # model = deeplabv3P_resnet_proto(num_classes=10, output_stride=8, pretrained_backbone=True)
+       
     
     return model
 
 
-def get_dataloader(args, phase ='train'):
+def get_dataloader(args=None, phase ='train'):
     """ 
     Create training and validation datasets    
     """    
    
     img_dir = '/home/valerie/data/rocky_tlm/rgb/' 
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' 
-    mask_dir = '/home/valerie/data/ace_alps/mask'
+    mask_dir = '/home/valerie/data/ace_alps/mask' 
     
-    if args.small_dataset:
+    # Create output folder if needed :
+    if args is not None and not os.path.exists(args.out_dir):
+        os.mkdir(args.out_dir)
+    if args is not None and not os.path.exists(os.path.join( args.out_dir, args.name)):
+        os.mkdir(os.path.join( args.out_dir, args.name))
+    
+    # Path to dataset splits : 
+    test_csv = 'data/split/test_dataset.csv'
+    if args is not None and args.small_dataset:
         train_csv = 'data/split_subset/train_subset.csv'
-        val_csv = '/home/valerie/Projects/Alps_LCC/data/split_subset/val_subset.csv'
+        val_csv = 'data/split_subset/val_subset.csv'
+    
     else : 
         train_csv = 'data/split/train_dataset.csv'
         val_csv = 'data/split/val_dataset.csv'  
+   
     
     common_transform = Compose([
         MyRandomHorizontalFlip(p=0.5),
@@ -102,40 +112,60 @@ def get_dataloader(args, phase ='train'):
     
     if phase =='train' :
         
-        train_dataset = SwissImage(train_csv, 
-                                img_dir, 
-                                dem_dir, 
-                                mask_dir, 
-                                common_transform = common_transform, 
-                                img_transform = img_transform, 
-                                debug=args.debug)
+        train_dataset = SwissImage(
+            train_csv, 
+            img_dir, 
+            dem_dir, 
+            mask_dir, 
+            common_transform = common_transform, 
+            img_transform = img_transform, 
+            debug=args.debug)
         
         train_loader = DataLoader(
             train_dataset,
-            batch_size=args.bs,
+            batch_size= args.bs if args is not None else 32,
             shuffle=True,
-            num_workers=args.num_workers,
+            num_workers= args.num_workers if args is not None else 16,
             pin_memory=True
         )
         
         return train_loader
     
     elif phase =='val':
-        val_dataset = SwissImage(val_csv, 
-                                img_dir, 
-                                dem_dir, 
-                                mask_dir, 
-                                debug=args.debug)
+        val_dataset = SwissImage(
+            val_csv, 
+            img_dir, 
+            dem_dir, 
+            mask_dir, 
+            debug=args.debug)
         
         val_loader = DataLoader(
             val_dataset,
-            batch_size=args.bs,
+            batch_size= args.bs if args is not None else 32,
             shuffle=False,
-            num_workers=args.num_workers,
+            num_workers= args.num_workers if args is not None else 16,
             pin_memory=True
         )
     
         return val_loader
+    
+    elif phase == 'test':
+        test_dataset = SwissImage(
+            dataset_csv = test_csv,
+            img_dir = img_dir,
+            dem_dir = dem_dir,
+            mask_dir = mask_dir,
+            common_transform=None,
+            img_transform= None,
+            debug=args.debug,          
+        )
+        test_loader = DataLoader(test_dataset, 
+            batch_size= args.bs if args is not None else 32,
+            shuffle=False,
+            num_workers= args.num_workers if args is not None else 16,
+            pin_memory=True
+        )
+        return test_loader
     
     else :
         raise NotImplementedError
@@ -158,4 +188,29 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+        
+        
+
+def setup_wandb_log(args):
+    
+    # create new experiment in wandb
+    if args.log_wandb :
+        wandb.init(project = "ACE_ALPS", 
+                entity = "zvalerie",
+                reinit = True,
+                config = args,           
+                )    
+        
+            
+        wandb.run.name = args.name
+        wandb.define_metric ('train_loss', summary = 'min'  )
+        wandb.define_metric ('val_loss', summary = 'min' )
+      #  wandb.define_metric ('train_accuracy' , summary = 'max')
+        wandb.define_metric ('val_accuracy', summary = 'max')
+        wandb.define_metric ('train_duration', summary = 'mean' )    
+        wandb.define_metric ('val_duration', summary = 'mean' ) 
+        wandb.define_metric ('val_mIoU', summary = 'max' )
+     #   wandb.define_metric ('train_mIoU', summary = 'max' )
+        wandb.define_metric ('lr', summary = 'last' )    
+
         

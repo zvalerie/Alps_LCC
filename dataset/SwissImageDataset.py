@@ -1,9 +1,8 @@
 import os,sys
 import glob
-
 import numpy as np
 import pandas as pd
-
+import torch
 import torch.nn as nn 
 from torch.utils.data import Dataset
 from PIL import Image
@@ -21,7 +20,7 @@ class SwissImage(Dataset):
         self.mask_dir = mask_dir
         self.img_dem_label = pd.read_csv(dataset_csv)
         if debug:
-            self.img_dem_label = self.img_dem_label.iloc[:1000]
+            self.img_dem_label = self.img_dem_label.iloc[:250]
         self.common_transform = common_transform
         self.img_transform = img_transform
         self.dem_max, self.dem_min = 4603, 948 
@@ -60,8 +59,8 @@ class SwissImage(Dataset):
         
         dem_transform = transforms.Compose([
             transforms.ToTensor(),
+          #  AbsoluteScaler(),
             MinMaxScaler(self.dem_max, self.dem_min),
-           # AbsoluteScaler(),
            transforms.Normalize(self.dem_mean, self.dem_std)
         ])
                                          
@@ -76,6 +75,34 @@ class SwissImage(Dataset):
     
     def _getImbalancedClass(self, idx):
         return self.img_dem_label['few'][idx]
+    
+    
+
+
+def unnormalize_batch(batch):
+    """
+    Unnormalizes a batch of tensors.
+
+    Args:
+        batch (torch.Tensor): Batch of tensors to be unnormalized, of shape (B, C, H, W).
+        mean (sequence): Sequence of mean values for each channel.
+        std (sequence): Sequence of standard deviation values for each channel.
+
+    Returns:
+        torch.Tensor: Unnormalized batch of tensors.
+    """
+    mean = [0.5585, 0.5771, 0.5543]  
+    std = [0.2535, 0.2388, 0.2318] 
+    # Create a normalization tensor of the same shape as the batch
+    norm_tensor = torch.Tensor(mean)[None, :, None, None]  # Shape: (1, C, 1, 1)
+    std_tensor = torch.Tensor(std)[None, :, None, None]    # Shape: (1, C, 1, 1)
+
+    # Unnormalize the batch
+    unnormalized_batch = batch * std_tensor + norm_tensor
+
+    return unnormalized_batch.clip(0, 256)
+
+
 
 if __name__ =="__main__":
     
