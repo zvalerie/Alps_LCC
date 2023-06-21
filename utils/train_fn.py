@@ -129,7 +129,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
     # End of each epoch          
     if args.log_wandb :
         metrics = {
-                'train_loss':loss.avg,
+                'train_loss':losses.avg,
                 'train_duration': batch_time.avg,
                 'lr':lr,                             
             }

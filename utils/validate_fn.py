@@ -81,7 +81,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         
         if args.log_wandb :
             metrics = {
-                'val_loss':loss.avg,
+                'val_loss':losses.avg,
                 'val_duration': batch_time.avg,
                 'val_mIoU':mean_iou,
                                             
