@@ -11,7 +11,7 @@ from torchvision import transforms
 from collections import Counter
 
 sys.path.append('.')
-from XL.lib.utils.transforms import MinMaxScaler, AbsoluteScaler
+from utils.transforms import MinMaxScaler, AbsoluteScaler
 
 class SwissImage(Dataset):
     '''Transformer needed to be added'''
@@ -21,7 +21,7 @@ class SwissImage(Dataset):
         self.mask_dir = mask_dir
         self.img_dem_label = pd.read_csv(dataset_csv)
         if debug:
-            self.img_dem_label = self.img_dem_label.iloc[:100]
+            self.img_dem_label = self.img_dem_label.iloc[:1000]
         self.common_transform = common_transform
         self.img_transform = img_transform
         self.dem_max, self.dem_min = 4603, 948 

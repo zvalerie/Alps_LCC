@@ -21,7 +21,7 @@ from lib.utils.utils import save_checkpoint
 from lib.models.ACE_UNet import ACE_Res50_UNet
 from lib.models.ACE_DeepLabv3P import ACE_deeplabv3P_resnet
 from lib.dataset.SwissImage import SwissImage
-from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
+from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
 
 # fix random seeds for reproducibility

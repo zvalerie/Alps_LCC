@@ -8,7 +8,7 @@ def parse_args():
                         type=float)
     parser.add_argument('--experts',
                         help='number of experts',
-                        default=3,
+                        default=0,
                         type=int)
     parser.add_argument('--epoch',
                         help='training epoches',
@@ -38,10 +38,10 @@ def parse_args():
                         help='step to decrease lr',
                         default = 10,
                         type=int)
-    parser.add_argument('--milestones',
-                        help='step to decrease lr',
-                        default = [10, 25],
-                        type=list)
+    #parser.add_argument('--milestones',
+    #                    help='step to decrease lr',
+    #                    default = [10, 25],
+    #                    type=list)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
                         default='out/train',
@@ -52,7 +52,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--frequent',
                         help='frequency of logging',
-                        default=100,
+                        default=1,
                         type=int)
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
@@ -67,8 +67,8 @@ def parse_args():
                         help='is debuging?',
                         default=False,
                         type=bool)
-    parser.add_argument('--tune',
-                        help='is tunning?',
+    parser.add_argument('--small_dataset',
+                        help='using small dataset for development',
                         default=True,
                         type=bool)
     parser.add_argument('--is_weighted_sampler',
@@ -83,6 +83,15 @@ def parse_args():
                         help='Device is set to cpu, no GPU usage.',
                         default=False,
                         type=bool)
+    parser.add_argument('--seed',
+                        help='random seed',
+                        default=2436,
+                        type=int)
+    parser.add_argument('--name',
+                        help='experiment name',
+                        default='debug',
+                        type=str)
+    
     args = parser.parse_args()
     
     return args

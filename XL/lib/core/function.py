@@ -39,7 +39,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
     device = torch.device("cuda")
     end = time.time()
     
-    for i, (image, dem, mask) in enumerate(train_loader):
+    for i, (image, dem, mask) in tqdm( enumerate(train_loader)):
         # measure the data loading time
         data_time.update(time.time() - end)
         

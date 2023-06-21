@@ -1,0 +1,1 @@
+python train.py --experts 0 --epoch 10 --debug True

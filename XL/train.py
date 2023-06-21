@@ -20,8 +20,8 @@ from lib.utils.utils import save_checkpoint
 from lib.models.Unet import Res50_UNet
 from lib.models.DeepLabv3Plus import deeplabv3P_resnet
 from lib.models.DeepLabv3Proto import deeplabv3P_resnet_proto
-from lib.dataset.SwissImage import SwissImage
-from lib.utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
+from dataset.SwissImageDataset import SwissImage
+from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
 
 # fix random seeds for reproducibility
