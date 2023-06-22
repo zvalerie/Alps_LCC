@@ -1,29 +1,78 @@
 Landuse classification in Alps area
+################################
 
+0 Background
 
-"Fels" : 1, 
+1 Bedrock                   "Fels"
 
-"Fels locker" : 2, 
+2 Bedrock with grass        "Fels locker" 
 
-"Felsbloecke" : 3, 
+3 Large blocks              "Felsbloecke" 
 
-"Felsbloecke locker" : 4, 
+4 Large blocks with grass   "Felsbloecke locker"
 
-"Lockergestein" : 5, 
+5 Scree                     "Lockergestein"
 
-"Lockergestein locker" : 6, 
+6 Scree with grass          "Lockergestein locker" 
 
+7 Water area                "Fliessgewaesser" "Stehende Gewaesser" 
 
-"Fliessgewaesser" : 7, 
-"Stehende Gewaesser" : 7,
+8 Forest                    "Wald" "Gebueschwald" "Gehoelzflaeche" "Feuchtgebiet""Wald offen" 
 
-"Gebueschwald" : 8, 
-"Gehoelzflaeche" : 8, 
-"Feuchtgebiet" : 8, 
-"Wald" : 8, 
-"Wald offen" : 8
+9 Glacier                   "Gletscher""Schneefeld Toteis" 
 
-"Gletscher" : 9, 
-"Schneefeld Toteis" : 9, 
+##########  3 experts ##############
+0 Background 
 
+Expert 1 :
+##############
+
+Bedrock 1
+Scree 5
+Glacier 9
+Forest 8
+Scree with grass 6
+Water area 7
+Bedrock with grass 2
+Large blocks 3
+Large blocks with grass 4
+
+Expert 2 : 
+##############
+
+Scree with grass 6
+Water area 7
+Bedrock with grass 2
+Large blocks 3
+Large blocks with grass 4
+
+Expert 3 : 
+##############
+
+Large blocks 3
+Large blocks with grass 4
+
+##########  2 experts ##############
+
+Expert 1 :
+##############
+
+Bedrock 1
+Scree 5
+Glacier 9
+Forest 8
+Scree with grass 6
+Water area 7
+Bedrock with grass 2
+Large blocks 3
+Large blocks with grass 4
+
+Expert 2 : 
+##############
+
+Scree with grass 6
+Water area 7
+Bedrock with grass 2
+Large blocks 3
+Large blocks with grass 4
 

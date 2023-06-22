@@ -5,14 +5,15 @@ import random
 import os 
 import wandb 
 from pprint import pprint
-from dataset.SwissImageDataset import SwissImage
-from torch.utils.data import DataLoader
-from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 from torchvision import transforms
-from XL.lib.models.Unet import Res50_UNet
-from XL.lib.models.DeepLabv3Plus import deeplabv3P_resnet
-from XL.lib.core.loss import CrossEntropy2D, SeesawLoss, PixelPrototypeCELoss
-from XL.lib.core.loss import ResCELoss, ResCELoss_3exp
+from torch.utils.data import DataLoader
+
+
+from dataset.SwissImageDataset import SwissImage
+from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
+from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts
+  
+from losses.losses import ResCELoss_2experts, ResCELoss_3experts, MyCrossEntropyLoss
 
 
 
@@ -39,14 +40,21 @@ def get_criterion (args):
     
     # Define loss function (criterion) and optimizer
     if args.loss == 'celoss':
-        criterion = CrossEntropy2D(ignore_index=0)
-    elif args.loss == 'seesawloss':
-        criterion = SeesawLoss(ignore_index=0)
-    elif args.model =='Deeplabv3_proto':
-        criterion = PixelPrototypeCELoss()
+        #criterion = CrossEntropy2D(ignore_index=0)
+        criterion = MyCrossEntropyLoss(ignore_index=0)
+
+    elif args.experts ==2 :
+        many_index = [1, 5, 8, 9]
+        few_index = [2, 3, 4, 6, 7]
+
+        ls_index = [many_index, few_index]
+        criterion = ResCELoss(many_index, few_index, args=args)
+        lr_ratio = [0.03] ## ratio of rare categories to frequent categories
         
 
-    if args.experts == 3: 
+        
+
+    elif args.experts == 3: 
         pass 
         many_index = [1, 5, 7, 8, 9]
         medium_index = [2, 6]
@@ -54,6 +62,8 @@ def get_criterion (args):
         criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args)
         lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
     
+    else :
+        raise NotImplementedError
     
     return criterion
 
@@ -69,11 +79,11 @@ def get_model(args):
         if args.experts ==0 :
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
-        if args.experts == 2 :
-            model = ...
+        elif args.experts == 2 or args.experts == 3 :
+            model = ACE_deeplabv3P_w_Experts(num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
+        else :
+            raise NotImplementedError  
             
-            
-        
     else:
        raise NotImplementedError
        

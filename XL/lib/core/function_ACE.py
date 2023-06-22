@@ -78,7 +78,7 @@ def train(train_loader, train_dataset, model, criterion, optimizer, epoch, outpu
             # compute gradient and update
             # if train seperately:
             if args.train_sep:
-                optimizer[0].zero_grad()                        # Why is there optimizer[0] optimzer[1] ?' is there 2 optimizers ? 
+                optimizer[0].zero_grad()         # Why is there optimizer[0] optimzer[1] ?' is there 2 optimizers ? 
                 optimizer[1].zero_grad()
                 many_loss.backward()
                 optimizer[0].step()

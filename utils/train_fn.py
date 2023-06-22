@@ -39,7 +39,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
         
         # move data to device
         input = torch.cat((image, dem), dim=1).to(device)
-        mask = mask.to(device)
+        mask = mask.long().squeeze().to(device)
         
         # Run forward pass : 
         output = model(input) 
@@ -131,7 +131,8 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
         metrics = {
                 'train_loss':losses.avg,
                 'train_duration': batch_time.avg,
-                'lr':lr,                             
+                'lr':lr,    
+                'epoch':epoch,                         
             }
             
         wandb.log(metrics)

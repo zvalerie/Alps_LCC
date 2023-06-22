@@ -3,14 +3,10 @@ import glob
 import torch
 from torch import nn
 from torch.nn import functional as F
-#from XL.lib.models.ResNet import resnet50
-#from XL.lib.utils.utils import IntermediateLayerGetter
-#from XL.lib.models.DeepLabv3Plus import ASPP
 from torchvision.models.segmentation.deeplabv3 import ASPP
-#from XL.lib.models.ResNet import resnet50
-from  torchvision.models._utils import IntermediateLayerGetter   #_SimpleSegmentationModel
-#from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
-from DeepLabV3_utils import _MultiExpertModel
+from torchvision.models._utils import IntermediateLayerGetter   
+
+from models.DeepLabV3_utils import _MultiExpertModel 
 from ResNet import resnet50
 
 
@@ -100,6 +96,7 @@ class MLP(nn.Module):
                                  nn.Linear(hidden_layers, num_outputs),
                                 )
         self.softmax = nn.Softmax(dim=-1)
+   
     def forward(self, x):
         x = self.mlp(x)
         # x = self.softmax(x)
@@ -132,6 +129,15 @@ def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, 
 if __name__ == '__main__':
     
     x = torch.rand([64,4,200,200])
-    model = ACE_deeplabv3P_w_Experts(10, output_stride=8, pretrained_backbone=True, num_experts=2,is_MLP=False)
+    model = ACE_deeplabv3P_w_Experts( 
+                                     num_classes=10, 
+                                     output_stride=8, 
+                                     pretrained_backbone=True, 
+                                     num_experts=2,
+                                     is_MLP=True)
     output =model(x) 
-    print(output['out'][0].shape,output['out'][1].shape,)
+    for i in range(len(output['out'])):
+        print('output i=',i, output['out'][i].shape)
+        
+    if output['mlp'] is not None :
+        print('output mlp=',output['mlp'].shape)
