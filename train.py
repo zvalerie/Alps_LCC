@@ -2,7 +2,6 @@
     My implementation of training pipeline
 """
 import os
-
 import random
 import numpy as np
 import torch
@@ -28,6 +27,7 @@ def main(args):
     # set all random seeds :
     set_all_random_seeds(args.seed)
     setup_wandb_log(args)
+    pprint(vars(args))
     
     
     # Choose model and device :
@@ -37,7 +37,7 @@ def main(args):
     
     # Get dataloaders : 
     train_loader = get_dataloader(args,phase='train')
-    val_loader = get_dataloader(args=args,phase='val')
+    val_loader   = get_dataloader(args,phase='val')
     
        
     # # Define loss function (criterion) and optimizer
@@ -59,48 +59,47 @@ def main(args):
     best_miou = 0.0 # best performance so far (mean IoU)
     start_epoch = 0
     miou=0.
+    if not args.test_only: 
+       
+        for epoch in range( args.epoch):
+                   
+            # train for one epoch
+            train_ACE(train_loader, model, criterion, optimizer, epoch, args, device)
+            scheduler.step()
+            
+            # evaluate on validation set
+            val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args, device)
 
-    for epoch in range( args.epoch):
-        
-        # train for one epoch
-        train_ACE(train_loader, model, criterion, optimizer, epoch, args, device)
-        scheduler.step()
-        
-        # evaluate on validation set
-        val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args, device)
-
-        # update best model if best performances : 
-        miou=0
-        if miou > best_miou :
+            # update best model if best performances : 
+            model_checkpoint = {
+                            'epoch': epoch ,
+                            'state_dict': deepcopy(model.state_dict()),
+                            'perf': miou,
+                            'last_epoch': epoch,
+                            'optimizer': optimizer.state_dict(),
+                            }
+            torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'last_model.pt'))
+            if miou > best_miou and epoch>10 :
                 best_miou = miou
-                model_checkpoint = {
-                        'epoch': epoch ,
-                        'state_dict': deepcopy(model.state_dict()),
-                        'perf': miou,
-                        'last_epoch': epoch,
-                        'optimizer': optimizer.state_dict(),
-                        }
-                torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'ep_{}'.format(epoch)+'.pt'))
+                torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'current_best.pt'))
 
         
-
-
-    # End of training : save final model
-    model_checkpoint = {
-                        'epoch': epoch ,
-                        'state_dict': deepcopy (model.state_dict()),
-                        'perf': miou,
-                        'last_epoch': epoch,
-                        'optimizer': optimizer.state_dict(),
-                        }
-    torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'final.pt'))
-    print('End of model training')
+        # End of training : save final model
+        model_checkpoint = {
+                            'epoch': epoch ,
+                            'state_dict': deepcopy (model.state_dict()),
+                            'perf': miou,
+                            'last_epoch': epoch,
+                            'optimizer': optimizer.state_dict(),
+                            }
+        torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'final.pt'))
+        print('End of model training')
     
     test_ACE(model,args,device)
 
 
 if __name__ == '__main__':
     args = parse_args()
-    pprint(vars ( args))
+   
     main(args)
         

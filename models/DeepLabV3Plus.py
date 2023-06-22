@@ -1,9 +1,10 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
-from XL.lib.models.ResNet import resnet50
-from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
-
+from torchvision.models import resnet50
+#from XL.lib.models.ResNet import resnet50
+from  torchvision.models._utils import IntermediateLayerGetter,  _SimpleSegmentationModel
+#from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
 
 
 
@@ -183,3 +184,10 @@ def deeplabv3P_resnet(num_classes, output_stride, pretrained_backbone):
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
     model = DeepLabV3(backbone, classifier, num_classes)
     return model
+
+if __name__ == '__main__':
+    
+    x = torch.rand([64,4,200,200])
+    model = ACE_deeplabv3P_w_Experts(10, output_stride=8, pretrained_backbone=True, num_experts=2,is_MLP=False)
+    output =model(x) 
+    print(output)

@@ -27,10 +27,7 @@ class SwissImage(Dataset):
         self.dem_mean, self.dem_std = 0.4806, 0.2652
         self.mean = np.array([0.5585, 0.5771, 0.5543], dtype=np.float32)
         self.std = np.array([0.2535, 0.2388, 0.2318], dtype=np.float32)
-        # Values for std and means (dem with absolute scaler)
-        #self.mean = np.array([22339.53184346, 23085.64802353, 22170.41603125,            ], dtype=np.float32)
-        #self.std = np.array([0.11846169, 0.11504443, 0.09361862,        ], dtype=np.float32)
-        #self.dem_mean, self.dem_std = 0,1
+
         
     def __len__(self):
         return len(self.img_dem_label)

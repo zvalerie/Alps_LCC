@@ -22,18 +22,6 @@ class DoubleConv (nn.Module):
     def forward(self, x):
         return self.doubel_conv(x)
     
-# class DownSampling(nn.Module):
-#     '''Maxpool + DoubleConv. Please double the number of feature
-#     channels at each downsampling step '''
-#     def __init__(self, in_channel, out_channel):
-#         super().__init__()
-#         self.maxpool_D_conv = nn.Sequential(
-#             nn.MaxPool2d(2),
-#             DoubleConv(in_channel, out_channel)
-#         )
-        
-#     def forward(self, x):
-#         return self.maxpool_D_conv(x)
     
 class Upsampling(nn.Module):
     '''ConvTransposed2d + Cropped feature map + DoubleConv'''

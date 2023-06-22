@@ -4,6 +4,7 @@ import numpy as np
 import random
 import os 
 import wandb 
+from pprint import pprint
 from dataset.SwissImageDataset import SwissImage
 from torch.utils.data import DataLoader
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
@@ -64,7 +65,14 @@ def get_model(args):
         model = Res50_UNet(num_classes=10)
         
     elif args.model == 'Deeplabv3':
-        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        
+        if args.experts ==0 :
+            model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        
+        if args.experts == 2 :
+            model = 
+            
+            
         
     else:
        raise NotImplementedError
@@ -90,7 +98,7 @@ def get_dataloader(args=None, phase ='train'):
     
     # Path to dataset splits : 
     test_csv = 'data/split/test_dataset.csv'
-    if args is not None and args.small_dataset:
+    if  args.small_dataset:
         train_csv = 'data/split_subset/train_subset.csv'
         val_csv = 'data/split_subset/val_subset.csv'
     
@@ -212,5 +220,5 @@ def setup_wandb_log(args):
         wandb.define_metric ('val_mIoU', summary = 'max' )
      #   wandb.define_metric ('train_mIoU', summary = 'max' )
         wandb.define_metric ('lr', summary = 'last' )    
-
+       
         

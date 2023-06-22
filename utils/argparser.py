@@ -57,7 +57,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--small_dataset',
                         help='using small dataset for development',
-                        default=True,
+                        default=False,
                         type=bool)
     parser.add_argument('--is_weighted_sampler',
                         help='is_weighted_sampler',
@@ -83,6 +83,10 @@ def parse_args():
                         help='log experiment to wandb',
                         default=False,
                         type=bool)  
+    parser.add_argument('--test_only',
+                        help='only run testing',
+                        default=False,
+                        type=bool) 
     args = parser.parse_args()
     
     return args

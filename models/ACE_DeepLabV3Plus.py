@@ -4,9 +4,17 @@ import glob
 import torch
 from torch import nn
 from torch.nn import functional as F
-from XL.lib.models.ResNet import resnet50
-from XL.lib.utils.utils import IntermediateLayerGetter
-from XL.lib.models.DeepLabv3Plus import ASPP
+#from XL.lib.models.ResNet import resnet50
+#from XL.lib.utils.utils import IntermediateLayerGetter
+#from XL.lib.models.DeepLabv3Plus import ASPP
+from torchvision.models.segmentation.deeplabv3 import ASPP
+from torchvision.models import resnet50
+#from XL.lib.models.ResNet import resnet50
+from  torchvision.models._utils import IntermediateLayerGetter   #_SimpleSegmentationModel
+#from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
+
+
+
 
 class _SimpleSegmentationModel(nn.Module):
     def __init__(self, backbone, classifier, num_classes):
@@ -117,7 +125,7 @@ class MLP(nn.Module):
         # x = self.softmax(x)
         return x
 
-def ACE_deeplabv3P_w_Experts(num_classes, output_stride,  num_experts, pretrained_backbone=True, is_MLP=False):
+def ACE_deeplabv3P_w_Experts(num_classes, output_stride, pretrained_backbone, num_experts, is_MLP):
 
     if output_stride==8:
         replace_stride_with_dilation=[False, True, True]
@@ -130,6 +138,7 @@ def ACE_deeplabv3P_w_Experts(num_classes, output_stride,  num_experts, pretraine
         pretrained=pretrained_backbone,
         replace_stride_with_dilation=replace_stride_with_dilation)
     
+    
     inplanes = 2048
     low_level_planes = 256
 
@@ -141,5 +150,9 @@ def ACE_deeplabv3P_w_Experts(num_classes, output_stride,  num_experts, pretraine
     return model
 
 
-
+if __name__ == '__main__':
     
+    x = torch.rand([64,4,200,200])
+    model = ACE_deeplabv3P_w_Experts(10, output_stride=8, pretrained_backbone=True, num_experts=2,is_MLP=False)
+    output =model(x) 
+    print(output)
