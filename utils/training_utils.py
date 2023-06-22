@@ -70,7 +70,7 @@ def get_model(args):
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         if args.experts == 2 :
-            model = 
+            model = ...
             
             
         
@@ -213,12 +213,10 @@ def setup_wandb_log(args):
         wandb.run.name = args.name
         wandb.define_metric ('train_loss', summary = 'min'  )
         wandb.define_metric ('val_loss', summary = 'min' )
-      #  wandb.define_metric ('train_accuracy' , summary = 'max')
         wandb.define_metric ('val_accuracy', summary = 'max')
         wandb.define_metric ('train_duration', summary = 'mean' )    
         wandb.define_metric ('val_duration', summary = 'mean' ) 
         wandb.define_metric ('val_mIoU', summary = 'max' )
-     #   wandb.define_metric ('train_mIoU', summary = 'max' )
         wandb.define_metric ('lr', summary = 'last' )    
        
         

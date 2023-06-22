@@ -1,6 +1,5 @@
 import os
 import glob
-
 import torch
 from torch import nn
 from torch.nn import functional as F
@@ -8,40 +7,20 @@ from torch.nn import functional as F
 #from XL.lib.utils.utils import IntermediateLayerGetter
 #from XL.lib.models.DeepLabv3Plus import ASPP
 from torchvision.models.segmentation.deeplabv3 import ASPP
-from torchvision.models import resnet50
 #from XL.lib.models.ResNet import resnet50
 from  torchvision.models._utils import IntermediateLayerGetter   #_SimpleSegmentationModel
 #from XL.lib.utils.utils import IntermediateLayerGetter, _SimpleSegmentationModel
+from DeepLabV3_utils import _MultiExpertModel
+from ResNet import resnet50
 
 
 
-
-class _SimpleSegmentationModel(nn.Module):
-    def __init__(self, backbone, classifier, num_classes):
-        super(_SimpleSegmentationModel, self).__init__()
-        self.backbone = backbone
-        self.classifier = classifier
-        self.num_classes = num_classes
-        
-    def forward(self, x):
-        input_shape = x.shape[-2:]
-        features = self.backbone(x)
-        x,MLP_output = self.classifier(features)
-        if isinstance(x, list):
-            output = [F.interpolate(y, size=input_shape, mode='bilinear', align_corners=False) for y in x]
-        else:
-            output = F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
-        
-        if MLP_output != None:
-            MLP_output = F.interpolate(MLP_output, size=input_shape, mode='bilinear', align_corners=False)
-        return output, MLP_output
     
 class DeepLabHeadV3Plus_w_Experts(nn.Module):
     def __init__(self, in_channels, low_level_channels, num_classes, 
                  num_experts, aspp_dilate=[12, 24, 36], is_MLP=False):
         super(DeepLabHeadV3Plus_w_Experts, self).__init__()
-        self.is_MLP = is_MLP
-        self.num_experts = num_experts
+       
         self.project = nn.Sequential( 
             nn.Conv2d(low_level_channels, 48, 1, bias=False),
             nn.BatchNorm2d(48),
@@ -55,7 +34,8 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
             nn.BatchNorm2d(256),
             nn.ReLU(inplace=True),
         )
-
+        
+        self.num_experts = num_experts
         if num_experts == 2:
             self.SegHead_many = nn.Conv2d(256, num_classes, 1)
             self.SegHead_few = nn.Conv2d(256, num_classes, 1)
@@ -66,7 +46,7 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
         else:
             raise ValueError('num_experts must be 2 or 3')
 
-        
+        self.is_MLP = is_MLP
         if self.is_MLP:
             self.MLP = MLP(num_inputs=num_classes*num_experts, hidden_layers=128, num_outputs=num_experts)
         self._init_weight()
@@ -125,7 +105,7 @@ class MLP(nn.Module):
         # x = self.softmax(x)
         return x
 
-def ACE_deeplabv3P_w_Experts(num_classes, output_stride, pretrained_backbone, num_experts, is_MLP):
+def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, pretrained_backbone=True, ):
 
     if output_stride==8:
         replace_stride_with_dilation=[False, True, True]
@@ -138,7 +118,6 @@ def ACE_deeplabv3P_w_Experts(num_classes, output_stride, pretrained_backbone, nu
         pretrained=pretrained_backbone,
         replace_stride_with_dilation=replace_stride_with_dilation)
     
-    
     inplanes = 2048
     low_level_planes = 256
 
@@ -146,7 +125,7 @@ def ACE_deeplabv3P_w_Experts(num_classes, output_stride, pretrained_backbone, nu
     classifier =  DeepLabHeadV3Plus_w_Experts(inplanes, low_level_planes, num_classes, num_experts, aspp_dilate, is_MLP)
     
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
-    model = _SimpleSegmentationModel(backbone, classifier, num_classes)
+    model = _MultiExpertModel(backbone, classifier, num_classes)
     return model
 
 
@@ -155,4 +134,4 @@ if __name__ == '__main__':
     x = torch.rand([64,4,200,200])
     model = ACE_deeplabv3P_w_Experts(10, output_stride=8, pretrained_backbone=True, num_experts=2,is_MLP=False)
     output =model(x) 
-    print(output)
+    print(output['out'][0].shape,output['out'][1].shape,)
