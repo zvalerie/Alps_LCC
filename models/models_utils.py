@@ -18,7 +18,8 @@ class _MultiExpertModel(nn.Module):
         x,MLP_output = self.classifier(features)
         
         if isinstance(x, list):
-            output['out'] = [F.interpolate(y, size=input_shape, mode='bilinear', align_corners=False) for y in x]
+            for idx in range(len(x)):
+                output[ 'exp_'+ str(idx)] = F.interpolate(x[idx], size=input_shape, mode='bilinear', align_corners=False) 
         else:
             output['out']= F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
         

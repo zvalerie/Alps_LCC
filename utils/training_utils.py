@@ -8,13 +8,12 @@ from pprint import pprint
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
-
 from dataset.SwissImageDataset import SwissImage
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
-from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts
+from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts, ACE_deeplabv3P_w_Better_Experts
   
 from losses.losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
-
+from torch import optim
 
 
 def set_all_random_seeds(seed):
@@ -35,23 +34,65 @@ def set_all_random_seeds(seed):
     if  torch.initial_seed( ) != 2436  or  random.randint(0,10e6) != 1153963 :
         print( '!! Random seeds are NOT set correctly !! Please verify ')
 
+def get_optimizer (model,args):
+    
+    
+    if args.experts ==0 :
+        optimizer = optim.Adam(model.parameters(), 
+                               lr=args.lr, 
+                               weight_decay=args.wd
+                               )
+        
+    elif args.experts ==2 :
+        optimizer = optim.Adam([
+                                {'params': model.backbone.parameters()},
+                                {'params': model.classifier.project.parameters()},
+                                {'params': model.classifier.aspp.parameters()},
+                                {'params': model.classifier.classifier.parameters()},
+                                {'params': model.classifier.SegHead_many.parameters()},
+                                {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.03}, 
+                                ], 
+                                lr= args.lr, 
+                                weight_decay=args.wd
+                                )
+        
+    elif args.experts ==3 :
+        optimizer = optim.Adam(
+                                [
+                                {'params': model.backbone.parameters()},
+                                {'params': model.classifier.project.parameters()},
+                                {'params': model.classifier.aspp.parameters()},
+                                {'params': model.classifier.classifier.parameters()},
+                                {'params': model.classifier.SegHead_many.parameters()},
+                                {'params': model.classifier.SegHead_medium.parameters(), 'lr' : args.lr *0.03}, 
+                                {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.003},  
+                                ], 
+                                lr=args.lr, 
+                                weight_decay=args.wd,
+                                                )          
+    
+    if False :
+        for param_group in optimizer.param_groups:
+            print(f"Learning rate for param group ", param_group['lr'])
+                          
+    
+    return optimizer
+
 
 def get_criterion (args):
     
     # Define loss function (criterion) and optimizer
-    if args.loss == 'celoss':
+    if args.loss == 'celoss' and args.experts == 0 :
         
         criterion = MyCrossEntropyLoss(ignore_index=0)
 
     elif args.experts ==2 :
-
+        
         criterion = CELoss_2experts (args)
-        lr_ratio = [0.03] ## ratio of rare categories to frequent categories
         
     elif args.experts == 3: 
 
         criterion = CELoss_3experts ( args)
-        lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
     
     else :
         raise NotImplementedError
@@ -74,12 +115,23 @@ def get_model(args):
             model = ACE_deeplabv3P_w_Experts(num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
         else :
             raise NotImplementedError  
-            
+    
+    elif args.model == 'Deeplabv3_w_Better_Experts':
+        if args.experts ==0 :
+            model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        
+        elif args.experts == 2 or args.experts == 3 :
+            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
+        else :
+            raise NotImplementedError  
+    
+         
     else:
        raise NotImplementedError
        
     
     return model
+
 
 
 def get_dataloader(args=None, phase ='train'):
@@ -180,25 +232,7 @@ def get_dataloader(args=None, phase ='train'):
         raise NotImplementedError
     
 
-class AverageMeter(object):
-    """Computes and stores the average and current value."""
-    
-    def __init__(self):
-        self.reset()
 
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val * n
-        self.count += n
-        self.avg = self.sum / self.count
-        
-        
 
 def setup_wandb_log(args):
     

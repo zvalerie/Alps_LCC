@@ -6,9 +6,9 @@ import torch.nn as nn
 import wandb
 import csv
 from numpy import linalg as LA
-""" 
-from utils.training_utils import AverageMeter
-from XL.lib.utils.evaluation import MetricLogger
+
+from utils.inference_utils import MetricLogger, get_predictions_from_logits
+
 from tqdm import tqdm
 from utils.training_utils import get_dataloader
 from pprint import pprint
@@ -49,9 +49,7 @@ def test_ACE( model,  args, device):
             output = model(input) 
             
             # Record metrics
-            if isinstance(output, dict):
-                output=output['out']
-            preds = torch.argmax(output.detach().cpu(),axis=1)
+            preds = get_predictions_from_logits(output, args)
             gt = mask.squeeze().detach().cpu().numpy()
             metrics.update(gt, preds.numpy())
                         
@@ -85,7 +83,7 @@ def test_ACE( model,  args, device):
         
         
         
- """   
+
         
 def write_result_to_csv(data,args=None):
     import datetime

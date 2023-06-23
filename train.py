@@ -1,20 +1,23 @@
 """
     My implementation of training pipeline
+    
+    
+    Look at the official one : 
+    https://github.com/winterxx/ACE/blob/main/main/train.py
+    Xiaolong one : 
+    https://github.com/xiaollu/Alps_LCC
+    
+    
 """
 import os
-import random
-import numpy as np
 import torch
-import torch.optim as optim
-from torch.utils.data import WeightedRandomSampler
 from torch.optim.lr_scheduler import StepLR, LambdaLR, ReduceLROnPlateau
 from pprint import pprint
 from copy import deepcopy
 
-from utils.training_utils import get_dataloader, get_model, get_criterion, set_all_random_seeds, setup_wandb_log
+from utils.training_utils import get_dataloader, get_model, get_criterion, set_all_random_seeds, setup_wandb_log, get_optimizer 
 from utils.argparser import parse_args
 
-from XL.lib.core.loss import ResCELoss, ResCELoss_3exp
 
 from utils.train_fn import train_ACE
 from utils.validate_fn import validate_ACE
@@ -43,22 +46,26 @@ def main(args):
        
     # # Define loss function (criterion) and optimizer
     criterion = get_criterion (args)
-    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-   # scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
-    scheduler = ReduceLROnPlateau(optimizer, min_lr = 1e-6, factor = args.lr_decay_rate, threshold = 1e-2, verbose = True)
-       
-    if args.experts == 3: 
-
-        lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
-        
+    optimizer = get_optimizer(model=model,args=args)
+    scheduler = ReduceLROnPlateau(optimizer, min_lr = 1e-8, factor = args.lr_decay_rate, threshold = 1e-2, verbose = True)
+    
+    ## Show experiment setup : 
+    print('*'*80)    
+    print('Experiment set up : ') 
+    print('\tModel    :  ', type(model).__name__,)
+    print('\tNb Expert:  ', args.experts)
+    print('\tLoss     :  ', type(criterion).__name__) 
+    print('\tOptimizer:  ', type(optimizer).__name__) 
+    print('\tDevice   :  ', device)      
+    print('*'*80)
     
     
     # Start model training :     
     best_miou = 0.0 # best performance so far (mean IoU)
     start_epoch = 0
     miou=0.
+    
     if not args.test_only: 
-       
         for epoch in range( args.epoch):
                    
             # train for one epoch
@@ -81,6 +88,7 @@ def main(args):
             torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'last_model.pt'))
             if miou > best_miou and epoch>10 :
                 best_miou = miou
+                print('Model saved, best miou')
                 torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'current_best.pt'))
 
         
@@ -100,9 +108,7 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    args
-    args.log_wandb = False
-    args.debug=True
-    args.test_only = True
+    args.model ='Deeplabv3_w_Better_Experts'
+    args.experts = 3
     main(args)
         

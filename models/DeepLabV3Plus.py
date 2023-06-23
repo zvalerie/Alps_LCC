@@ -1,6 +1,6 @@
 import torch
 from torchvision.models._utils import IntermediateLayerGetter
-from DeepLabV3_utils import DeepLabHeadV3Plus, DeepLabV3
+from models.models_utils import DeepLabHeadV3Plus, DeepLabV3
 from ResNet import resnet50
 
 def deeplabv3P_resnet(num_classes, output_stride=8, pretrained_backbone=True):

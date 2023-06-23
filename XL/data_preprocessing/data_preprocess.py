@@ -8,7 +8,13 @@ from sklearn.model_selection import train_test_split
 import torch
 sys.path.append("..") 
 sys.path.append(".") 
-from XL.lib.dataset.SwissImage import SwissImage
+from dataset.SwissImageDataset import SwissImage
+from pprint import pprint
+
+labels_to_idx = {'Background':0, "Bedrock" : 1, "Bedrock with grass" : 2,
+                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                    "Scree with grass" : 6,"Water" : 7,
+                    "Forest" : 8, "Glacier" : 9, } 
 
 
 def label_selection(label_path, rgb_path, threshold):
@@ -221,16 +227,62 @@ def cal_pixel_frequency(csv_path):
     
     '''return the pixel frequency of each class'''
     df = pd.read_csv(csv_path)
-    array = np.zeros((10))
-    mask_dir = '/data/xiaolong/mask'
+    counter = np.zeros((10))
+    mask_dir = '/home/valerie/data/ace_alps/mask'
+    
     for idx in tqdm(range(len(df))):
         mask_path = os.path.join(mask_dir, df.iloc[idx, 2])
         img = Image.open(mask_path)
         img = np.array(img)
         classes, counts = np.unique(img, return_counts=True)
         for i in range(len(classes)):
-            array[int(classes[i])] += counts[i]
-    return array
+            counter[int(classes[i])] += counts[i]
+            
+    print('P ixel frequency of each class, from file', csv_path)
+    frequency = { x:int(y) for x,y in  zip(labels_to_idx.keys(), counter) }
+    pprint(frequency)
+    
+    compute_ratio_of_few_many(frequency, nb_experts =2)
+    compute_ratio_of_few_many(frequency, nb_experts =3)
+        
+    return frequency
+
+def compute_ratio_of_few_many(frequency, nb_experts ):
+    
+    if nb_experts ==2:
+        print()
+        print('compute ratio of few pixel vs many pixels for', nb_experts,'experts: ')
+        
+        pixel_few = frequency['Scree with grass'] + frequency['Water']+ frequency['Bedrock with grass']+ \
+                 + frequency['Large blocks'] + frequency['Large blocks with grass']
+                 
+        pixel_many = sum( [ frequency[x] for x in frequency.keys() ])
+        
+        print('\tRatio of few/many pixel:{:.4f}'.format( pixel_few/pixel_many), '\t\t({:.2e}/{:.2e})'.format(pixel_few,pixel_many))
+
+    elif nb_experts == 3 : 
+        
+        print()
+        print('compute ratio of few pixel vs medium vs many pixels for', nb_experts,'experts: ')
+        
+        pixel_few =  frequency['Large blocks'] + frequency['Large blocks with grass']
+        
+        pixel_medium = frequency['Scree with grass'] + frequency['Water']+ frequency['Bedrock with grass']+ \
+                    + frequency['Large blocks'] + frequency['Large blocks with grass']
+                 
+        pixel_many = sum( [ frequency[x] for x in frequency.keys() ])
+        print()
+        print('\tRatio of few/many pixel:\t{:.4f}'.format( pixel_few/pixel_many), '\t\t({:.2e}/{:.2e})'.format(pixel_few,pixel_many))
+        print() 
+        print('\tRatio of medium/many pixel:\t{:.4f}'.format( pixel_medium/pixel_many), '\t\t({:.2e}/{:.2e})'.format(pixel_medium,pixel_many))
+         
+    
+    else : 
+        raise NotImplementedError
+     
+    
+    
+    return 
 
 
 if __name__ == '__main__':
@@ -241,5 +293,17 @@ if __name__ == '__main__':
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' # /data/xiaolong/dem'
     mask_dir = '/home/valerie/data/ace_alps/mask'
     
-    ds = SwissImage(dataset_csv,img_dir,dem_dir,mask_dir)
-    compute_mean_std(ds)
+    if False :
+        ds = SwissImage(dataset_csv,img_dir,dem_dir,mask_dir)
+        compute_mean_std(ds)
+        
+    
+    if False:
+    
+        for file in os.listdir('/home/valerie/Projects/Alps_LCC/data/split/'):
+            cal_pixel_frequency('/home/valerie/Projects/Alps_LCC/data/split/' + file)
+            
+        for file in os.listdir('/home/valerie/Projects/Alps_LCC/data/split_subset/'):
+            cal_pixel_frequency('/home/valerie/Projects/Alps_LCC/data/split_subset/' + file)
+        
+        

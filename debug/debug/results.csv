@@ -9,3 +9,17 @@ Gletscher,0.3296143421680156,0.2216157231164376,0.717,0.6460458
 Lockergestein,0.3296143421680156,0.2216157231164376,0.74,0.6460458
 Lockergestein locker,0.3296143421680156,0.2216157231164376,0.115,0.6460458
 Wald,0.3296143421680156,0.2216157231164376,0.969,0.6460458
+Experiment results
+2023-06-23 17:13:18
+test_macc0.3320384580851053
+test_miou0.2240776594669039
+test_oacc0.6514596
+Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
+0.01,0.423,0.0,0.0,nan,0.744,0.116,0.001,0.97,0.725
+Experiment results
+2023-06-23 17:16:45
+test_macc0.3314836229002981
+test_miou0.22410893758889472
+test_oacc0.6515251
+Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
+0.009,0.422,0.0,0.0,nan,0.746,0.111,0.002,0.969,0.724

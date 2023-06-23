@@ -1,13 +1,9 @@
 import time
-import os
 import numpy as np
 import torch
 import wandb
-import torch.nn as nn
-from numpy import linalg as LA
-from utils.training_utils import AverageMeter
-from XL.lib.utils.evaluation import MetricLogger
-from tqdm import tqdm
+
+from utils.inference_utils import get_predictions_from_logits, MetricLogger, AverageMeter
 
 def validate_ACE(val_loader, model, criterion, epoch, args, device):  
     '''run validation
@@ -46,28 +42,31 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
             output = model(input) 
             loss = criterion(output, mask)
             
+            if args.experts == 2 :               
+                loss = loss[0]+loss[1]
+            if args.experts == 3 :
+                loss = loss[0] + loss[1] + loss [2]
+            
             # Record metrics
             losses.update(loss.item(), num_inputs)
-            if isinstance(output, dict):
-                output=output['out']
-            preds = torch.argmax(output.detach().cpu(),axis=1)
+            
+
+            preds = get_predictions_from_logits(output, args)
+            
 
             gt = mask.squeeze().detach().cpu().numpy()
             metrics.update(gt, preds.numpy())
                         
-            # measure elapsed time
-            batch_time.update(time.time() - tick)
-            tick= time.time()
-            
+        # measure elapsed time
+        batch_time.update(time.time() - tick)            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()   
         
-        msg = 'Validate: [{0}/{1}]\t' \
-                'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t' \
+        msg = 'Validate:   \t' \
+                'Time {batch_time.avg:.3f}s \t' \
+                'Loss {loss.avg:.3f} \t'\
                 'Mean Accuracy {mean_acc:.3f} \t' \
                 'Mean IoU {mean_iou:.3f} \t' \
-                'Overall Acc {overall_acc:.3f} \t' \
-                'Loss {loss.val:.3f} ({loss.avg:.3f})'.format(  
-                i, len(val_loader), 
+                'Overall Acc {overall_acc:.3f} \t'.format(                  
                 batch_time=batch_time,
                 mean_acc=mean_acc,
                 mean_iou=mean_iou,
@@ -79,7 +78,6 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         
         perf_indicator = mean_iou
         metrics.reset()
-        print('Mean IoU score: {:.3f}'.format(mean_iou))
         
         if args.log_wandb :        
             

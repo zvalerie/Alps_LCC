@@ -20,7 +20,7 @@ def parse_args():
                         type=float)      
     parser.add_argument('--bs',
                         help='batch size',
-                        default=32,
+                        default=64,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
@@ -36,17 +36,12 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/baseline/',
+                        default='out/experts/',
                         type=str)
     parser.add_argument('--model',
                         help='model',
                         default='Deeplabv3',
                         type=str)
-    parser.add_argument('--logging_frequency',
-                        help='frequency of logging',
-                        default=100,
-                        type=int)
-    # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
                         default=16,
@@ -57,10 +52,6 @@ def parse_args():
                         type=bool)
     parser.add_argument('--small_dataset',
                         help='using small dataset for development',
-                        default=False,
-                        type=bool)
-    parser.add_argument('--is_weighted_sampler',
-                        help='is_weighted_sampler',
                         default=False,
                         type=bool)
     parser.add_argument('--MLP',
