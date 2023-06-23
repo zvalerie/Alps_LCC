@@ -76,3 +76,14 @@ Bedrock with grass 2
 Large blocks 3
 Large blocks with grass 4
 
+classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                    "Scree with grass" : 6,"Water" : 7,
+                    "Forest" : 8, "Glacier" : 9, } 
+
+
+classes = {'Background':0, "Fels" : 1, "Fels locker" : 2,
+                    "Felsbloecke" : 3, "Felsbloecke locker" : 4, "Lockergestein" : 5,
+                    "Lockergestein locker" : 6,"Fliessgewaesser" : 7,
+                    "Wald" : 8, "Gletscher" : 9, } 
+

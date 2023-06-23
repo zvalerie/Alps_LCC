@@ -44,7 +44,7 @@ def parse_args():
                         type=str)
     parser.add_argument('--logging_frequency',
                         help='frequency of logging',
-                        default=10,
+                        default=100,
                         type=int)
     # just an experience, the number of workers == cpu cores == 6 in this work station
     parser.add_argument('--num_workers',

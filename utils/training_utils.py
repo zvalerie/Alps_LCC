@@ -13,7 +13,7 @@ from dataset.SwissImageDataset import SwissImage
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts
   
-from losses.losses import ResCELoss_2experts, ResCELoss_3experts, MyCrossEntropyLoss
+from losses.losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
 
 
 
@@ -40,26 +40,17 @@ def get_criterion (args):
     
     # Define loss function (criterion) and optimizer
     if args.loss == 'celoss':
-        #criterion = CrossEntropy2D(ignore_index=0)
+        
         criterion = MyCrossEntropyLoss(ignore_index=0)
 
     elif args.experts ==2 :
-        many_index = [1, 5, 8, 9]
-        few_index = [2, 3, 4, 6, 7]
 
-        ls_index = [many_index, few_index]
-        criterion = ResCELoss(many_index, few_index, args=args)
+        criterion = CELoss_2experts (args)
         lr_ratio = [0.03] ## ratio of rare categories to frequent categories
         
-
-        
-
     elif args.experts == 3: 
-        pass 
-        many_index = [1, 5, 7, 8, 9]
-        medium_index = [2, 6]
-        few_index = [3, 4]
-        criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args)
+
+        criterion = CELoss_3experts ( args)
         lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
     
     else :

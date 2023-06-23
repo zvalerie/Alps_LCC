@@ -38,16 +38,18 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         for i, (image, dem, mask) in enumerate(val_loader):
             
             # move data to device
-            input = torch.cat((image, dem), dim=1).to(device) #[B, 4, 200, 200]
-            mask = mask.to(device) #[B, 10, 200, 200]
+            input = torch.cat((image, dem), dim=1).to(device) 
+            mask = mask.long().squeeze().to(device)
             num_inputs = input.size(0)
             
             # Run forwards pass and compute loss : 
-            output = model(input) #[B, 10, 200, 200]
+            output = model(input) 
             loss = criterion(output, mask)
             
             # Record metrics
             losses.update(loss.item(), num_inputs)
+            if isinstance(output, dict):
+                output=output['out']
             preds = torch.argmax(output.detach().cpu(),axis=1)
 
             gt = mask.squeeze().detach().cpu().numpy()
@@ -79,27 +81,22 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         metrics.reset()
         print('Mean IoU score: {:.3f}'.format(mean_iou))
         
-        if args.log_wandb :
+        if args.log_wandb :        
+            
+            classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                    "Scree with grass" : 6,"Water" : 7,
+                    "Forest" : 8, "Glacier" : 9, }  
+            class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
+            
             metrics = {
-                'val_loss':losses.avg,
-                'val_duration': batch_time.avg,
-                'val_mIoU':mean_iou,
-                                            
+                    'val_loss':losses.avg,
+                    'val_duration': batch_time.avg,
+                    'val_macc': mean_acc, 
+                    'val_miou' : mean_iou, 
+                    'val_acc' : class_accuracies,
+                    'val_oacc':overall_acc,   
             }
-            
             wandb.log(metrics)
-            
-        classes = {'Background':0, "Fels" : 1, "Fels locker" : 2,
-                "Felsbloecke" : 3, "Felsbloecke locker" : 4, "Lockergestein" : 5,
-                "Lockergestein locker" : 6,"Fliessgewaesser" : 7,
-                "Wald" : 8, "Gletscher" : 9, } 
-        class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
-        
-        metrics = {'mean_acc': mean_acc, 
-                'mean_iou' : mean_iou, 
-                'class_accuracies' : class_accuracies,
-                'overall_acc':overall_acc,   
-        }
-
     
     return losses.avg, perf_indicator

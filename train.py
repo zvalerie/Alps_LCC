@@ -7,7 +7,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 from torch.utils.data import WeightedRandomSampler
-from torch.optim.lr_scheduler import StepLR, LambdaLR
+from torch.optim.lr_scheduler import StepLR, LambdaLR, ReduceLROnPlateau
 from pprint import pprint
 from copy import deepcopy
 
@@ -33,6 +33,7 @@ def main(args):
     # Choose model and device :
     model = get_model(args)
     device =  torch.device("cuda") if torch.cuda.is_available() or not args.force_cpu else 'cpu'
+    args.device = device
     model = model.to(device)
     
     # Get dataloaders : 
@@ -43,16 +44,13 @@ def main(args):
     # # Define loss function (criterion) and optimizer
     criterion = get_criterion (args)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
-    scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
+   # scheduler = StepLR(optimizer, step_size=args.step_size, gamma=args.lr_decay_rate)
+    scheduler = ReduceLROnPlateau(optimizer, min_lr = 1e-6, factor = args.lr_decay_rate, threshold = 1e-2, verbose = True)
        
     if args.experts == 3: 
-        many_index = [1, 5, 7, 8, 9]
-        medium_index = [2, 6]
-        few_index = [3, 4]
-        ls_index = [many_index, medium_index, few_index]
-        criterion = ResCELoss_3exp(many_index, medium_index, few_index, args=args).to(device)
+
         lr_ratio = [0.03, 0.01] ## ratio of rare categories to frequent categories
-        optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+        
     
     
     # Start model training :     
@@ -65,11 +63,13 @@ def main(args):
                    
             # train for one epoch
             train_ACE(train_loader, model, criterion, optimizer, epoch, args, device)
-            scheduler.step()
+            
             
             # evaluate on validation set
             val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args, device)
-
+            
+            scheduler.step(metrics=val_loss)
+            
             # update best model if best performances : 
             model_checkpoint = {
                             'epoch': epoch ,
@@ -100,6 +100,9 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-   
+    args
+    args.log_wandb = False
+    args.debug=True
+    args.test_only = True
     main(args)
         
