@@ -42,7 +42,7 @@ def get_predictions_from_logits(output,args):
     elif args.experts == 3 :
 
         aggr_logits = 1/3 * ( output['exp_0'] + output['exp_1'] + output['exp_2'] )
-        logits = softmax(aggr_logits)
+        logits = softmax(aggr_logits, dim = 1)
         
         
             

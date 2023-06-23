@@ -40,7 +40,7 @@ def get_optimizer (model,args):
     if args.experts ==0 :
         optimizer = optim.Adam(model.parameters(), 
                                lr=args.lr, 
-                               weight_decay=args.wd
+                               weight_decay=1e-2
                                )
         
     elif args.experts ==2 :
@@ -53,7 +53,7 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.03}, 
                                 ], 
                                 lr= args.lr, 
-                                weight_decay=args.wd
+                                weight_decay=1e-2
                                 )
         
     elif args.experts ==3 :
@@ -68,7 +68,7 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.003},  
                                 ], 
                                 lr=args.lr, 
-                                weight_decay=args.wd,
+                                weight_decay=1e-2,
                                                 )          
     
     if False :
@@ -236,6 +236,14 @@ def get_dataloader(args=None, phase ='train'):
 
 def setup_wandb_log(args):
     
+    if args.debug :
+        args.epoch = 3
+        args.out_dir = 'out/debug/'
+        args.small_dataset = True
+        args.name = 'debug'
+        args.log_wandb =False
+        
+        
     # create new experiment in wandb
     if args.log_wandb :
         wandb.init(project = "ACE_ALPS", 
@@ -254,4 +262,4 @@ def setup_wandb_log(args):
         wandb.define_metric ('val_mIoU', summary = 'max' )
         wandb.define_metric ('lr', summary = 'last' )    
        
-        
+

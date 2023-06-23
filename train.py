@@ -108,7 +108,6 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-    args.model ='Deeplabv3_w_Better_Experts'
-    args.experts = 3
+
     main(args)
         

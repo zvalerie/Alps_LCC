@@ -23,3 +23,17 @@ test_miou0.22410893758889472
 test_oacc0.6515251
 Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
 0.009,0.422,0.0,0.0,nan,0.746,0.111,0.002,0.969,0.724
+Experiment results
+2023-06-23 17:32:06
+test_macc0.1658492168237512
+test_miou0.08199133423953871
+test_oacc0.2176182
+Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
+0.031,0.02,0.088,0.008,nan,0.295,0.208,0.015,0.687,0.14
+Experiment results
+2023-06-23 17:32:47
+test_macc0.16793637819636753
+test_miou0.08135160413026576
+test_oacc0.2161404
+Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
+0.029,0.02,0.109,0.008,nan,0.291,0.213,0.012,0.693,0.136

@@ -67,10 +67,10 @@ def test_ACE( model,  args, device):
         class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
         
         metrics = {
-                    'test_macc': mean_acc, 
-                    'test_miou' : mean_iou, 
-                    'test_acc' : class_accuracies,
-                    'test_oacc':overall_acc,   
+                    'test_macc':  np.round (mean_acc,3), 
+                    'test_miou' : np.round ( mean_iou,3), 
+                    'test_acc' :  class_accuracies,
+                    'test_oacc':  np.round (overall_acc,3),   
             }
         if args.log_wandb :
             wandb.log(metrics)
