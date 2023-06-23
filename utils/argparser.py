@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--epoch',
                         help='training epoches',
                         default=50,
-                        type=int)     
+                        type=int)  
     parser.add_argument('--bs',
                         help='batch size',
                         default=64,
