@@ -87,13 +87,10 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
     msg = 'Epoch: [{0}]\t' \
         'Time {batch_time.avg:.3f}s \t' \
         'Loss {loss.avg:.5f} \t'\
-        'Learning rate group 0  {lr:.3e}\t'\
-        'Learning rate group -1 {lr_last:.3e}\t'\
         'MediumLoss {mediumloss.avg:.5f}\t'\
         'FewLoss {fewloss.avg:.5f}\t'.format(
         epoch, 
         batch_time=batch_time,
-        lr=lr, lr_last=lr_last, 
         loss=losses,
         mediumloss=mediumlosses, 
         fewloss=fewlosses)

@@ -247,7 +247,7 @@ def setup_wandb_log(args):
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_ALPS_test_only", 
+        wandb.init(project = "ACE_ALPS", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           

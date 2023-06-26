@@ -5,8 +5,10 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models.segmentation.deeplabv3 import ASPP
 from torchvision.models._utils import IntermediateLayerGetter   
+from torch.linalg import vector_norm
 
-from models.models_utils import _MultiExpertModel 
+#from models.models_utils import _MultiExpertModel 
+from models_utils import _MultiExpertModel
 from ResNet import resnet50
 
 
@@ -14,7 +16,7 @@ from ResNet import resnet50
     
 class DeepLabHeadV3Plus_w_Experts(nn.Module):
     def __init__(self, in_channels, low_level_channels, num_classes, 
-                 num_experts, aspp_dilate=[12, 24, 36], is_MLP=False):
+                 num_experts, aspp_dilate=[12, 24, 36], is_MLP=False, use_lws = False):
         super(DeepLabHeadV3Plus_w_Experts, self).__init__()
        
         self.project = nn.Sequential( 
@@ -46,17 +48,28 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
         if self.is_MLP:
             self.MLP = MLP(num_inputs=num_classes*num_experts, hidden_layers=128, num_outputs=num_experts)
         self._init_weight()
+        
+        self.use_lws  = use_lws
+        
 
     def forward(self, feature):
         low_level_feature = self.project( feature['low_level'] )
         output_feature = self.aspp(feature['out'])
         output_feature = F.interpolate(output_feature, size=low_level_feature.shape[2:], mode='bilinear', align_corners=False)
         final_feature = self.classifier( torch.cat( [ low_level_feature, output_feature ], dim=1 ) )
-        
         MLP_output = None
+        
+                
         if self.num_experts == 2:
+            
             y_few = self.SegHead_few(final_feature)
             y_many = self.SegHead_many(final_feature)
+            
+            if self.use_lws:
+                f_few = vector_norm( self.SegHead_few.weight.flatten()) / vector_norm(self.SegHead_many.weight.flatten())
+                y_few = f_few * y_few
+                
+            
             if self.is_MLP:
                 y_stack = torch.cat((y_many, y_few), 1)
                 y_stack = y_stack.permute(0, 2, 3, 1) #[B,H,W,20]
@@ -64,12 +77,25 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
                 exp_prob = exp_prob.permute(0, 3, 1, 2)
                 MLP_output = exp_prob
                 # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
+                
             return [y_many, y_few], MLP_output
 
+
+
+
         elif self.num_experts == 3:
+            
             y_few = self.SegHead_few(final_feature)
             y_medium = self.SegHead_medium(final_feature)
             y_many = self.SegHead_many(final_feature)
+            
+            if self.use_lws:
+                f_few = vector_norm( self.SegHead_few.weight.flatten()) / vector_norm(self.SegHead_many.weight.flatten())
+                y_few = f_few * y_few
+                
+                f_medium = vector_norm( self.SegHead_medium .weight.flatten()) / vector_norm(self.SegHead_many.weight.flatten())
+                y_medium = f_medium * y_medium
+            
             if self.is_MLP:
                 y_stack = torch.cat((y_many, y_medium, y_few), 1)
                 y_stack = y_stack.permute(0, 2, 3, 1)
@@ -77,6 +103,7 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
                 exp_prob = exp_prob.permute(0, 3, 1, 2)
                 MLP_output = exp_prob
                 # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_medium + exp_prob[:,2:3,:,:] * y_few
+                
             return [y_many, y_medium, y_few], MLP_output
 
         
@@ -102,7 +129,7 @@ class MLP(nn.Module):
         # x = self.softmax(x)
         return x
 
-def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, pretrained_backbone=True, ):
+def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, pretrained_backbone=True, use_lws=False):
 
     if output_stride==8:
         replace_stride_with_dilation=[False, True, True]
@@ -119,7 +146,7 @@ def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, 
     low_level_planes = 256
 
     return_layers = {'layer4': 'out', 'layer1': 'low_level'}
-    classifier =  DeepLabHeadV3Plus_w_Experts(inplanes, low_level_planes, num_classes, num_experts, aspp_dilate, is_MLP)
+    classifier =  DeepLabHeadV3Plus_w_Experts(inplanes, low_level_planes, num_classes, num_experts, aspp_dilate, is_MLP, use_lws=use_lws)
     
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
     model = _MultiExpertModel(backbone, classifier, num_classes)
@@ -129,16 +156,15 @@ def ACE_deeplabv3P_w_Experts(num_classes, num_experts, is_MLP ,output_stride=8, 
 
 if __name__ == '__main__':
     
-    x = torch.rand([64,4,200,200])
+    x = torch.rand([64,4,20,20])
     model = ACE_deeplabv3P_w_Experts( 
                                      num_classes=10, 
                                      output_stride=8, 
                                      pretrained_backbone=True, 
-                                     num_experts=2,
-                                     is_MLP=True)
+                                     num_experts=3,
+                                     is_MLP=False,
+                                     use_lws =True,
+                                     )
     output =model(x) 
-    for i in range(len(output['out'])):
-        print('output i=',i, output['out'][i].shape)
-        
-    if output['mlp'] is not None :
-        print('output mlp=',output['mlp'].shape)
+    for key in output.keys():
+        print('output i=',key, output[key].shape)

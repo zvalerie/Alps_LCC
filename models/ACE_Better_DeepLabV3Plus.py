@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from torchvision.models.segmentation.deeplabv3 import ASPP
 from torchvision.models._utils import IntermediateLayerGetter   
-
+from torch.linalg import vector_norm
 from models_utils import _MultiExpertModel 
 from ResNet import resnet50
 
@@ -29,7 +29,7 @@ class MLP(nn.Module):
     
 class DLV3P_w_BetterExperts(nn.Module):
     def __init__(self, in_channels, low_level_channels, num_classes, 
-                 num_experts, aspp_dilate=[12, 24, 36], is_MLP=False):
+                 num_experts, aspp_dilate=[12, 24, 36], is_MLP=False, use_lws=False):
         super(DLV3P_w_BetterExperts, self).__init__()
        
         self.project = nn.Sequential( 
@@ -68,7 +68,9 @@ class DLV3P_w_BetterExperts(nn.Module):
             
         else:
             raise ValueError('num_experts must be 2 or 3')
-
+        
+        self.use_lws  = use_lws
+        
         self.is_MLP = is_MLP
         if self.is_MLP:
             self.MLP = MLP(num_inputs=num_classes*num_experts, hidden_layers=128, num_outputs=num_experts)
@@ -79,11 +81,20 @@ class DLV3P_w_BetterExperts(nn.Module):
         output_feature = self.aspp(feature['out'])
         output_feature = F.interpolate(output_feature, size=low_level_feature.shape[2:], mode='bilinear', align_corners=False)
         output_feature = torch.cat( [ low_level_feature, output_feature ], dim=1 )
-        
         MLP_output = None
+        
+        
+        
         if self.num_experts == 2:
+            
             y_few = self.SegHead_few(output_feature)
             y_many = self.SegHead_many(output_feature)
+            
+            if self.use_lws:                
+                f_few = vector_norm( self.SegHead_few[3].weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
+                y_few = f_few * y_few
+                
+            
             if self.is_MLP:
                 raise NotImplementedError
                 y_stack = torch.cat((y_many, y_few), 1)
@@ -94,10 +105,23 @@ class DLV3P_w_BetterExperts(nn.Module):
                 # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_few
             return [y_many, y_few], MLP_output
 
+
+
         elif self.num_experts == 3:
+            
             y_few = self.SegHead_few(output_feature)
             y_medium = self.SegHead_medium(output_feature)
             y_many = self.SegHead_many(output_feature)
+            
+            if self.use_lws:
+                f_few = vector_norm( self.SegHead_few[3].weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
+                y_few = f_few * y_few
+                
+                f_medium = vector_norm( self.SegHead_medium[3] .weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
+                y_medium = f_medium * y_medium
+               
+                
+            
             if self.is_MLP:
                 raise NotImplementedError
                 y_stack = torch.cat((y_many, y_medium, y_few), 1)
@@ -119,7 +143,7 @@ class DLV3P_w_BetterExperts(nn.Module):
 
 
 
-def ACE_deeplabv3P_w_Better_Experts(num_classes, num_experts, is_MLP ,output_stride=8, pretrained_backbone=True, ):
+def ACE_deeplabv3P_w_Better_Experts(num_classes, num_experts, is_MLP ,output_stride=8, pretrained_backbone=True, use_lws=False):
 
     if output_stride==8:
         replace_stride_with_dilation=[False, True, True]
@@ -136,7 +160,9 @@ def ACE_deeplabv3P_w_Better_Experts(num_classes, num_experts, is_MLP ,output_str
     low_level_planes = 256
 
     return_layers = {'layer4': 'out', 'layer1': 'low_level'}
-    classifier = DLV3P_w_BetterExperts (inplanes, low_level_planes, num_classes, num_experts, aspp_dilate, is_MLP)
+    classifier = DLV3P_w_BetterExperts (inplanes, low_level_planes, num_classes, 
+                                        num_experts, aspp_dilate, 
+                                        is_MLP=is_MLP, use_lws=use_lws)
     
     backbone = IntermediateLayerGetter(backbone, return_layers=return_layers)
     model = _MultiExpertModel(backbone, classifier, num_classes)
@@ -151,8 +177,10 @@ if __name__ == '__main__':
                                      num_classes=10, 
                                      output_stride=8, 
                                      pretrained_backbone=True, 
-                                     num_experts=2,
-                                     is_MLP=False)
+                                     num_experts=3,
+                                     is_MLP=False,
+                                     use_lws=True,
+                                     )
     output =model(x) 
     for key in output.keys():
         print('output i=',key, output[key].shape)

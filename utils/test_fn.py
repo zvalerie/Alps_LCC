@@ -103,7 +103,7 @@ def write_result_to_csv(data,args=None):
         
     keys = data.keys()
     
-    with open(filename, 'a', newline='') as file:
+    with open(filename, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Experiment results'])
         writer.writerow([filename])
@@ -113,11 +113,11 @@ def write_result_to_csv(data,args=None):
             if isinstance(data[key],dict):
                 sub_data = data[key]
                 for sub_key in list(sub_data.keys()):
-                    text = str(key)+'_'+ str(sub_key) +' '+ str(sub_data[sub_key])
+                    text = str(key)+'_'+ str(sub_key) +', '+ str(sub_data[sub_key])
                     writer.writerow([text])
                
             else :
-                text = str(key) +' '+ str(data[key])
+                text = str(key) +', '+ str(data[key])
                 writer.writerow([text])
                
        

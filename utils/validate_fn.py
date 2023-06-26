@@ -24,6 +24,8 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
         tick= time.time()
         batch_time = AverageMeter()
         losses = AverageMeter()
+        mediumlosses = AverageMeter()
+        fewlosses = AverageMeter()
         metrics = MetricLogger(model.num_classes)
         device  = args.device
         
@@ -42,10 +44,16 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             output = model(input) 
             loss = criterion(output, mask)
             
-            if args.experts == 2 :               
+            if args.experts == 2 :    
+                fewlosses.update(loss[1].item(), input.size(0))           
                 loss = loss[0]+loss[1]
+                
             if args.experts == 3 :
+                fewlosses.update(loss[2].item(), input.size(0))
+                mediumlosses.update(loss[1].item(), input.size(0))
                 loss = loss[0] + loss[1] + loss [2]
+                
+                
             
             # Record metrics
             losses.update(loss.item(), num_inputs)
@@ -61,17 +69,23 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
         batch_time.update(time.time() - tick)            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()   
         
-        msg = 'Validate:   \t' \
+        msg = 'Validate: [{0}]\t' \
                 'Time {batch_time.avg:.3f}s \t' \
                 'Loss {loss.avg:.3f} \t'\
+                'MediumLoss {mediumloss.avg:.5f}\t'\
+                'FewLoss {fewloss.avg:.5f}\t'\
                 'Mean Accuracy {mean_acc:.3f} \t' \
                 'Mean IoU {mean_iou:.3f} \t' \
-                'Overall Acc {overall_acc:.3f} \t'.format(                  
+                'Overall Acc {overall_acc:.3f} \t'.format(    
+                epoch,              
                 batch_time=batch_time,
                 mean_acc=mean_acc,
                 mean_iou=mean_iou,
                 overall_acc=overall_acc,                
-                loss=losses)
+                loss=losses,
+                mediumloss=mediumlosses, 
+                fewloss=fewlosses
+                )
 
         print(msg)
                            

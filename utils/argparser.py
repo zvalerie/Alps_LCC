@@ -32,7 +32,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/experts/',
+                        default='out/lws_l2_norm/',
                         type=str)
     parser.add_argument('--model',
                         help='model',
@@ -72,6 +72,14 @@ def parse_args():
                         type=bool)  
     parser.add_argument('--test_only',
                         help='only run testing',
+                        default=False,
+                        type=bool) 
+    parser.add_argument('--L2penalty',
+                        help='use a complementary loss term as penalty for predicting non target classes',
+                        default=False,
+                        type=bool) 
+    parser.add_argument('--lws',
+                        help='use a learnable weights scaling',
                         default=False,
                         type=bool) 
     args = parser.parse_args()
