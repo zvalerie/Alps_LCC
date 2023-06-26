@@ -69,11 +69,11 @@ def main(args):
         for epoch in range( args.epoch):
                    
             # train for one epoch
-            train_ACE(train_loader, model, criterion, optimizer, epoch, args, device)
+            train_ACE(train_loader, model, criterion, optimizer, epoch, args)
             
             
             # evaluate on validation set
-            val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args, device)
+            val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args)
             
             scheduler.step(metrics=val_loss)
             
@@ -103,7 +103,7 @@ def main(args):
         torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'final.pt'))
         print('End of model training')
     
-    test_ACE(model,args,device)
+    test_ACE(model,args)
 
 
 if __name__ == '__main__':

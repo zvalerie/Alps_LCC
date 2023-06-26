@@ -122,6 +122,7 @@ def get_model(args):
         
         elif args.experts == 2 or args.experts == 3 :
             model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
+            
         else :
             raise NotImplementedError  
     
@@ -238,7 +239,7 @@ def setup_wandb_log(args):
     
     if args.debug :
         args.epoch = 3
-        args.out_dir = 'out/debug/'
+       # args.out_dir = 'out/debug/'
         args.small_dataset = True
         args.name = 'debug'
         args.log_wandb =False
@@ -246,7 +247,7 @@ def setup_wandb_log(args):
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_ALPS", 
+        wandb.init(project = "ACE_ALPS_test_only", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           

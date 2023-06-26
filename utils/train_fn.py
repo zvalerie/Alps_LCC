@@ -9,7 +9,7 @@ from utils.inference_utils import AverageMeter
 
 
 
-def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
+def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
     '''Train one epoch
     
     Args:
@@ -18,7 +18,6 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
         criterion (torch.nn.Module): loss function for image segmentation.
         optimizer (torch.optim.Optimizer): optimizer for model parameters.
         epoch (int): current training epoch.
-        device (str): device 'cuda:0' or 'cpu'
         args: arguments from the main script.
     '''
     
@@ -30,7 +29,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args, device ):
     
     # switch to train mode
     model.train()
-    device = torch.device("cuda")
+    device = args.device
     end = time.time()
     
     for i, (image, dem, mask) in enumerate(train_loader):

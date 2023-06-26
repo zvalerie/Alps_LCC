@@ -7,13 +7,13 @@ import wandb
 import csv
 from numpy import linalg as LA
 
-from utils.inference_utils import MetricLogger, get_predictions_from_logits
+from utils.inference_utils import MetricLogger, get_predictions_from_logits, load_best_model_weights
 
 from tqdm import tqdm
 from utils.training_utils import get_dataloader
 from pprint import pprint
 
-def test_ACE( model,  args, device):  
+def test_ACE( model,  args):  
     '''run validation
     
     Args:
@@ -26,13 +26,15 @@ def test_ACE( model,  args, device):
         perf_indicator (float): performance indicator: mean IoU over all validation images.
         validation loss (float): val loss
     '''
+    device = args.device
     print('Start model testing....')
     test_loader = get_dataloader(args=args,phase='test')
+    load_best_model_weights(model,args)
     
     with torch.no_grad():
         
         tick= time.time()
-        metrics = MetricLogger(model.num_classes)
+        metrics = MetricLogger( n_classes=10)
         
         # switch to evaluate mode
         model.eval()       
@@ -66,16 +68,21 @@ def test_ACE( model,  args, device):
                     "Forest" : 8, "Glacier" : 9, } 
         class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
         
+        freq_cls_acc =   1/4* (class_accuracies["Scree"]+ class_accuracies["Bedrock"] + class_accuracies["Glacier"] + class_accuracies["Forest"])
+        common_cls_acc = 1/3* (class_accuracies["Scree with grass"]+    class_accuracies["Water"]+   class_accuracies["Bedrockwith grass"])
+        rare_cls_acc =   1/2* (class_accuracies["Large blocks"]+   class_accuracies["Large blocks with grass"])
+         
         metrics = {
-                    'test_macc':  np.round (mean_acc,3), 
                     'test_miou' : np.round ( mean_iou,3), 
+                    'test_macc':  np.round (mean_acc,3), 
+                    'test_oacc':  np.round (overall_acc,3),
+                    'frequent_cls_acc':np.round(freq_cls_acc,3),
+                    'common_cls_acc': np.round(common_cls_acc,3),
+                    'rare_cls_acc': np.round(rare_cls_acc,3),
                     'test_acc' :  class_accuracies,
-                    'test_oacc':  np.round (overall_acc,3),   
             }
         if args.log_wandb :
-            wandb.log(metrics)
-        
-        
+            wandb.log(metrics)       
         
         
         pprint(metrics)
@@ -90,33 +97,30 @@ def write_result_to_csv(data,args=None):
     time_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if args is not None : 
-        filename = os.path.join( args.out_dir, args.name,'results.csv')
+        filename = os.path.join( args.out_dir, args.name,'metrics.csv')
     else :
-        filename = os.path.join('results.csv')
+        filename = os.path.join('metrics.csv')
         
     keys = data.keys()
     
     with open(filename, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Experiment results'])
+        writer.writerow([filename])
         writer.writerow([time_string])
         for key in keys :
             
             if isinstance(data[key],dict):
-               continue
+                sub_data = data[key]
+                for sub_key in list(sub_data.keys()):
+                    text = str(key)+'_'+ str(sub_key) +' '+ str(sub_data[sub_key])
+                    writer.writerow([text])
+               
             else :
-                text = str(key) + str(data[key])
+                text = str(key) +' '+ str(data[key])
                 writer.writerow([text])
-
-    for key in keys :
-        if isinstance(data[key],dict):
-            sub_data = data[key]
-            with open(filename, 'a', newline='') as file:
-                writer = csv.DictWriter(file, fieldnames=sub_data.keys())
-                writer.writeheader()
-                writer.writerow(sub_data)
-                
-        
+               
+       
 
     print('Results save to file :',filename)
     

@@ -1,8 +1,24 @@
 import torch
 import numpy as np
 from torch.nn.functional import softmax
+import os
 
 
+def load_best_model_weights (model,args):
+    best_model_path = os.path.join( args.out_dir, args.name,'current_best.pt')
+    last_model_path = os.path.join( args.out_dir, args.name,'last_model.pt')
+    
+    if os.path.isfile (best_model_path) :
+        checkpoint = torch.load(best_model_path)
+        
+    elif os.path.isfile(last_model_path):
+        checkpoint = torch.load(last_model_path)        
+    
+    else :
+        raise NameError ('Best model weights are not found in folder', args.out_dir , args.name )
+    
+    best_weights = checkpoint['state_dict']
+    model =  model.load_state_dict (best_weights)
 
 
 class AverageMeter(object):

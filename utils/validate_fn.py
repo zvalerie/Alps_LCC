@@ -5,7 +5,7 @@ import wandb
 
 from utils.inference_utils import get_predictions_from_logits, MetricLogger, AverageMeter
 
-def validate_ACE(val_loader, model, criterion, epoch, args, device):  
+def validate_ACE(val_loader, model, criterion, epoch, args):  
     '''run validation
     
     Args:
@@ -13,7 +13,6 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         model (torch.nn.Module): image segmentation module.
         criterion (torch.nn.Module): loss function for image segmentation.
         epoch : current epoch 
-        device (str): device 'cuda:0' or 'cpu'
         args: arguments from the main script.
 
     Returns:
@@ -26,6 +25,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args, device):
         batch_time = AverageMeter()
         losses = AverageMeter()
         metrics = MetricLogger(model.num_classes)
+        device  = args.device
         
         # switch to evaluate mode
         model.eval()       
