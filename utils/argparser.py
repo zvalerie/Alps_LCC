@@ -50,10 +50,6 @@ def parse_args():
                         help='using small dataset for development',
                         default=False,
                         type=bool)
-    parser.add_argument('--MLP',
-                        help='Train MLP layer to combine the results of experts',
-                        default=False,
-                        type=bool)
     parser.add_argument('--force_cpu',
                         help='Device is set to cpu, no GPU usage.',
                         default=False,
@@ -84,6 +80,14 @@ def parse_args():
                         type=bool) 
     parser.add_argument('--separate_backprop',
                         help='use a separate backprop for each expert, E1 update the backbone',
+                        default=False,
+                        type=bool)
+    parser.add_argument('--CNN_aggregator',
+                        help='Train a CNN to combine the results of experts',
+                        default=False,
+                        type=bool) 
+    parser.add_argument('--MLP_aggregator',
+                        help='Train MLP layer to combine the results of experts',
                         default=False,
                         type=bool) 
     args = parser.parse_args()

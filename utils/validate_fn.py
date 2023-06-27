@@ -44,11 +44,14 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             output = model(input) 
             loss = criterion(output, mask)
             
-            if args.experts == 2 :    
+            if args.CNN_aggregator:
+                pass 
+                
+            elif args.experts == 2 :    
                 fewlosses.update(loss[1].item(), input.size(0))           
                 loss = loss[0]+loss[1]
                 
-            if args.experts == 3 :
+            elif args.experts == 3 :
                 fewlosses.update(loss[2].item(), input.size(0))
                 mediumlosses.update(loss[1].item(), input.size(0))
                 loss = loss[0] + loss[1] + loss [2]

@@ -12,7 +12,8 @@ from dataset.SwissImageDataset import SwissImage
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts, ACE_deeplabv3P_w_Better_Experts
   
-from losses.losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
+from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
+from losses.aggregator_losses import AggregatorLoss
 from torch import optim
 
 
@@ -94,8 +95,9 @@ def get_criterion (args):
 
         criterion = CELoss_3experts ( args)
     
-    else :
-        raise NotImplementedError
+    if  args.CNN_aggregator:
+        criterion = AggregatorLoss(args)
+
     
     return criterion
 
@@ -112,7 +114,13 @@ def get_model(args):
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Experts(num_classes = 10, num_experts = args.experts, is_MLP = args.MLP, use_lws=args.lws)
+            model = ACE_deeplabv3P_w_Experts(num_classes = 10, 
+                                             num_experts = args.experts, 
+                                             use_lws=args.lws,
+                                             )
+            
+            if args.MLP_aggregator or args.CNN_aggregator :
+                raise NotImplementedError    
  
     
     elif args.model == 'Deeplabv3_w_Better_Experts':
@@ -120,7 +128,12 @@ def get_model(args):
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, num_experts = args.experts, is_MLP = args.MLP, use_lws=args.lws)
+            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, 
+                                                     num_experts = args.experts, 
+                                                     use_lws=args.lws,
+                                                     use_CNN_aggregator= args.CNN_aggregator,
+                                                     use_MLP_aggregator= args. MLP_aggregator,
+                                                     )
 
          
     else:

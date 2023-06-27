@@ -15,7 +15,7 @@ class _MultiExpertModel(nn.Module):
         output=dict()
         input_shape = x.shape[-2:]
         features = self.backbone(x)
-        x,MLP_output = self.classifier(features)
+        x, aggregator_output = self.classifier(features)
         
         if isinstance(x, list):
             for idx in range(len(x)):
@@ -23,8 +23,8 @@ class _MultiExpertModel(nn.Module):
         else:
             output['out']= F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
         
-        if MLP_output != None:
-            output['mlp'] = F.interpolate(MLP_output, size=input_shape, mode='bilinear', align_corners=False)        
+        if aggregator_output != None:
+            output['aggregation'] = F.interpolate(aggregator_output, size=input_shape, mode='bilinear', align_corners=False)        
         
         
         

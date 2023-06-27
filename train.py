@@ -108,5 +108,10 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
+    args.CNN_aggregator = True
+    args.experts=3
+    args.bs =4
+    args.debug =True
+    args.model = 'Deeplabv3_w_Better_Experts'
     main(args)
         

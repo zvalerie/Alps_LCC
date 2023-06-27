@@ -60,6 +60,12 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+        
+        elif args.CNN_aggregator:
+            loss = criterion(output,mask)
+            optimizer.zero_grad() 
+            loss.backward()
+            optimizer.step()
             
             
         elif args.experts == 2:
