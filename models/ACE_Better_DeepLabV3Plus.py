@@ -94,6 +94,7 @@ class DLV3P_w_BetterExperts(nn.Module):
                 f_few = vector_norm( self.SegHead_few[3].weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
                 y_few = f_few * y_few
                 
+                
             
             if self.is_MLP:
                 raise NotImplementedError
@@ -120,6 +121,7 @@ class DLV3P_w_BetterExperts(nn.Module):
                 f_medium = vector_norm( self.SegHead_medium[3] .weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
                 y_medium = f_medium * y_medium
                
+               
                 
             
             if self.is_MLP:
@@ -131,6 +133,10 @@ class DLV3P_w_BetterExperts(nn.Module):
                 MLP_output = exp_prob
                 # MLP_output = exp_prob[:,:1,:,:] * y_many + exp_prob[:,1:2,:,:] * y_medium + exp_prob[:,2:3,:,:] * y_few
             return [y_many, y_medium, y_few], MLP_output
+        
+        
+        else :
+            raise NotImplementedError 
 
         
     def _init_weight(self):

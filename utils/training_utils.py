@@ -112,20 +112,16 @@ def get_model(args):
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Experts(num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
-        else :
-            raise NotImplementedError  
+            model = ACE_deeplabv3P_w_Experts(num_classes = 10, num_experts = args.experts, is_MLP = args.MLP, use_lws=args.lws)
+ 
     
     elif args.model == 'Deeplabv3_w_Better_Experts':
         if args.experts ==0 :
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, num_experts = args.experts, is_MLP = args.MLP)
-            
-        else :
-            raise NotImplementedError  
-    
+            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, num_experts = args.experts, is_MLP = args.MLP, use_lws=args.lws)
+
          
     else:
        raise NotImplementedError

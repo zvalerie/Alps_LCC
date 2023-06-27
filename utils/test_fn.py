@@ -103,7 +103,7 @@ def write_result_to_csv(data,args=None):
         
     keys = data.keys()
     
-    with open(filename, 'w', newline='') as file:
+    with open(filename, 'a', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['Experiment results'])
         writer.writerow([filename])

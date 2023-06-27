@@ -68,6 +68,7 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
             if self.use_lws:
                 f_few = vector_norm( self.SegHead_few.weight.flatten()) / vector_norm(self.SegHead_many.weight.flatten())
                 y_few = f_few * y_few
+               
                 
             
             if self.is_MLP:
@@ -95,6 +96,7 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
                 
                 f_medium = vector_norm( self.SegHead_medium .weight.flatten()) / vector_norm(self.SegHead_many.weight.flatten())
                 y_medium = f_medium * y_medium
+                
             
             if self.is_MLP:
                 y_stack = torch.cat((y_many, y_medium, y_few), 1)

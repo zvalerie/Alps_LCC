@@ -9,6 +9,19 @@ from utils.inference_utils import AverageMeter
 
 
 
+def freeze_backbone(model):
+    
+    for name, param in model.named_parameters():
+        if not ('medium' in name or 'few' in name):
+            param.requires_grad = False
+        
+def unfreeze_backbone(model) :
+    
+    for name, param in model.named_parameters():
+        param.requires_grad = True
+            
+
+
 def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
     '''Train one epoch
     
@@ -53,9 +66,24 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             
             many_loss , few_loss = criterion(output, mask)
             loss = many_loss + few_loss 
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+            
+            if not args.separate_backprop or few_loss.item()==0.:
+                optimizer.zero_grad() 
+                loss.backward()
+                optimizer.step()
+            
+            else : 
+                # update backbone with expert 1 and head for few classes with expert few
+                optimizer.zero_grad() 
+                many_loss.backward(retain_graph=True)
+                optimizer.step()
+                # update the few head only :                
+                freeze_backbone(model)
+                optimizer.zero_grad()
+                few_loss.backward()
+                optimizer.step()
+                unfreeze_backbone(model)                
+                
 
             fewlosses.update(few_loss.item(), input.size(0))
             
@@ -64,11 +92,32 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             
             many_loss, medium_loss, few_loss = criterion(output, mask)
             loss = many_loss + medium_loss  + few_loss 
-                      
-            # compute gradient and update
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+                  
+            if not args.separate_backprop or (few_loss.item()==0. and medium_loss.item()==0.):
+                optimizer.zero_grad() 
+                loss.backward()
+                optimizer.step()
+            
+            else :
+                # update backbone with expert 1 and head for few classes with expert few
+                optimizer.zero_grad() 
+                many_loss.backward(retain_graph=True)
+                optimizer.step()
+                freeze_backbone(model)
+                
+                if few_loss.item() >0. :
+            
+                    optimizer.zero_grad()
+                    few_loss.backward(retain_graph=True)
+                    optimizer.step()
+                    
+                if medium_loss.item() >0. :
+                    
+                    optimizer.zero_grad()
+                    medium_loss.backward()
+                    optimizer.step()
+                    
+                unfreeze_backbone(model)                 
             
             fewlosses.update(few_loss.item(), input.size(0))            
             mediumlosses.update(medium_loss.item(), input.size(0))

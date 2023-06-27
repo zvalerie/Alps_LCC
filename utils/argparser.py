@@ -32,7 +32,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/lws_l2_norm/',
+                        default='out/lws/',
                         type=str)
     parser.add_argument('--model',
                         help='model',
@@ -80,6 +80,10 @@ def parse_args():
                         type=bool) 
     parser.add_argument('--lws',
                         help='use a learnable weights scaling',
+                        default=False,
+                        type=bool) 
+    parser.add_argument('--separate_backprop',
+                        help='use a separate backprop for each expert, E1 update the backbone',
                         default=False,
                         type=bool) 
     args = parser.parse_args()
