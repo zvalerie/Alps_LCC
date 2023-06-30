@@ -41,7 +41,7 @@ def get_optimizer (model,args):
     if args.experts ==0 :
         optimizer = optim.Adam(model.parameters(), 
                                lr=args.lr, 
-                               weight_decay=1e-2
+                               weight_decay=args.weight_decay
                                )
         
     elif args.experts ==2 :
@@ -54,7 +54,7 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.03}, 
                                 ], 
                                 lr= args.lr, 
-                                weight_decay=1e-2
+                                weight_decay=args.weight_decay
                                 )
         
     elif args.experts ==3 :
@@ -69,7 +69,7 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.003},  
                                 ], 
                                 lr=args.lr, 
-                                weight_decay=1e-2,
+                                weight_decay=args.weight_decay,
                                                 )          
     
     if False :

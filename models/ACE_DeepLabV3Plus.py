@@ -63,7 +63,7 @@ class DeepLabHeadV3Plus_w_Experts(nn.Module):
             y_many = self.SegHead_many(final_feature)
             
             if self.use_lws:
-                f_few = vector_norm(self.SegHead_many.weight.flatten()) / vector_norm( self.SegHead_few.weight.flatten()) / 
+                f_few = vector_norm(self.SegHead_many.weight.flatten()) / vector_norm( self.SegHead_few.weight.flatten())  
                 y_few = f_few * y_few                
 
 

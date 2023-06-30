@@ -22,6 +22,10 @@ def parse_args():
                         help='scheduler_decay_rate',
                         default=0.1,
                         type=float)
+    parser.add_argument('--weight_decay',
+                        help='weight decay',
+                        default=1e-2,
+                        type=float)
     parser.add_argument('--loss',
                         help='which loss',
                         default='celoss',

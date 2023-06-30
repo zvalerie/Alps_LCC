@@ -74,3 +74,22 @@ out/separate_bckprp/debug/metrics.csv
 "test_acc_Water, 0.457"
 "test_acc_Forest, 0.006"
 "test_acc_Glacier, 0.226"
+Experiment results
+out/separate_bckprp/debug/metrics.csv
+2023-06-30 17:47:30
+"test_miou, 0.031"
+"test_macc, 0.128"
+"test_oacc, 0.132"
+"frequent_cls_acc, 0.208"
+"common_cls_acc, 0.021"
+"rare_cls_acc, nan"
+"test_acc_Background, 0.052"
+"test_acc_Bedrock, 0.064"
+"test_acc_Bedrockwith grass, 0.004"
+"test_acc_Large blocks, 0.2"
+"test_acc_Large blocks with grass, nan"
+"test_acc_Scree, 0.073"
+"test_acc_Scree with grass, 0.017"
+"test_acc_Water, 0.043"
+"test_acc_Forest, 0.657"
+"test_acc_Glacier, 0.039"
