@@ -12,10 +12,11 @@ def load_best_model_weights (model,args):
         checkpoint = torch.load(best_model_path)
         
     elif os.path.isfile(last_model_path):
-        checkpoint = torch.load(last_model_path)        
+        checkpoint = torch.load(last_model_path)   
+        print('Using last model weights, best weights not found')     
     
     else :
-        raise NameError ('Best model weights are not found in folder', args.out_dir , args.name )
+        raise NameError ('Best or last model weights are not found in folder', args.out_dir , args.name )
     
     best_weights = checkpoint['state_dict']
     model =  model.load_state_dict (best_weights)
@@ -47,7 +48,9 @@ def get_predictions_from_logits(output,args):
         
     elif 'out' in output.keys():
         logits = output['out']
-            
+    
+    elif args.CNN_aggregator:
+        logits=  softmax ( output['aggregation'],dim =1 )
     
     elif args.experts == 2 :
         # Aggregation is simple average : the output logits of class c is the average among the ouputs 
@@ -58,10 +61,7 @@ def get_predictions_from_logits(output,args):
     elif args.experts == 3 :
 
         aggr_logits = 1/3 * ( output['exp_0'] + output['exp_1'] + output['exp_2'] )
-        logits = softmax(aggr_logits, dim = 1)
-        
-        
-            
+        logits = softmax(aggr_logits, dim = 1)                
         
     preds = torch.argmax(logits.detach().cpu(),axis=1)    
     return preds    

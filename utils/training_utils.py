@@ -158,6 +158,13 @@ def get_dataloader(args=None, phase ='train'):
         os.mkdir(args.out_dir)
     if args is not None and not os.path.exists(os.path.join( args.out_dir, args.name)):
         os.mkdir(os.path.join( args.out_dir, args.name))
+        
+    # Save config in file
+    import json
+    fn = os.path.join( args.out_dir, args.name,'config.json')
+    with open(fn, 'w') as file:
+        json.dump(vars(args), file, indent=4)
+
     
     # Path to dataset splits : 
     test_csv = 'data/split/test_dataset.csv'
@@ -252,6 +259,8 @@ def setup_wandb_log(args):
         args.small_dataset = True
         args.name = 'debug'
         args.log_wandb =False
+    
+
         
         
     # create new experiment in wandb

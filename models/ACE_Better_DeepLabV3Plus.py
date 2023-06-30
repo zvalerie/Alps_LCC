@@ -95,11 +95,11 @@ class DLV3P_w_BetterExperts(nn.Module):
             y_medium = self.SegHead_medium(output_feature)
             
             
-        if self.use_lws:                
-            f_few = vector_norm( self.SegHead_few[3].weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
+        if self.use_lws:       
+            f_few = vector_norm(self.SegHead_many[3].weight.flatten()) / vector_norm( self.SegHead_few[3].weight.flatten()) 
             y_few = f_few * y_few
             if self.num_experts == 3: 
-                f_medium = vector_norm( self.SegHead_medium[3] .weight.flatten()) / vector_norm(self.SegHead_many[3].weight.flatten())
+                f_medium = vector_norm(self.SegHead_many[3].weight.flatten()) / vector_norm( self.SegHead_medium[3] .weight.flatten()) 
                 y_medium = f_medium * y_medium
             
         
@@ -109,6 +109,7 @@ class DLV3P_w_BetterExperts(nn.Module):
                 
                 expert_features = torch.cat([y_many, y_medium, y_few],dim=1) 
                 aggregator_output = self.classifier(expert_features)
+                
             return [y_many, y_medium, y_few], aggregator_output
         
         else :

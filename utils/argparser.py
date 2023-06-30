@@ -32,11 +32,11 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/lws/',
+                        default='out/separate_bckprp/',
                         type=str)
     parser.add_argument('--model',
                         help='model',
-                        default='Deeplabv3',
+                        default='Deeplabv3_w_Better_Experts',
                         type=str)
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',
@@ -48,7 +48,7 @@ def parse_args():
                         type=bool)
     parser.add_argument('--small_dataset',
                         help='using small dataset for development',
-                        default=False,
+                        default=True,
                         type=bool)
     parser.add_argument('--force_cpu',
                         help='Device is set to cpu, no GPU usage.',

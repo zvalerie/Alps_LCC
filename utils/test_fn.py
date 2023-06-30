@@ -8,7 +8,7 @@ import csv
 from numpy import linalg as LA
 
 from utils.inference_utils import MetricLogger, get_predictions_from_logits, load_best_model_weights
-
+from utils.visualize import plot_confusion_matrix
 from tqdm import tqdm
 from utils.training_utils import get_dataloader
 from pprint import pprint
@@ -58,14 +58,18 @@ def test_ACE( model,  args):
             # measure elapsed time
             tick= time.time()
             
-           
-
-                           
-        mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
                     "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
                     "Scree with grass" : 6,"Water" : 7,
-                    "Forest" : 8, "Glacier" : 9, } 
+                    "Forest" : 8, "Glacier" : 9, }    
+
+                           
+        mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
+        confusion_matrix = metrics.get_confusion_matrix()
+        plot_confusion_matrix(confusion_matrix, classes= list(classes.keys()), save_path= os.path.join( args.out_dir, args.name,'confusion_matrix'), normalize=True)
+        
+        
+        
         class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
         
         freq_cls_acc =   1/4* (class_accuracies["Scree"]+ class_accuracies["Bedrock"] + class_accuracies["Glacier"] + class_accuracies["Forest"])
@@ -87,6 +91,7 @@ def test_ACE( model,  args):
         
         pprint(metrics)
         write_result_to_csv(metrics,args)
+        
         
         
         
