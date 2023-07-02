@@ -16,11 +16,9 @@ python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_E
 python train.py  --experts 2 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_2exp_30June --out_dir out/baseline/
 
 # Best model so far to re-run
-python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True     --L2penalty True  --separate_backprop True    --lws True --name ace_3exp_L2_new_lws
+python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True     --L2penalty True  --separate_backprop True    --lws True --name ace_3exp_L2_new_lws_backprop
 
 # Try different weight decay values : 
 python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_3exp_wd_0 --out_dir out/weight_decay/ --weight_decay 0.
 python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_3exp_wd_1e1 --out_dir out/weight_decay/ --weight_decay 1e-1
 python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_3exp_wd_1e3 --out_dir out/weight_decay/ --weight_decay 1e-3
-python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_3exp_wd_1e4 --out_dir out/weight_decay/ --weight_decay 1e-4
-python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True  --name ace_3exp_wd_1e5 --out_dir out/weight_decay/ --weight_decay 1e-5

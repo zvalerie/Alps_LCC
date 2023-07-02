@@ -1,0 +1,19 @@
+Experiment results
+out/separate_bckprp/ace_3exp_L2_new_lws_separate_bckprp/metrics.csv
+2023-07-01 11:37:21
+"test_miou, 0.473"
+"test_macc, 0.605"
+"test_oacc, 0.845"
+"frequent_cls_acc, 0.871"
+"common_cls_acc, 0.659"
+"rare_cls_acc, 0.292"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.821"
+"test_acc_Bedrockwith grass, 0.419"
+"test_acc_Large blocks, 0.547"
+"test_acc_Large blocks with grass, 0.036"
+"test_acc_Scree, 0.805"
+"test_acc_Scree with grass, 0.615"
+"test_acc_Water, 0.943"
+"test_acc_Forest, 0.957"
+"test_acc_Glacier, 0.903"

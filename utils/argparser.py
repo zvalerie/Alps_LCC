@@ -94,6 +94,14 @@ def parse_args():
                         help='Train MLP layer to combine the results of experts',
                         default=False,
                         type=bool) 
+    parser.add_argument('--finetune_classifier_only',
+                        help='Train MLP/CNN only, freeze Deeplabv3 backbone',
+                        default=False,
+                        type=bool) 
+    parser.add_argument('--pretrained_weights',
+                        help='pretrained weights',
+                        default='Nope',
+                        type=str)
     args = parser.parse_args()
     
     return args

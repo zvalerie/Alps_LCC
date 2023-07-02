@@ -55,9 +55,9 @@ def test_ACE( model,  args):
             gt = mask.squeeze().detach().cpu().numpy()
             metrics.update(gt, preds.numpy())
                         
-            # measure elapsed time
-            tick= time.time()
-            
+        # measure elapsed time
+        tick= time.time()
+        print('Elapsed time [s]:',tick)
         classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
                     "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
                     "Scree with grass" : 6,"Water" : 7,

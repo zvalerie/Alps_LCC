@@ -1,0 +1,19 @@
+Experiment results
+out/weight_decay/ace_3exp_wd_0/metrics.csv
+2023-07-02 12:51:14
+"test_miou, 0.392"
+"test_macc, 0.653"
+"test_oacc, 0.763"
+"frequent_cls_acc, 0.785"
+"common_cls_acc, 0.775"
+"rare_cls_acc, 0.534"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.742"
+"test_acc_Bedrockwith grass, 0.556"
+"test_acc_Large blocks, 0.845"
+"test_acc_Large blocks with grass, 0.222"
+"test_acc_Scree, 0.621"
+"test_acc_Scree with grass, 0.808"
+"test_acc_Water, 0.961"
+"test_acc_Forest, 0.875"
+"test_acc_Glacier, 0.901"

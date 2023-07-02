@@ -108,6 +108,8 @@ def main(args):
 
 if __name__ == '__main__':
     args = parse_args()
-
+    args.CNN_aggregator =True 
+    args. finetune_classifier_only =True
+    args.experts = 3
     main(args)
         

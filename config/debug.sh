@@ -1,0 +1,1 @@
+python train.py --debug True --lr 0.1 --CNN_aggregator True --experts 3 --bs 8 --pretrained_weights /home/valerie/Projects/Alps_LCC/out/cnn/ace_3exp_CNN_new_lws_L2/current_best.pt --finetune_classifier_only True

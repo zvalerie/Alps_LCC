@@ -134,10 +134,22 @@ def get_model(args):
                                                      use_CNN_aggregator= args.CNN_aggregator,
                                                      use_MLP_aggregator= args. MLP_aggregator,
                                                      )
-
-         
     else:
        raise NotImplementedError
+   
+    if os.path.isfile(args.pretrained_weights): 
+        checkpoint = torch.load(args.pretrained_weights)
+        model.load_state_dict(checkpoint['state_dict'])
+        print('Model weights loaded from file:',args.pretrained_weights)
+        
+    if args.finetune_classifier_only :      
+        
+        for name, param in model.named_parameters():
+            if not ('cnn' in name or 'MLP' in name):
+                param.requires_grad = False    
+            #print(name , param.requires_grad)      
+        print('Model weights are frozen except for finetune_classifier_only')
+    
        
     
     return model
