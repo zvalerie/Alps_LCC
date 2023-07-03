@@ -132,14 +132,14 @@ def get_model(args):
                                                      num_experts = args.experts, 
                                                      use_lws=args.lws,
                                                      use_CNN_aggregator= args.CNN_aggregator,
-                                                     use_MLP_aggregator= args. MLP_aggregator,
+                                                     use_MLP_aggregator= args.MLP_aggregator,
                                                      )
     else:
        raise NotImplementedError
    
     if os.path.isfile(args.pretrained_weights): 
         checkpoint = torch.load(args.pretrained_weights)
-        model.load_state_dict(checkpoint['state_dict'])
+        model.load_state_dict(checkpoint['state_dict'],strict=False)
         print('Model weights loaded from file:',args.pretrained_weights)
         
     if args.finetune_classifier_only :      

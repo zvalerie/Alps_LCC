@@ -26,7 +26,7 @@ from utils.test_fn import test_ACE
 
 
 def main(args):
-   
+
     # set all random seeds :
     set_all_random_seeds(args.seed)
     setup_wandb_log(args)
@@ -107,9 +107,9 @@ def main(args):
 
 
 if __name__ == '__main__':
+  
     args = parse_args()
-    args.CNN_aggregator =True 
-    args. finetune_classifier_only =True
-    args.experts = 3
+
+    
     main(args)
         

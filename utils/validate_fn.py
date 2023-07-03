@@ -44,7 +44,8 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             output = model(input) 
             loss = criterion(output, mask)
             
-            if args.CNN_aggregator:
+            if args.CNN_aggregator or args.MLP_aggregator:
+                # nothing special to do here, just pass
                 pass 
                 
             elif args.experts == 2 :    

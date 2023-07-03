@@ -22,6 +22,22 @@ class CNN_aggregator(nn.Module):
     def forward(self, x):
         return self.cnn(x) 
 
+class MLP_aggregator(nn.Module):
+    def __init__(self, input_dim, output_dim, hidden_layers = 256):
+        super(MLP_aggregator, self).__init__()
+        self.mlp = nn.Sequential(    
+                    nn.Linear(input_dim, hidden_layers),
+                    nn.ReLU(),
+                    nn.Linear(hidden_layers, output_dim),              
+                    )
+
+    def forward(self, x):
+        x = torch.moveaxis(x,1,-1)
+        x = self.mlp(x)
+        x = torch.moveaxis(x,-1,1)
+        return x
+
+   
     
 class DLV3P_w_BetterExperts(nn.Module):
     def __init__(self,  num_classes,  num_experts, use_lws=False, 
@@ -50,7 +66,7 @@ class DLV3P_w_BetterExperts(nn.Module):
             self.aggregation = 'cnn'
             
         elif use_MLP_aggregator :
-            raise NotImplementedError
+            self.classifier = MLP_aggregator(input_dim= num_experts * num_classes, output_dim= num_classes)    
             self.aggregation = 'mlp'
         
         else:
@@ -112,7 +128,7 @@ class DLV3P_w_BetterExperts(nn.Module):
                 
             return [y_many, y_medium, y_few], aggregator_output
         
-        else :
+        else : #self.num_experts == 2:
             if self.aggregation is not None :
                 
                 expert_features = torch.cat([y_many,  y_few],dim=1) 
@@ -165,14 +181,14 @@ def ACE_deeplabv3P_w_Better_Experts(num_classes, num_experts,  pretrained_backbo
 
 if __name__ == '__main__':
     
-    x = torch.rand([64,4,20,20])
+    x = torch.rand([8,4,200,200])
     model = ACE_deeplabv3P_w_Better_Experts( 
                                      num_classes=10, 
                                      pretrained_backbone=True, 
-                                     num_experts=2,
+                                     num_experts=3,
                                      use_lws=True,
-                                     use_MLP_aggregator=False,
-                                     use_CNN_aggregator=True,
+                                     use_MLP_aggregator=True,
+                                     use_CNN_aggregator=False,
                                      )
     output =model(x) 
     for key in output.keys():

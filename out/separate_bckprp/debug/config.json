@@ -1,8 +1,8 @@
 {
-    "lr": 0.1,
+    "lr": 1e-05,
     "experts": 3,
     "epoch": 3,
-    "bs": 8,
+    "bs": 64,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
     "loss": "celoss",
@@ -22,7 +22,7 @@
     "separate_backprop": false,
     "CNN_aggregator": true,
     "MLP_aggregator": false,
-    "finetune_classifier_only": true,
-    "pretrained_weights": "/home/valerie/Projects/Alps_LCC/out/cnn/ace_3exp_CNN_new_lws_L2/current_best.pt",
+    "finetune_classifier_only": false,
+    "pretrained_weights": "Nope",
     "device": "cuda"
 }
