@@ -1,4 +1,3 @@
-CNN_aggregator
 
 # look for best learning rate for finetuning cnn on top of frozen network
 python train.py  --experts 3   --log_wandb True  --out_dir out/aggregate_cnn/ --CNN_aggregator True --finetune_classifier_only True --name ft_cnn_lr_1e_1 --lr 0.1             --pretrained_weights /home/valerie/Projects/Alps_LCC/out/new_lws/ace_3exp_new_lws_L2/current_best.pt 

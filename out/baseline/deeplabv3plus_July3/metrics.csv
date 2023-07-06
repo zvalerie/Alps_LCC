@@ -1,0 +1,19 @@
+Experiment results
+out/baseline/deeplabv3plus_July3/metrics.csv
+2023-07-04 06:12:40
+"test_miou, 0.477"
+"test_macc, 0.56"
+"test_oacc, 0.848"
+"frequent_cls_acc, 0.878"
+"common_cls_acc, 0.521"
+"rare_cls_acc, 0.26"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.824"
+"test_acc_Bedrockwith grass, 0.235"
+"test_acc_Large blocks, 0.391"
+"test_acc_Large blocks with grass, 0.13"
+"test_acc_Scree, 0.828"
+"test_acc_Scree with grass, 0.418"
+"test_acc_Water, 0.911"
+"test_acc_Forest, 0.962"
+"test_acc_Glacier, 0.899"

@@ -148,7 +148,7 @@ def get_model(args):
             if not ('cnn' in name or 'MLP' in name):
                 param.requires_grad = False    
             #print(name , param.requires_grad)      
-        print('Model weights are frozen except for finetune_classifier_only')
+        print('Model weights are frozen except for cnn or MLP layers')
     
        
     
