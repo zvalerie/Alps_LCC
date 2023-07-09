@@ -1,1 +1,1 @@
-python train.py --debug True --lr 0.1 --MLP_aggregator True --experts 3 --bs 8 
+python train.py  --debug True --bs 8 --experts 3   --log_wandb True  --MLP_aggregator True --finetune_classifier_only True  

@@ -28,6 +28,7 @@ from utils.test_fn import test_ACE
 def main(args):
 
     # set all random seeds :
+    print(args.small_dataset)
     set_all_random_seeds(args.seed)
     setup_wandb_log(args)
     pprint(vars(args))
@@ -109,7 +110,7 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
+    args.small_dataset = False
 
-    
     main(args)
         

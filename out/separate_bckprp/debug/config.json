@@ -2,7 +2,7 @@
     "lr": 1e-05,
     "experts": 3,
     "epoch": 3,
-    "bs": 64,
+    "bs": 8,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
     "loss": "celoss",
@@ -20,9 +20,9 @@
     "L2penalty": false,
     "lws": false,
     "separate_backprop": false,
-    "CNN_aggregator": true,
-    "MLP_aggregator": false,
-    "finetune_classifier_only": false,
+    "CNN_aggregator": false,
+    "MLP_aggregator": true,
+    "finetune_classifier_only": true,
     "pretrained_weights": "Nope",
     "device": "cuda"
 }

@@ -1,0 +1,19 @@
+Experiment results
+out/aggregate_cnn/ft_cnn_wd_02/metrics.csv
+2023-07-06 13:00:08
+"test_miou, 0.461"
+"test_macc, 0.541"
+"test_oacc, 0.843"
+"frequent_cls_acc, 0.876"
+"common_cls_acc, 0.523"
+"rare_cls_acc, 0.17"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.834"
+"test_acc_Bedrockwith grass, 0.239"
+"test_acc_Large blocks, 0.34"
+"test_acc_Large blocks with grass, 0.0"
+"test_acc_Scree, 0.794"
+"test_acc_Scree with grass, 0.403"
+"test_acc_Water, 0.927"
+"test_acc_Forest, 0.971"
+"test_acc_Glacier, 0.905"

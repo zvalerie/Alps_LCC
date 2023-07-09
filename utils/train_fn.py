@@ -61,7 +61,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             loss.backward()
             optimizer.step()
         
-        elif args.CNN_aggregator:
+        elif args.CNN_aggregator or args.MLP_aggregator :
             loss = criterion(output,mask)
             optimizer.zero_grad() 
             loss.backward()
@@ -99,7 +99,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             many_loss, medium_loss, few_loss = criterion(output, mask)
             loss = many_loss + medium_loss  + few_loss 
                   
-            if not args.separate_backprop or (few_loss.item()==0. and medium_loss.item()==0.):
+            if not args.separate_backprop :
                 optimizer.zero_grad() 
                 loss.backward()
                 optimizer.step()

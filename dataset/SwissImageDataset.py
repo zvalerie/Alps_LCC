@@ -76,7 +76,7 @@ class SwissImage(Dataset):
     
 
 
-def unnormalize_batch(batch):
+def xunnormalize_batch(batch):
     """
     Unnormalizes a batch of tensors.
 
@@ -97,7 +97,23 @@ def unnormalize_batch(batch):
     # Unnormalize the batch
     unnormalized_batch = batch * std_tensor + norm_tensor
 
-    return unnormalized_batch.clip(0, 256)
+    return unnormalized_batch
+
+def unnormalize_batch(images, ):
+    # Assuming images is a NumPy array with shape (batch_size, height, width, channels)
+    # mean and std should be lists or arrays with length equal to the number of channels
+    mean = [0.5585, 0.5771, 0.5543]  
+    std = [0.2535, 0.2388, 0.2318] 
+
+    unnormalized_images = torch.empty_like(images)
+    if len(images.shape ) == 4: 
+        for i in range(len(mean)):
+            unnormalized_images[:, i, :, ] = (unnormalized_images[:, i, :, :] * std[i]) + mean[i]
+    elif len(images.shape) == 3 :
+         for i in range(len(mean)):
+                unnormalized_images[ i, :, ] = (unnormalized_images[ i, :, :] * std[i]) + mean[i]
+          
+    return unnormalized_images   
 
 
 

@@ -95,7 +95,7 @@ def get_criterion (args):
 
         criterion = CELoss_3experts ( args)
     
-    if  args.CNN_aggregator:
+    if  args.CNN_aggregator or  args.MLP_aggregator:
         criterion = AggregatorLoss(args)
 
     
@@ -257,6 +257,25 @@ def get_dataloader(args=None, phase ='train'):
         )
         return test_loader
     
+    elif phase == 'plot':
+        plot_csv = '/home/valerie/Projects/Alps_LCC/data/split/interesting_dataset.csv'
+        test_dataset = SwissImage(
+            dataset_csv = plot_csv,
+            img_dir = img_dir,
+            dem_dir = dem_dir,
+            mask_dir = mask_dir,
+            common_transform=None,
+            img_transform= None,
+            debug=args.debug,          
+        )
+        test_loader = DataLoader(test_dataset, 
+            batch_size= args.bs if args is not None else 32,
+            shuffle=False,
+            num_workers= args.num_workers if args is not None else 16,
+            pin_memory=True
+        )
+        return test_loader
+    
     else :
         raise NotImplementedError
     
@@ -266,6 +285,7 @@ def get_dataloader(args=None, phase ='train'):
 def setup_wandb_log(args):
     
     if args.debug :
+        print('*'*20,'entering debug mode','*'*20)
         args.epoch = 3
        # args.out_dir = 'out/debug/'
         args.small_dataset = True
