@@ -12,7 +12,7 @@ class AggregatorLoss(nn.Module):
                 # Wegihts from class balanced loss :
         #'Background', "Bedrock", "Bedrockwith grass", "Large blocks", "Large blocks with grass", "Scree",  "Scree with grass","Water", "Forest" , "Glacier" ,
         weights = torch.Tensor ([0.0, 1e-3,      5e-3,               1e-2,             1e-1,                         1e-3 ,     2e-3,        3e-3,       1e-3,       1e-3  ]).to(args.device)
-        print('uses weights in the aggregator loss')
+        print('uses weights in the aggregator loss','*'*150)
         
         self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight= weights)
 

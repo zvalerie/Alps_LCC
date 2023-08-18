@@ -14,10 +14,10 @@ from utils.transforms import MinMaxScaler, AbsoluteScaler
 
 class SwissImage(Dataset):
     '''Transformer needed to be added'''
-    def __init__(self, dataset_csv, img_dir, dem_dir, mask_dir, common_transform=None, img_transform=None, debug=False):
+    def __init__(self, dataset_csv, img_dir, dem_dir, label_dir, common_transform=None, img_transform=None, debug=False):
         self.img_dir = img_dir
         self.dem_dir = dem_dir
-        self.mask_dir = mask_dir
+        self.label_dir = label_dir
         self.img_dem_label = pd.read_csv(dataset_csv)
         if debug:
             self.img_dem_label = self.img_dem_label.iloc[:250]
@@ -35,16 +35,16 @@ class SwissImage(Dataset):
     def __getitem__(self, idx):
         img_path = os.path.join(self.img_dir, self.img_dem_label.iloc[idx, 0])
         dem_path = os.path.join(self.dem_dir, self.img_dem_label.iloc[idx, 1])
-        mask_path = os.path.join(self.mask_dir, self.img_dem_label.iloc[idx, 2])
+        label_path = os.path.join(self.label_dir, self.img_dem_label.iloc[idx, 2])
         image = Image.open(img_path)
         
-        ## resize rgb images from 400x400 to 200x200 to match the size of mask
+        ## resize rgb images from 400x400 to 200x200 to match the size of label
         image = image.resize((200,200))
         dem = Image.open(dem_path)
-        mask = Image.open(mask_path)
+        label = Image.open(label_path)
         
         if self.common_transform is not None:
-            image, dem, mask = self.common_transform(image, dem, mask)
+            image, dem, label = self.common_transform(image, dem, label)
 
         if self.img_transform is not None:
             image = self.img_transform(image)
@@ -63,8 +63,8 @@ class SwissImage(Dataset):
                                          
         image = basic_transform(image)
         dem = dem_transform(dem)
-        mask = transforms.ToTensor()(mask)
-        return image, dem, mask
+        label = transforms.ToTensor()(label)
+        return image, dem, label
 
     def _getImbalancedCount(self):
         count = Counter(self.img_dem_label['few'])
@@ -123,9 +123,9 @@ if __name__ =="__main__":
         
     img_dir = '/home/valerie/data/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' # /data/xiaolong/dem'
-    mask_dir = '/home/valerie/data/ace_alps/mask'
+    label_dir = '/home/valerie/data/ace_alps/label'
     
-    ds = SwissImage(dataset_csv,img_dir,dem_dir,mask_dir,common_transform=None,img_transform=None,debug=False)
+    ds = SwissImage(dataset_csv,img_dir,dem_dir,label_dir,common_transform=None,img_transform=None,debug=False)
     print(ds[0][0].shape,ds[0][1].shape,ds[0][2].shape,)
     
 

@@ -16,7 +16,7 @@ class CNN_aggregator(nn.Module):
                             nn.Conv2d(input_dim, hidden_layers, 3, padding=1, bias=False),
                             nn.BatchNorm2d(hidden_layers),
                             nn.ReLU(inplace=True),
-                            nn.Dropout(p=0.2),
+              #              nn.Dropout(p=0.2),
                             nn.Conv2d(hidden_layers, output_dim, 1)
                         ) 
    
