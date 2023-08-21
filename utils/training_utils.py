@@ -10,7 +10,8 @@ from torch.utils.data import DataLoader
 
 from dataset.SwissImageDataset import SwissImage
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
-from models import Res50_UNet, deeplabv3P_resnet, ACE_deeplabv3P_w_Experts, ACE_deeplabv3P_w_Better_Experts
+from models import Res50_UNet, deeplabv3P_resnet
+from models.models_utils import model_builder
   
 from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
@@ -36,15 +37,23 @@ def set_all_random_seeds(seed):
         print( '!! Random seeds are NOT set correctly !! Please verify ')
 
 def get_optimizer (model,args):
+    """Set optimizerbased on arguments from config
+
+    Args:
+        model (nn.Module): model used in the main loop
+        args (dict) : args from config file
+    """
     
     
-    if args.experts ==0 :
+    if args.experts ==0  :
         optimizer = optim.Adam(model.parameters(), 
                                lr=args.lr, 
                                weight_decay=args.weight_decay
                                )
         
     elif args.experts ==2 :
+       
+       
         optimizer = optim.Adam([
                                 {'params': model.backbone.parameters()},
                                 {'params': model.classifier.project.parameters()},
@@ -81,6 +90,11 @@ def get_optimizer (model,args):
 
 
 def get_criterion (args):
+    """Set criterion based on arguments from config
+
+    Args:
+        args (dict) : args from config file
+    """
     
     # Define loss function (criterion) and optimizer
     if args.loss == 'celoss' and args.experts == 0 :
@@ -103,37 +117,35 @@ def get_criterion (args):
 
 
 def get_model(args):
+    """Get model based on arguments from config
+
+    Args:
+        args (dict) : args from config file
+    """
    
     # Choose model : 
     if args.model == 'Unet':
         model = Res50_UNet(num_classes=10)
         
-    elif args.model == 'Deeplabv3':
+    elif args.model == 'Deeplabv3' :
         
         if args.experts ==0 :
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
-        
-        elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Experts(num_classes = 10, 
-                                             num_experts = args.experts, 
-                                             use_lws=args.lws,
-                                             )
-            
-            if args.MLP_aggregator or args.CNN_aggregator :
-                raise NotImplementedError    
+
+        else :    raise NotImplementedError    
  
     
-    elif args.model == 'Deeplabv3_w_Better_Experts':
+    elif args.model == 'MCE':
         if args.experts ==0 :
             model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
         
         elif args.experts == 2 or args.experts == 3 :
-            model = ACE_deeplabv3P_w_Better_Experts (num_classes = 10, 
-                                                     num_experts = args.experts, 
-                                                     use_lws=args.lws,
-                                                     use_CNN_aggregator= args.CNN_aggregator,
-                                                     use_MLP_aggregator= args.MLP_aggregator,
-                                                     )
+            model = model_builder (num_classes = 10, 
+                        num_experts = args.experts, 
+                        use_lws=args.lws,
+                        use_CNN_aggregator= args.CNN_aggregator,
+                        use_MLP_aggregator= args.MLP_aggregator,
+                        )
     else:
        raise NotImplementedError
    
@@ -157,13 +169,16 @@ def get_model(args):
 
 
 def get_dataloader(args=None, phase ='train'):
-    """ 
-    Create training and validation datasets    
+    """     Create training and validation datasets    based on arguments from config
+
+    Args:
+        args (dict) : args from config file
+        phase (str) : indicates the phase in ['train','val','test]
     """    
    
     img_dir = '/home/valerie/data/rocky_tlm/rgb/' 
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' 
-    mask_dir = '/home/valerie/data/ace_alps/mask' 
+    label_dir = '/home/valerie/data/ace_alps/mask' 
     
     # Create output folder if needed :
     if args is not None and not os.path.exists(args.out_dir):
@@ -179,8 +194,8 @@ def get_dataloader(args=None, phase ='train'):
 
     
     # Path to dataset splits : 
-    test_csv = 'data/split/test_dataset.csv'
-    if  args.small_dataset:
+    test_csv = 'data/split/test_dataset.csv'  # always the same test set
+    if  args.small_dataset ==True:
         train_csv = 'data/split_subset/train_subset.csv'
         val_csv = 'data/split_subset/val_subset.csv'
     
@@ -206,7 +221,7 @@ def get_dataloader(args=None, phase ='train'):
             train_csv, 
             img_dir, 
             dem_dir, 
-            mask_dir, 
+            label_dir, 
             common_transform = common_transform, 
             img_transform = img_transform, 
             debug=args.debug)
@@ -226,7 +241,9 @@ def get_dataloader(args=None, phase ='train'):
             val_csv, 
             img_dir, 
             dem_dir, 
-            mask_dir, 
+            label_dir, 
+            common_transform=None,
+            img_transform= None,
             debug=args.debug)
         
         val_loader = DataLoader(
@@ -244,12 +261,13 @@ def get_dataloader(args=None, phase ='train'):
             dataset_csv = test_csv,
             img_dir = img_dir,
             dem_dir = dem_dir,
-            mask_dir = mask_dir,
+            label_dir = label_dir,
             common_transform=None,
             img_transform= None,
             debug=args.debug,          
         )
-        test_loader = DataLoader(test_dataset, 
+        test_loader = DataLoader(
+            test_dataset, 
             batch_size= args.bs if args is not None else 32,
             shuffle=False,
             num_workers= args.num_workers if args is not None else 16,
@@ -263,7 +281,7 @@ def get_dataloader(args=None, phase ='train'):
             dataset_csv = plot_csv,
             img_dir = img_dir,
             dem_dir = dem_dir,
-            mask_dir = mask_dir,
+            label_dir = label_dir,
             common_transform=None,
             img_transform= None,
             debug=args.debug,          
@@ -283,21 +301,14 @@ def get_dataloader(args=None, phase ='train'):
 
 
 def setup_wandb_log(args):
-    
-    if args.debug :
-        print('*'*20,'entering debug mode','*'*20)
-        args.epoch = 3
-       # args.out_dir = 'out/debug/'
-        args.small_dataset = True
-        args.name = 'debug'
-        args.log_wandb =False
+        
     
 
         
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_ALPS", 
+        wandb.init(project = "ACE_ALPS_Au18", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           
