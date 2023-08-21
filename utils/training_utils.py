@@ -13,7 +13,7 @@ from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip
 from models import Res50_UNet, deeplabv3P_resnet
 from models.models_utils import model_builder
   
-from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
+from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, MyWeightedCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
 from torch import optim
 
@@ -97,7 +97,11 @@ def get_criterion (args):
     """
     
     # Define loss function (criterion) and optimizer
-    if args.loss == 'celoss' and args.experts == 0 :
+    if args.loss == 'inverse_freq_weights':
+        
+        criterion = MyWeightedCrossEntropyLoss(ignore_index=0,args=args)
+    
+    elif args.loss == 'celoss' and args.experts == 0 :
         
         criterion = MyCrossEntropyLoss(ignore_index=0)
 

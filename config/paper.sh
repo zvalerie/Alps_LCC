@@ -4,7 +4,7 @@
 #python train.py --name CEL --experts 0    --log_wandb True  --large_dataset True
 
 ## WCEL
-#python train.py --name WCEL --experts 0    --log_wandb True  --large_dataset True     --inv_freq_weights 
+python train.py --name WCEL --experts 0    --log_wandb True  --large_dataset True     --loss inv_freq_weights 
 #TODO
 ## SL
 #python train.py --name SL --experts 0    --log_wandb True  --large_dataset True     --loss seesaw
@@ -31,6 +31,10 @@ python train.py --name CEL --experts 3 --L2penalty True  --large_dataset True
 
 ## MCE + WDT 
 python train.py --name mce_no_wd --experts 3  --lws True --L2penalty True  --weight_decay 0.  --large_dataset True 
+
+## MCE + smaller batch size 
+python train.py --ma,e mce_small_bs --experts 3 --bs 8
+
 
 
 ############################# Aggregations methods

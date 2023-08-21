@@ -27,7 +27,7 @@ def parse_args():
                         default=1e-2,
                         type=float)
     parser.add_argument('--loss',
-                        help='which loss',
+                        help='which loss:celoss(default), seesaw, inverse_freq_weights',
                         default='celoss',
                         type=str)
     parser.add_argument('--step_size',

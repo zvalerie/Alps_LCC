@@ -19,6 +19,26 @@ class MyCrossEntropyLoss(nn.Module):
             return self.ce( output, targets )
 
 
+class MyWeightedCrossEntropyLoss(nn.Module):
+    
+    def __init__(self, ignore_index=0,args =None):
+        
+        super(MyWeightedCrossEntropyLoss, self).__init__()
+        device = args.device if args is not None else "cuda"
+        inverse_freq_weights = torch.tensor(
+                    [ 0.0,	3.5,	153.8,	7.9,	3.9,	
+                     388.6,	3586.6,	3.4,	70.1,	118.4]   ).to(device)
+        
+        self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight=inverse_freq_weights)
+
+    def forward(self, output, targets):
+    
+        if isinstance(output,dict):
+            return self.ce( output['out'], targets )
+        
+        else :
+            return self.ce( output, targets )
+
 
 class CELoss_2experts(nn.Module):
     

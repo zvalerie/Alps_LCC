@@ -1,1 +1,1 @@
-python train.py --debug True --model MCE --experts 2 --small_dataset False 
+python train.py --debug True --experts 0 --loss inverse_freq_weights --bs 16
