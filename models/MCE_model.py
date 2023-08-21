@@ -73,11 +73,18 @@ class MCE(nn.Module):
             y_body = self.expert_body(output_feature)
             
             
-        if self.use_lws:       
+        if False : # New implementation seems to work less weel self.use_lws:       
             f_tail = vector_norm(self.expert_head.cnn2.weight,dim=1) / vector_norm(self.expert_tail.cnn2.weight,dim=1) 
             y_tail = f_tail * y_tail
             if self.num_experts == 3: 
                 f_body = vector_norm(self.expert_head.cnn2.weight,dim=1) / vector_norm(self.expert_body.cnn2.weight,dim=1)
+                y_body = f_body * y_body
+        
+        if self.use_lws :       
+            f_tail= vector_norm(self.expert_head.cnn2.weight.flatten()) / vector_norm( self.expert_tail.cnn2.weight.flatten()) 
+            y_tail= f_tail* y_tail
+            if self.num_experts == 3: 
+                f_body = vector_norm(self.expert_head.cnn2.weight.flatten()) / vector_norm( self.expert_body.cnn2.weight.flatten()) 
                 y_body = f_body * y_body
             
         # Aggregation methods : 

@@ -28,7 +28,6 @@ from utils.test_fn import test_ACE
 def main(args):
 
     # set all random seeds :
-    print(args.small_dataset)
     set_all_random_seeds(args.seed)
     setup_wandb_log(args)
     pprint(vars(args))
@@ -57,7 +56,9 @@ def main(args):
     print('\tNb Expert:  ', args.experts)
     print('\tLoss     :  ', type(criterion).__name__) 
     print('\tOptimizer:  ', type(optimizer).__name__) 
-    print('\tDevice   :  ', device)      
+    print('\tDevice   :  ', device)    
+    print('\tTrain set:  ', len(train_loader.dataset), 'samples')  
+    print('\tVal set  :  ', len(val_loader.dataset),   'samples')  
     print('*'*80)
     
     
@@ -110,6 +111,5 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-
     main(args)
         

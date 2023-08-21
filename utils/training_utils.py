@@ -59,8 +59,8 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.project.parameters()},
                                 {'params': model.classifier.aspp.parameters()},
                                 {'params': model.classifier.classifier.parameters()},
-                                {'params': model.classifier.SegHead_many.parameters()},
-                                {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.03}, 
+                                {'params': model.classifier.expert_head.parameters()},
+                                {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *0.03}, 
                                 ], 
                                 lr= args.lr, 
                                 weight_decay=args.weight_decay
@@ -73,9 +73,9 @@ def get_optimizer (model,args):
                                 {'params': model.classifier.project.parameters()},
                                 {'params': model.classifier.aspp.parameters()},
                                 {'params': model.classifier.classifier.parameters()},
-                                {'params': model.classifier.SegHead_many.parameters()},
-                                {'params': model.classifier.SegHead_medium.parameters(), 'lr' : args.lr *0.03}, 
-                                {'params': model.classifier.SegHead_few.parameters(), 'lr' : args.lr *0.003},  
+                                {'params': model.classifier.expert_head.parameters()},
+                                {'params': model.classifier.expert_body.parameters(), 'lr' : args.lr *0.03}, 
+                                {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *0.003},  
                                 ], 
                                 lr=args.lr, 
                                 weight_decay=args.weight_decay,
@@ -194,12 +194,11 @@ def get_dataloader(args=None, phase ='train'):
 
     
     # Path to dataset splits : 
-    test_csv = 'data/split/test_dataset.csv'  # always the same test set
-    if  args.small_dataset ==True:
-        train_csv = 'data/split_subset/train_subset.csv'
-        val_csv = 'data/split_subset/val_subset.csv'
+    test_csv = 'data/split/test_dataset.csv'  # always the same test set    
+    train_csv = 'data/split_subset/train_subset.csv'
+    val_csv = 'data/split_subset/val_subset.csv'
     
-    else : 
+    if  args.large_dataset:    
         train_csv = 'data/split/train_dataset.csv'
         val_csv = 'data/split/val_dataset.csv'  
    

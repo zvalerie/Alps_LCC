@@ -50,9 +50,9 @@ def parse_args():
                         help='is debuging?',
                         default=False,
                         type=bool)
-    parser.add_argument('--small_dataset',
-                        help='using small dataset for development',
-                        default=True,
+    parser.add_argument('--large_dataset',
+                        help='using large dataset for paper',
+                        default=False,
                         type=bool)
     parser.add_argument('--force_cpu',
                         help='Device is set to cpu, no GPU usage.',
