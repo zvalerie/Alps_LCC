@@ -75,6 +75,7 @@ def test_ACE( model,  args):
         common_cls_acc = 1/3* (class_accuracies["Scree with grass"]+    class_accuracies["Water"]+   class_accuracies["Bedrockwith grass"])
         rare_cls_acc =   1/2* (class_accuracies["Large blocks"]+   class_accuracies["Large blocks with grass"])
          
+         
         metrics = {
                     'test_miou' : np.round ( mean_iou,3), 
                     'test_macc':  np.round (mean_acc,3), 

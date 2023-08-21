@@ -36,7 +36,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/debug/',
+                        default='out/august/',
                         type=str)
     parser.add_argument('--model',
                         help='model',

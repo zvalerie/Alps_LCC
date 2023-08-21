@@ -1,0 +1,86 @@
+--------------------------------------------------
+Experiment results
+--------------------------------------------------
+out/paper/mce2_July/oracle_results.csv
+2023-08-21 16:54:30
+"test_miou, 0.494"
+"test_macc, 0.541"
+"test_oacc, 0.854"
+"frequent_cls_acc, 0.885"
+"common_cls_acc, 0.392"
+"rare_cls_acc, nan"
+"        test_acc_Background, 0.0"
+"        test_acc_Bedrock, 0.833"
+"        test_acc_Bedrockwith grass, 0.0"
+"        test_acc_Large blocks, 0.153"
+"        test_acc_Large blocks with grass, nan"
+"        test_acc_Scree, 0.827"
+"        test_acc_Scree with grass, 0.227"
+"        test_acc_Water, 0.949"
+"        test_acc_Forest, 0.955"
+"        test_acc_Glacier, 0.926"
+--------------------------------------------------
+--------------------------------------------------
+Experiment results
+--------------------------------------------------
+out/paper/mce2_July/oracle_results.csv
+2023-08-21 16:54:30
+"test_miou, 0.024"
+"test_macc, 0.267"
+"test_oacc, 0.057"
+"frequent_cls_acc, 0.038"
+"common_cls_acc, 0.639"
+"rare_cls_acc, nan"
+"        test_acc_Background, 0.02"
+"        test_acc_Bedrock, 0.015"
+"        test_acc_Bedrockwith grass, 0.035"
+"        test_acc_Large blocks, 0.318"
+"        test_acc_Large blocks with grass, nan"
+"        test_acc_Scree, 0.014"
+"        test_acc_Scree with grass, 0.913"
+"        test_acc_Water, 0.968"
+"        test_acc_Forest, 0.092"
+"        test_acc_Glacier, 0.031"
+--------------------------------------------------
+--------------------------------------------------
+Experiment results
+--------------------------------------------------
+out/paper/mce2_July/oracle_results.csv
+2023-08-21 16:54:59
+"test_miou, 0.494"
+"test_macc, 0.541"
+"test_oacc, 0.854"
+"frequent_cls_acc, 0.885"
+"common_cls_acc, 0.392"
+"rare_cls_acc, nan"
+"        test_acc_Background, 0.0"
+"        test_acc_Bedrock, 0.833"
+"        test_acc_Bedrockwith grass, 0.0"
+"        test_acc_Large blocks, 0.153"
+"        test_acc_Large blocks with grass, nan"
+"        test_acc_Scree, 0.827"
+"        test_acc_Scree with grass, 0.227"
+"        test_acc_Water, 0.949"
+"        test_acc_Forest, 0.955"
+"        test_acc_Glacier, 0.926"
+--------------------------------------------------
+Experiment results
+--------------------------------------------------
+out/paper/mce2_July/oracle_results.csv
+2023-08-21 16:54:59
+"test_miou, 0.024"
+"test_macc, 0.267"
+"test_oacc, 0.057"
+"frequent_cls_acc, 0.038"
+"common_cls_acc, 0.639"
+"rare_cls_acc, nan"
+"        test_acc_Background, 0.02"
+"        test_acc_Bedrock, 0.015"
+"        test_acc_Bedrockwith grass, 0.035"
+"        test_acc_Large blocks, 0.318"
+"        test_acc_Large blocks with grass, nan"
+"        test_acc_Scree, 0.014"
+"        test_acc_Scree with grass, 0.913"
+"        test_acc_Water, 0.968"
+"        test_acc_Forest, 0.092"
+"        test_acc_Glacier, 0.031"

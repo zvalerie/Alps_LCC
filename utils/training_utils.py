@@ -124,30 +124,19 @@ def get_model(args):
     """
    
     # Choose model : 
-    if args.model == 'Unet':
-        model = Res50_UNet(num_classes=10)
-        
-    elif args.model == 'Deeplabv3' :
-        
-        if args.experts ==0 :
-            model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
 
-        else :    raise NotImplementedError    
- 
+    if args.experts ==0 :
+        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
     
-    elif args.model == 'MCE':
-        if args.experts ==0 :
-            model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
-        
-        elif args.experts == 2 or args.experts == 3 :
-            model = model_builder (num_classes = 10, 
-                        num_experts = args.experts, 
-                        use_lws=args.lws,
-                        use_CNN_aggregator= args.CNN_aggregator,
-                        use_MLP_aggregator= args.MLP_aggregator,
-                        )
-    else:
-       raise NotImplementedError
+    elif args.experts == 2 or args.experts == 3 :
+        model = model_builder (num_classes = 10, 
+                    num_experts = args.experts, 
+                    use_lws=args.lws,
+                    use_CNN_aggregator= args.CNN_aggregator,
+                    use_MLP_aggregator= args.MLP_aggregator,
+                    )
+    else :
+        raise NotImplementedError
    
     if os.path.isfile(args.pretrained_weights): 
         checkpoint = torch.load(args.pretrained_weights)
