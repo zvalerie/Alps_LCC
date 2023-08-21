@@ -23,8 +23,7 @@ class SwissImage(Dataset):
             self.img_dem_label = self.img_dem_label.iloc[:250]
         self.common_transform = common_transform
         self.img_transform = img_transform
-        self.dem_max, self.dem_min = 4603, 948 
-        self.dem_mean, self.dem_std = 0.4806, 0.2652
+        self.dem_mean, self.dem_std = 41.32,19.18
         self.mean = np.array([0.5585, 0.5771, 0.5543], dtype=np.float32)
         self.std = np.array([0.2535, 0.2388, 0.2318], dtype=np.float32)
 
@@ -56,23 +55,15 @@ class SwissImage(Dataset):
         
         dem_transform = transforms.Compose([
             transforms.ToTensor(),
-          #  AbsoluteScaler(),
-            MinMaxScaler(self.dem_max, self.dem_min),
-           transforms.Normalize(self.dem_mean, self.dem_std)
+            AbsoluteScaler(),
+            transforms.Normalize(self.dem_mean, self.dem_std)
         ])
                                          
         image = basic_transform(image)
-        dem = dem_transform(dem)
+        dem = dem_transform(np.array(dem))
         label = transforms.ToTensor()(label)
+        
         return image, dem, label
-
-    def _getImbalancedCount(self):
-        count = Counter(self.img_dem_label['few'])
-        return count
-    
-    def _getImbalancedClass(self, idx):
-        return self.img_dem_label['few'][idx]
-    
     
 
 
@@ -100,20 +91,25 @@ def xunnormalize_batch(batch):
     return unnormalized_batch
 
 def unnormalize_batch(images, ):
+    """
+    Unnormalizes a batch of tensors.
+
+    Args:
+        batch (torch.Tensor): Batch of tensors to be unnormalized, of shape (B, C, H, W).
+        mean (sequence): Sequence of mean values for each channel.
+        std (sequence): Sequence of standard deviation values for each channel.
+
+    Returns:
+        torch.Tensor: Unnormalized batch of tensors.
+    """
     # Assuming images is a NumPy array with shape (batch_size, height, width, channels)
     # mean and std should be lists or arrays with length equal to the number of channels
-    mean = [0.5585, 0.5771, 0.5543]  
-    std = [0.2535, 0.2388, 0.2318] 
 
-    unnormalized_images = torch.empty_like(images)
-    if len(images.shape ) == 4: 
-        for i in range(len(mean)):
-            unnormalized_images[:, i, :, ] = (unnormalized_images[:, i, :, :] * std[i]) + mean[i]
-    elif len(images.shape) == 3 :
-         for i in range(len(mean)):
-                unnormalized_images[ i, :, ] = (unnormalized_images[ i, :, :] * std[i]) + mean[i]
-          
-    return unnormalized_images   
+    mean = torch.Tensor([0.5585, 0.5771, 0.5543]).unsqueeze(-1).unsqueeze(-1)
+    std = torch.Tensor ([0.2535, 0.2388, 0.2318]).unsqueeze(-1).unsqueeze(-1)
+    rgb_images = rgb_images * std +mean
+            
+    return rgb_images  
 
 
 

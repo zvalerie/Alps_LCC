@@ -7,7 +7,7 @@ def parse_args():
                         default=1e-5,
                         type=float)
     parser.add_argument('--experts',
-                        help='number of experts',
+                        help='number of experts, between 2-3, 0 is baseline model',
                         default=0,
                         type=int)
     parser.add_argument('--epoch',
@@ -36,11 +36,11 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/separate_bckprp/',
+                        default='out/debug/',
                         type=str)
     parser.add_argument('--model',
                         help='model',
-                        default='Deeplabv3_w_Better_Experts',
+                        default='MCE',
                         type=str)
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',

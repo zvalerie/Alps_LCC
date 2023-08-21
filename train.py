@@ -110,7 +110,6 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    args.small_dataset = False
 
     main(args)
         

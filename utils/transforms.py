@@ -77,5 +77,5 @@ class AbsoluteScaler(object):
         pass
 
     def __call__(self, dem):        
-        scaled_dem = dem - min(dem)  
+        scaled_dem = dem - torch.min(dem)  
         return scaled_dem
