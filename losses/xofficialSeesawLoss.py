@@ -8,8 +8,8 @@ from torch import Tensor
 
 
 
-from F import cross_entropy
-from .utils import weight_reduce_loss
+from torch.nn.functional import cross_entropy
+#from .utils import weight_reduce_loss
 
 
 def seesaw_ce_loss(cls_score: Tensor,
@@ -229,3 +229,49 @@ class SeesawLoss(nn.Module):
         else:
             loss_cls = loss_cls_classes + loss_cls_objectness
         return loss_cls
+
+
+def weight_reduce_loss(loss: Tensor,
+                       weight: Optional[Tensor] = None,
+                       reduction: str = 'mean',
+                       avg_factor: Optional[float] = None) -> Tensor:
+    """Apply element-wise weight and reduce loss.
+
+    Args:
+        loss (Tensor): Element-wise loss.
+        weight (Optional[Tensor], optional): Element-wise weights.
+            Defaults to None.
+        reduction (str, optional): Same as built-in losses of PyTorch.
+            Defaults to 'mean'.
+        avg_factor (Optional[float], optional): Average factor when
+            computing the mean of losses. Defaults to None.
+
+    Returns:
+        Tensor: Processed loss values.
+    """
+    # if weight is specified, apply element-wise weight
+    if weight is not None:
+        loss = loss * weight
+
+    # if avg_factor is not specified, just reduce the loss
+    if avg_factor is None:
+        loss = reduce_loss(loss, reduction)
+    else:
+        # if reduction is mean, then average the loss by avg_factor
+        if reduction == 'mean':
+            # Avoid causing ZeroDivisionError when avg_factor is 0.0,
+            # i.e., all labels of an image belong to ignore index.
+            eps = torch.finfo(torch.float32).eps
+            loss = loss.sum() / (avg_factor + eps)
+        # if reduction is 'none', then do nothing, otherwise raise an error
+        elif reduction != 'none':
+            raise ValueError('avg_factor can not be used with reduction="sum"')
+    return loss
+    
+if __name__ == '__main__':
+    
+    preds =torch.rand([16,10,50,50]).flatten(-1)
+    target = torch.randint(high=10,size= [16,1,50,50])
+    print(preds.shape,target.shape)
+    criterion = SeesawLoss(num_classes=10)
+    loss = criterion(preds,target)

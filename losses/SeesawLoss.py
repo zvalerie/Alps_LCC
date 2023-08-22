@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn import CrossEntropyLoss
-
+import torch.nn.functional as F
 
 class SeesawLoss(nn.Module):
     """
@@ -25,18 +25,17 @@ class SeesawLoss(nn.Module):
 
     def __init__(self,
                  num_classes,
-                 eps=1e-2,
                  reduction='mean',
                  ignore_index=0):
         super(SeesawLoss, self).__init__()
         self.p = 0.8
         self.q = 2.0
         self.num_classes = num_classes
-        self.eps = eps
+        self.eps = 1e-2
         self.reduction = reduction
         self.register_buffer(
             'cum_samples',
-            torch.zeros(self.num_classes, dtype=torch.float))
+            torch.zeros(self.num_classes, dtype=torch.float).cuda())
         self.cls_criterion = CrossEntropyLoss(ignore_index=ignore_index)
         
     def forward(self,
@@ -60,16 +59,21 @@ class SeesawLoss(nn.Module):
             inds_ = labels == u_l.item()
             self.cum_samples[u_l.long()] += inds_.sum()
         labels = torch.flatten(labels) #[(B H W)]
+        
         cls_score = torch.permute(cls_score, (0,2,3,1))
-        cls_score = torch.flatten(cls_score, start_dim=0, end_dim=2)         
-        cls_score = self.seesaw_logit(cls_score, labels, self.cum_samples, self.num_classes, self.p, self.q, self.eps)
+        cls_score = torch.flatten(cls_score, start_dim=0, end_dim=2)  
+               
+        cls_score = self.seesaw_logit(cls_score = cls_score, labels=labels, 
+                                      cum_samples=self.cum_samples, num_classes= self.num_classes, 
+                                      p = self.p, q = self.q, eps= self.eps
+                                      )
         
         # calculate loss
         loss = self.cls_criterion(cls_score, labels)
         
         return loss
 
-    def seesaw_logit(cls_score,
+    def seesaw_logit(self,cls_score,
                     labels,
                     cum_samples,
                     num_classes,
@@ -96,9 +100,6 @@ class SeesawLoss(nn.Module):
         """
         assert cls_score.size(1) == num_classes
         assert len(cum_samples) == num_classes
-
-        # labels = torch.flatten(labels) #[(B H W)]
-        # cls_score = torch.flatten(cls_score.permute(0,2,3,1), start_dim=0, end_dim=2) #[(B H W) C]
         
         onehot_labels = F.one_hot(labels.long(), num_classes) # [(B H W) C]
         seesaw_weights = cls_score.new_ones(cls_score.size())  
@@ -128,3 +129,13 @@ class SeesawLoss(nn.Module):
         # loss = F.cross_entropy(cls_score, labels.long(), weight=None, reduction='none')
         
         return cls_score
+
+
+if __name__ == '__main__':
+    
+    preds =torch.rand([16,10,50,50]).flatten(-1).cuda()
+    target = torch.randint(high=10,size= [16,50,50]).cuda()
+    print(preds.shape,target.shape)
+    criterion = SeesawLoss(num_classes=10)
+    loss = criterion(preds,target)
+    print(loss)

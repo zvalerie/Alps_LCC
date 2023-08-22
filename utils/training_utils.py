@@ -15,6 +15,7 @@ from models.models_utils import model_builder
   
 from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, MyWeightedCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
+from losses.SeesawLoss import SeesawLoss
 from torch import optim
 
 
@@ -100,7 +101,11 @@ def get_criterion (args):
     if args.loss == 'inverse_freq_weights':
         
         criterion = MyWeightedCrossEntropyLoss(ignore_index=0,args=args)
+
+    elif args.loss == 'seesaw' and args.experts == 0 :
     
+        criterion = SeesawLoss(num_classes= 10)
+        
     elif args.loss == 'celoss' and args.experts == 0 :
         
         criterion = MyCrossEntropyLoss(ignore_index=0)
@@ -113,8 +118,11 @@ def get_criterion (args):
 
         criterion = CELoss_3experts ( args)
     
-    if  args.CNN_aggregator or  args.MLP_aggregator:
+    elif  args.CNN_aggregator or  args.MLP_aggregator:
         criterion = AggregatorLoss(args)
+    
+    else:
+        raise NotImplementedError
 
     
     return criterion
