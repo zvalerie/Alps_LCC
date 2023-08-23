@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from torchvision.models.segmentation.deeplabv3 import ASPP
 from torch.linalg import vector_norm
 from torch.nn.functional import relu
-from aggregator import CNN_aggregator, MLP_aggregator
+from aggregator import CNN_merge, MLP_merge
 
    
 class Expert(nn.Module):
@@ -45,11 +45,11 @@ class MCE(nn.Module):
             self.expert_body = Expert(input_dim=304, output_dim=num_classes)   
         
         if use_CNN_aggregator:
-            self.classifier = CNN_aggregator(input_dim= num_experts * num_classes, output_dim= num_classes)    
+            self.classifier = CNN_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
             self.aggregation = 'cnn'
             
         elif use_MLP_aggregator :
-            self.classifier = MLP_aggregator(input_dim= num_experts * num_classes, output_dim= num_classes)    
+            self.classifier = MLP_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
             self.aggregation = 'mlp'
         
         else:
