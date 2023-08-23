@@ -86,14 +86,10 @@ def parse_args():
                         help='use a separate backprop for each expert, E1 update the backbone',
                         default=False,
                         type=bool)
-    parser.add_argument('--CNN_aggregator',
-                        help='Train a CNN to combine the results of experts',
-                        default=False,
-                        type=bool) 
-    parser.add_argument('--MLP_aggregator',
-                        help='Train MLP layer to combine the results of experts',
-                        default=False,
-                        type=bool) 
+    parser.add_argument('--aggregation',
+                        help='method used for aggregation choose from :mean,CNN_merge,MLP_merge,CNN_select,MLP_select,max_pool,',
+                        default='none',
+                        type=str)
     parser.add_argument('--finetune_classifier_only',
                         help='Train MLP/CNN only, freeze Deeplabv3 backbone',
                         default=False,

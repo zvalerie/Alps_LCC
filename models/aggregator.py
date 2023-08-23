@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 
-class CNN_aggregator(nn.Module):
+class CNN_merge(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers = 256):
-        super(CNN_aggregator, self).__init__()
+        super(CNN_merge, self).__init__()
         self.cnn =  nn.Sequential(
                             nn.Conv2d(input_dim, hidden_layers, 3, padding=1, bias=False),
                             nn.BatchNorm2d(hidden_layers),
@@ -16,9 +16,9 @@ class CNN_aggregator(nn.Module):
     def forward(self, x):
         return self.cnn(x) 
     
-class MLP_aggregator(nn.Module):
+class MLP_merge(nn.Module):
     def __init__(self, input_dim, output_dim, hidden_layers = 256):
-        super(MLP_aggregator, self).__init__()
+        super(MLP_merge, self).__init__()
         self.mlp = nn.Sequential(    
                     nn.Linear(input_dim, hidden_layers),
                     nn.ReLU(),

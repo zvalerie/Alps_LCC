@@ -50,7 +50,7 @@ def get_predictions_from_logits(output,args):
     elif 'out' in output.keys():
         logits = output['out']
     
-    elif args.CNN_aggregator:
+    elif args.aggregation == 'CNN_merge':
         logits=  softmax ( output['aggregation'],dim =1 )
     
     elif args.experts == 2 :

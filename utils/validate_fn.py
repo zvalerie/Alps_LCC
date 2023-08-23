@@ -44,7 +44,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             output = model(input) 
             loss = criterion(output, mask)
             
-            if args.CNN_aggregator or args.MLP_aggregator:
+            if args.aggregation == 'CNN_merge' or args.aggregation == 'MLP_merge':
                 # nothing special to do here, just pass
                 pass 
                 

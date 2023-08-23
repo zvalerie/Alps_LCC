@@ -118,7 +118,8 @@ def get_criterion (args):
 
         criterion = CELoss_3experts ( args)
     
-    elif  args.CNN_aggregator or  args.MLP_aggregator:
+    elif  args.aggregation != 'mean':
+        print('use end to end aggregation loss')
         criterion = AggregatorLoss(args)
     
     else:

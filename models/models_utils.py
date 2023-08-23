@@ -6,7 +6,7 @@ from MCE_model import MCE
 
 def model_builder(num_classes, num_experts,  
                   pretrained_backbone=True, use_lws=False,
-                  use_CNN_aggregator=False, use_MLP_aggregator  = False):
+                  aggregation='mean'):
 
     backbone = resnet50(
         pretrained=pretrained_backbone,
@@ -17,8 +17,7 @@ def model_builder(num_classes, num_experts,
     classifier = MCE (  num_classes, 
                         num_experts, 
                         use_lws,
-                        use_CNN_aggregator, 
-                        use_MLP_aggregator,
+                        aggregation=aggregation,
                         )
     
     
@@ -27,8 +26,8 @@ def model_builder(num_classes, num_experts,
     # give an informative name :
     name = "MCE"
     name += ' use_lws' if use_lws else ''
-    name += ' use_CNN_aggregator' if use_CNN_aggregator else ''
-    name += ' use_MLP_aggregator' if use_MLP_aggregator else ''
+    name +=  aggregation
+
     model.__class__.__name__ = name
     return model
 

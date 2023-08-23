@@ -61,7 +61,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
             loss.backward()
             optimizer.step()
         
-        elif args.CNN_aggregator or args.MLP_aggregator :
+        elif args.aggregation == 'CNN_merge' or args.aggregation == 'MLP_merge':
             loss = criterion(output,mask)
             optimizer.zero_grad() 
             loss.backward()

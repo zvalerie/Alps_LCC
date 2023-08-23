@@ -12,9 +12,9 @@ from utils.argparser import parse_args
 from utils.inference_utils import MetricLogger, load_best_model_weights
 from utils.training_utils import get_dataloader
 import csv
+from utils.visualize import plot_confusion_matrix
 
-
-def write_oracle_result_to_csv(data,args=None):
+def write_oracle_result_to_csv(data,args=None,string=None):
     import datetime
     time_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
@@ -29,6 +29,8 @@ def write_oracle_result_to_csv(data,args=None):
         writer = csv.writer(file)
         writer.writerow(['-'*50])
         writer.writerow(['Experiment results'])
+        if string is not None :
+            writer.writerow([string])
         writer.writerow(['-'*50])
         writer.writerow([filename])
         writer.writerow([time_string])
@@ -75,9 +77,13 @@ def main(args):
     
   #  load_best_model_weights(model,args)
     test_loader = get_dataloader(args=args,phase='test')    
+
+        
+    
     
     with torch.no_grad():
         
+        metrics = MetricLogger( n_classes=10)
         metric_exp0 = MetricLogger( n_classes=10)
         metric_exp1 = MetricLogger( n_classes=10)
         metric_exp2 = MetricLogger( n_classes=10)
@@ -98,7 +104,11 @@ def main(args):
             
             # Record metrics
             gt = mask.squeeze().detach().cpu().numpy()
+            logits = get_oracle_logits_from_experts(output)
+            preds = torch.argmax(logits.detach().cpu(),axis=1)  
+            metrics.update(gt, preds.numpy())         
             
+            # REcord metrics for each expert
             pred_exp_0 = torch.argmax( output['exp_0'], dim=1)
             metric_exp0.update(gt, pred_exp_0.detach().cpu().numpy())
             
@@ -108,22 +118,93 @@ def main(args):
             if args.experts ==3:
                 pred_exp_2 = torch.argmax(  output['exp_2'], dim=1)
                 metric_exp2.update(gt, pred_exp_2.detach().cpu().numpy())
+            
         
         # measure elapsed time
         tick= time.time()
         print('Elapsed time [s]:',tick)
+        
+        # Compute and save metrics : 
+        classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                    "Scree with grass" : 6,"Water" : 7,
+                    "Forest" : 8, "Glacier" : 9, }    
+                           
+        mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
+ 
+        class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
+        freq_cls_acc =   1/4* (class_accuracies["Scree"]+ class_accuracies["Bedrock"] + class_accuracies["Glacier"] + class_accuracies["Forest"])
+        common_cls_acc = 1/3* (class_accuracies["Scree with grass"]+    class_accuracies["Water"]+   class_accuracies["Bedrockwith grass"])
+        rare_cls_acc =   1/2* (class_accuracies["Large blocks"]+   class_accuracies["Large blocks with grass"])
+         
+         
+        metrics = {
+                    'test_miou' : np.round ( mean_iou,3), 
+                    'test_macc':  np.round (mean_acc,3), 
+                    'test_oacc':  np.round (overall_acc,3),
+                    'frequent_cls_acc':np.round(freq_cls_acc,3),
+                    'common_cls_acc': np.round(common_cls_acc,3),
+                    'rare_cls_acc': np.round(rare_cls_acc,3),
+                    'test_acc' :  class_accuracies,
+            }
+        pprint(metrics)
+        write_oracle_result_to_csv(metrics,args)
+        
         # Compute and save metrics : 
         print('metrics for expert 0:')
-
-        get_score_per_expert(metric_exp0)
+        values = get_score_per_expert(metric_exp0)
+        write_oracle_result_to_csv(values,args, 'metrics for expert 0')
         print('*'*50)
+        
         print('metrics for expert 1:', )
-        get_score_per_expert(metric_exp1)
+        values = get_score_per_expert(metric_exp1)
+        write_oracle_result_to_csv(values,args, 'metrics for expert 1')
         print('*'*50)
+        
         if args.experts ==3:
             print('metrics for expert 2:',)
-            get_score_per_expert(metric_exp2)
+            values = get_score_per_expert(metric_exp2)
+            write_oracle_result_to_csv(values,args, 'metrics for expert 2')
             print('*'*50)
+        return
+
+
+def get_oracle_logits_from_experts(output):
+    
+    assert isinstance(output,dict)
+    nb_experts  = len(output)
+    device = output['exp_0'].device
+    
+    logits = torch.zeros_like(output['exp_0'])
+
+    head_index =  [1, 5, 8, 9]
+    exp_0 = output['exp_0']
+    mask = torch.zeros_like(output['exp_0'])
+    mask[:, head_index,:,:] = 1 
+    logits += mask * exp_0
+    
+    if nb_experts ==2 :
+        tail_index = [2, 3, 4, 6, 7]
+        mask = torch.zeros_like(output['exp_0'])
+        mask[:, tail_index,:,:] = 1 
+        exp_1 = output['exp_1']
+        logits += mask * exp_1   
+        
+    elif nb_experts ==3 :
+        tail_index = [3, 4]
+        mask = torch.zeros_like(output['exp_0'])
+        mask[:, tail_index,:,:] = 1 
+        exp_1 = output['exp_1']
+        logits += mask * exp_1 
+        
+        body_index = [ 2, 6, 7 ]
+        mask = torch.zeros_like(output['exp_0'])
+        mask[:,body_index,:,:] = 1 
+        exp_2 = output['exp_2']
+        logits += mask * exp_2       
+
+     
+    return logits 
 
 
 def get_score_per_expert(metrics):
@@ -154,7 +235,7 @@ def get_score_per_expert(metrics):
                 'test_acc' :  class_accuracies,
             }
     pprint(values)
-    write_oracle_result_to_csv(values,args)
+    
     return values
 
 
@@ -165,16 +246,19 @@ def get_score_per_expert(metrics):
 
 if __name__ == '__main__':
   
+    
+    
+    
+    
+    
     args = parse_args()
-  #  args.device= 'cpu'
+
     args.model ='MCE'
-    args.experts = 2
-  #  args.force_cpu =True
-    args.out_dir='out/paper/'
-    args.name = 'mce2_July'
+    args.experts = 3
+    args.out_dir='out/august/'
+    args.name = 'MCE3'
     args.test_only = True
     args.debug = True
-    #save_ACE_as_MCE(args)
     main(args)
         
 
