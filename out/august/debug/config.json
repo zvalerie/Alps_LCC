@@ -1,11 +1,11 @@
 {
     "lr": 1e-05,
-    "experts": 0,
-    "epoch": 50,
-    "bs": 8,
+    "experts": 3,
+    "epoch": 3,
+    "bs": 16,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
-    "loss": "seesaw",
+    "loss": "celoss",
     "step_size": 10,
     "out_dir": "out/august/",
     "model": "MCE",
@@ -20,9 +20,9 @@
     "L2penalty": false,
     "lws": false,
     "separate_backprop": false,
-    "CNN_aggregator": false,
-    "MLP_aggregator": false,
+    "aggregation": "CNN_merge",
     "finetune_classifier_only": false,
+    "zero_nontarget_expert": false,
     "pretrained_weights": "Nope",
     "device": "cuda"
 }

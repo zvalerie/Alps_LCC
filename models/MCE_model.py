@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from torchvision.models.segmentation.deeplabv3 import ASPP
 from torch.linalg import vector_norm
 from torch.nn.functional import relu
-from aggregator import CNN_merge, MLP_merge
+from aggregator import CNN_merge, MLP_merge, MLP_select, CNN_select
 
    
 class Expert(nn.Module):
@@ -24,14 +24,16 @@ class Expert(nn.Module):
     
 class MCE(nn.Module):
     def __init__(self,  num_classes,  num_experts, use_lws=False, 
-                 use_CNN_aggregator=False, use_MLP_aggregator  = False):
+                 aggregation='mean'):
         
         super(MCE, self).__init__()
+        
         assert num_experts  in [2,3 ], 'Num_experts must be 2 or 3 ! '
-        assert not ( use_MLP_aggregator and use_CNN_aggregator), 'only one of "use_MLP_aggregator" and "use_CNN_aggregator" can be True'
         self.num_experts = num_experts
         self.use_lws  = use_lws 
+        self.aggregation = aggregation
         
+        # Build model layers : 
         self.project = nn.Sequential( 
                 nn.Conv2d(256, 48, 1, bias=False),
                 nn.BatchNorm2d(48),
@@ -44,17 +46,22 @@ class MCE(nn.Module):
         if num_experts == 3:
             self.expert_body = Expert(input_dim=304, output_dim=num_classes)   
         
-        if use_CNN_aggregator:
+        # Build classifier :
+        if   aggregation == 'MLP_merge':
             self.classifier = CNN_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
-            self.aggregation = 'cnn'
             
-        elif use_MLP_aggregator :
+        elif aggregation == 'CNN_merge':
             self.classifier = MLP_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
-            self.aggregation = 'mlp'
         
+        elif aggregation == 'CNN_select':            
+            self.classifier = MLP_select(num_experts, num_classes,)    
+        
+        elif aggregation == 'MLP_select':
+            self.classifier = MLP_select(num_experts, num_classes,) 
+               
         else:
             self.classifier = nn.Sequential( nn.ReLU(inplace=True))    # Useless layer too avoid empty and bug
-            self.aggregation = None       
+            
        
         
 
@@ -71,14 +78,6 @@ class MCE(nn.Module):
         y_head = self.expert_head(output_feature)        
         if self.num_experts == 3:   
             y_body = self.expert_body(output_feature)
-            
-            
-        if False : # New implementation seems to work less weel self.use_lws:       
-            f_tail = vector_norm(self.expert_head.cnn2.weight,dim=1) / vector_norm(self.expert_tail.cnn2.weight,dim=1) 
-            y_tail = f_tail * y_tail
-            if self.num_experts == 3: 
-                f_body = vector_norm(self.expert_head.cnn2.weight,dim=1) / vector_norm(self.expert_body.cnn2.weight,dim=1)
-                y_body = f_body * y_body
         
         if self.use_lws :       
             f_tail= vector_norm(self.expert_head.cnn2.weight.flatten()) / vector_norm( self.expert_tail.cnn2.weight.flatten()) 
@@ -86,21 +85,15 @@ class MCE(nn.Module):
             if self.num_experts == 3: 
                 f_body = vector_norm(self.expert_head.cnn2.weight.flatten()) / vector_norm( self.expert_body.cnn2.weight.flatten()) 
                 y_body = f_body * y_body
-            
+        
+        output_feature = [y_head, y_tail] if self.num_experts == 2 else [y_head, y_body, y_tail]
+        
         # Aggregation methods : 
         aggregator_output = None
-        if self.aggregation is not None :
-
-            if self.num_experts == 3:              
-                aggregator_output = self.classifier(torch.cat([y_head, y_body, y_tail],dim=1) )
-            elif self.num_experts == 2 :
-                aggregator_output = self.classifier(torch.cat([y_head, y_tail],dim=1) )
-                
-            
-        if self.num_experts == 3: 
-            return [y_head, y_body, y_tail], aggregator_output
+        if self.aggregation not in [ 'mean', 'max_pool']  :           
+            aggregator_output = self.classifier(output_feature) 
            
-        return [y_head, y_tail], aggregator_output
+        return output_feature, aggregator_output
 
         
     def _init_weight(self):
@@ -118,15 +111,14 @@ class MCE(nn.Module):
 
 if __name__ == '__main__':
     
-    x = torch.rand([8,4,100,200])
+    x = torch.rand([64,4,200,200])
     from models_utils import model_builder
     model = model_builder( 
                 num_classes = 10, 
                 pretrained_backbone = True, 
                 num_experts = 3,
                 use_lws = True,
-                use_MLP_aggregator = False,
-                use_CNN_aggregator = True,
+                aggregation = 'mean',
                 )
     output = model(x) 
     for key in output.keys():

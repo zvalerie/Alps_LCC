@@ -1,1 +1,2 @@
-python train.py --debug True --experts 0 --loss seesaw --bs 8 
+python train.py --debug True --experts 3 --aggregation MLP_select --bs 8
+

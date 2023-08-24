@@ -19,11 +19,11 @@ class MyCrossEntropyLoss(nn.Module):
             return self.ce( output, targets )
 
 
-class MyWeightedCrossEntropyLoss(nn.Module):
+class WeightedCrossEntropyLoss(nn.Module):
     
     def __init__(self, ignore_index=0,args =None):
         
-        super(MyWeightedCrossEntropyLoss, self).__init__()
+        super(WeightedCrossEntropyLoss, self).__init__()
         device = args.device if args is not None else "cuda"
         inverse_freq_weights = torch.tensor(
                     [ 0.0,	3.5,	153.8,	7.9,	3.9,	
@@ -76,7 +76,7 @@ class CELoss_2experts(nn.Module):
                     size = output['exp_1'].shape
                     mask  = torch.logical_not(is_tail_pixel).long().unsqueeze(1)
                     tail_loss +=  self.complementary_loss(mask.expand(size)*output['exp_1'], torch.zeros(size).to(self.device)) 
-                    #tail_loss += torch.norm ( mask.expand(size)*output['exp_1'] )
+                    
                                         
         return  head_loss , tail_loss
     
@@ -118,7 +118,8 @@ class CELoss_3experts(nn.Module):
                 # L2 penalty for predicting head  classes from the body expert 
                 size = output['exp_1'].shape   
                 mask  = torch.logical_not(is_body_pixel).long().unsqueeze(1)
-                body_loss += torch.norm ( mask.expand(size)*output['exp_1'] )   
+                body_loss +=  self.complementary_loss(mask.expand(size)*output['exp_1'], torch.zeros(size).to(self.device)) 
+               
             
             
         # Compute the classification  loss from the tail expert, only if there are pixel from tail classes
@@ -127,21 +128,13 @@ class CELoss_3experts(nn.Module):
         if is_tail_pixel.any():         
             tail_loss += self.tail_masked_celoss(output['exp_2'], targets)    
             
-        # Compute complementary loss : 
-        if self.use_L2_penalty:
-            # L2 penalty for predicting head  classes from the body expert 
-            size = output['exp_1'].shape   
-            mask  = torch.logical_not(is_body_pixel).long().unsqueeze(1)
-            body_loss += self.complementary_loss(mask.expand(size)*output['exp_1'], torch.zeros(size).to(self.device)) 
-            #body_loss += torch.norm ( mask.expand(size)*output['exp_1'] )  
-            
             # Compute complementary loss : 
             if self.use_L2_penalty:          
                 # L2 penalty for predicting head and body classes from the tail expert 
                 size = output['exp_2'].shape
                 mask  = torch.logical_not(is_tail_pixel).long().unsqueeze(1)
                 tail_loss += self.complementary_loss(mask.expand(size)*output['exp_2'], torch.zeros(size).to(self.device)) 
-              #  tail_loss += torch.norm ( mask.expand(size)*output['exp_2'] )       
+                    
                 
                       
             

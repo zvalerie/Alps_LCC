@@ -44,28 +44,50 @@ class AverageMeter(object):
         
 def get_predictions_from_logits(output,args):
     
+    
+    if args.zero_nontarget_expert : 
+        device = output['exp_1'].device
+        output['exp_1'] =   torch.tensor([0., 0., 1., 1., 1., 0., 1., 1., 0., 0.])[:,None,None].to(device) * output['exp_1']
+        
+        if args.experts ==3  :
+           output['exp_2'] = torch.tensor([0., 0., 0., 1., 1., 0., 0., 0., 0., 0.])[:,None,None].to(device) * output['exp_2']
+        
+    
     if  isinstance(output, torch.TensorType):
        logits = output
-        
+       
+    elif args.aggregation in  ['CNN_merge','MLP_merge']:
+        logits =   output['aggregation'] 
+       
+    elif args.aggregation in  ['CNN_select','MLP_select',]:
+        logits =   output['aggregation']
+     
     elif 'out' in output.keys():
-        logits = output['out']
+        logits = output['out']    
     
-    elif args.aggregation == 'CNN_merge':
-        logits=  softmax ( output['aggregation'],dim =1 )
-    
-    elif args.experts == 2 :
+    elif  args.aggregation == 'mean' :
         # Aggregation is simple average : the output logits of class c is the average among the ouputs 
         # from set of experts that trained with class c,  then softmax is applied. 
-        aggr_logits = 0.5 * ( output['exp_0'] + output['exp_1'] )
-        logits = softmax(aggr_logits, dim = 1 )
-    
-    elif args.experts == 3 :
-
-        aggr_logits = 1/3 * ( output['exp_0'] + output['exp_1'] + output['exp_2'] )
-        logits = softmax(aggr_logits, dim = 1)                
+        device = output['exp_1'].device
+        sum_logits = ( output['exp_0'] + output['exp_1'] ) if args.experts ==2  \
+            else  ( output['exp_0'] + output['exp_1'] + output['exp_2'] )
+        # Divide the sum of logits by the number of experts used to predict them :
+        quotient = [1,1,2,2,2,1,2,2,1,1] if args.experts ==2  \
+            else   [1,1,2,3,3,1,2,2,1,1]
+        quotient = torch.tensor(quotient).unsqueeze(-1).unsqueeze(-1).to(device)
+        logits = sum_logits / quotient
+            
+                
+        
+    elif  args.aggregation == 'max_pool' :          
+        group = torch.stack( output['exp_0'] , output['exp_1'] ) if args.experts ==2  \
+            else  torch.stack( [output['exp_0'], output['exp_1'], output['exp_2']])
+        logits = group.max(group,0)
+         
         
     preds = torch.argmax(logits.detach().cpu(),axis=1)    
     return preds    
+
 
 class MetricLogger(object):
     def __init__(self, n_classes):

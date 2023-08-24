@@ -13,7 +13,7 @@ from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip
 from models import Res50_UNet, deeplabv3P_resnet
 from models.models_utils import model_builder
   
-from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, MyWeightedCrossEntropyLoss
+from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, WeightedCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
 from losses.SeesawLoss import SeesawLoss
 from torch import optim
@@ -98,27 +98,28 @@ def get_criterion (args):
     """
     
     # Define loss function (criterion) and optimizer
-    if args.loss == 'inverse_freq_weights':
-        
-        criterion = MyWeightedCrossEntropyLoss(ignore_index=0,args=args)
+    if args.loss == 'inverse_freq_weights':        
+        criterion = WeightedCrossEntropyLoss(ignore_index=0,args=args)
 
-    elif args.loss == 'seesaw' and args.experts == 0 :
-    
+    elif args.loss == 'seesaw' and args.experts == 0 :        
         criterion = SeesawLoss(num_classes= 10)
         
-    elif args.loss == 'celoss' and args.experts == 0 :
-        
+    elif args.loss == 'celoss' and args.experts == 0 :        
         criterion = MyCrossEntropyLoss(ignore_index=0)
 
-    elif args.experts ==2 :
+    elif  args.finetune_classifier_only or 'MLP' in args.aggregation or 'CNN' in args.aggregation :
+        assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
+        print('use end to end aggregation loss')
+        criterion = AggregatorLoss(args)
         
+    elif args.experts ==2 :    
         criterion = CELoss_2experts (args)
         
     elif args.experts == 3: 
-
         criterion = CELoss_3experts ( args)
     
-    elif  args.aggregation != 'mean':
+    elif  args.finetune_classifier_only :
+        assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
         print('use end to end aggregation loss')
         criterion = AggregatorLoss(args)
     
@@ -142,11 +143,11 @@ def get_model(args):
         model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
     
     elif args.experts == 2 or args.experts == 3 :
-        model = model_builder (num_classes = 10, 
+        model = model_builder (
+                    num_classes = 10, 
                     num_experts = args.experts, 
-                    use_lws=args.lws,
-                    use_CNN_aggregator= args.CNN_aggregator,
-                    use_MLP_aggregator= args.MLP_aggregator,
+                    use_lws = args.lws,
+                    aggregation = args.aggregation,
                     )
     else :
         raise NotImplementedError
@@ -159,10 +160,10 @@ def get_model(args):
     if args.finetune_classifier_only :      
         
         for name, param in model.named_parameters():
-            if not ('cnn' in name or 'MLP' in name):
+            if not ('CNN' in name or 'MLP' in name):
                 param.requires_grad = False    
             #print(name , param.requires_grad)      
-        print('Model weights are frozen except for cnn or MLP layers')
+        print('Model weights are frozen except for CNN or MLP layers')
     
        
     

@@ -53,6 +53,9 @@ class SeesawLoss(nn.Module):
         """
         
         # accumulate the samples for each category
+        if isinstance (cls_score,dict):
+            cls_score = cls_score['out']
+            
         unique_labels = labels.unique()
         self.cum_samples.cuda()
         for u_l in unique_labels:

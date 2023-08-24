@@ -88,12 +88,16 @@ def parse_args():
                         type=bool)
     parser.add_argument('--aggregation',
                         help='method used for aggregation choose from :mean,CNN_merge,MLP_merge,CNN_select,MLP_select,max_pool,',
-                        default='none',
+                        default='mean',
                         type=str)
     parser.add_argument('--finetune_classifier_only',
                         help='Train MLP/CNN only, freeze Deeplabv3 backbone',
                         default=False,
-                        type=bool) 
+                        type=bool)
+    parser.add_argument('--zero_nontarget_expert',
+                        help='Zero the prediction of expert on non target classes',
+                        default=False,
+                        type=bool)
     parser.add_argument('--pretrained_weights',
                         help='pretrained weights',
                         default='Nope',

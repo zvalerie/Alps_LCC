@@ -17,7 +17,7 @@ def model_builder(num_classes, num_experts,
     classifier = MCE (  num_classes, 
                         num_experts, 
                         use_lws,
-                        aggregation=aggregation,
+                        aggregation = aggregation,
                         )
     
     
@@ -26,7 +26,7 @@ def model_builder(num_classes, num_experts,
     # give an informative name :
     name = "MCE"
     name += ' use_lws' if use_lws else ''
-    name +=  aggregation
+    name +=  ' with '+ aggregation  + ' aggregation '
 
     model.__class__.__name__ = name
     return model
@@ -52,6 +52,9 @@ class _MultiExpertModel(nn.Module):
             output['out']= F.interpolate(x, size=input_shape, mode='bilinear', align_corners=False)
         
         if aggregator_output != None:
-            output['aggregation'] = F.interpolate(aggregator_output, size=input_shape, mode='bilinear', align_corners=False)        
+            if isinstance(aggregator_output,tuple) :
+                aggregator_output = aggregator_output[0]
+
+            output['aggregation']= F.interpolate(aggregator_output, size=input_shape, mode='bilinear', align_corners=False)        
         
         return output

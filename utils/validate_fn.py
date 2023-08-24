@@ -44,7 +44,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             output = model(input) 
             loss = criterion(output, mask)
             
-            if args.aggregation == 'CNN_merge' or args.aggregation == 'MLP_merge':
+            if 'MLP' in args.aggregation or 'CNN' in args.aggregation :
                 # nothing special to do here, just pass
                 pass 
                 
@@ -67,7 +67,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
             
 
             gt = mask.squeeze().detach().cpu().numpy()
-            metrics.update(gt, preds.numpy())
+            metrics.update(gt, preds.detach().cpu().numpy())
                         
         # measure elapsed time
         batch_time.update(time.time() - tick)            

@@ -55,18 +55,12 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
         output = model(input) 
         
         # compute loss
-        if args.experts ==0:
+        if args.experts ==0 or 'MLP' in args.aggregation or 'CNN' in args.aggregation :
             loss = criterion(output,mask)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-        
-        elif args.aggregation == 'CNN_merge' or args.aggregation == 'MLP_merge':
-            loss = criterion(output,mask)
-            optimizer.zero_grad() 
-            loss.backward()
-            optimizer.step()
-            
+                    
             
         elif args.experts == 2:
             
