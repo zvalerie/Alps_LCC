@@ -27,14 +27,12 @@ class AggregatorLoss(nn.Module):
         
     def forward(self, output, targets):
         
-        loss = torch.Tensor([0.]).to(self.device)
+        loss = self.ce(output['aggregation'],targets)
         
         if  not self.finetune_classifier_only :
             
-            loss += torch.Tensor (self.expertLoss(output,targets)) .sum() 
-        
-        loss += self.ce(output['aggregation'],targets)
-        
-           
-        return loss
+           exp_losses = torch.cat (self.expertLoss(output,targets)  ) .sum()
+           loss = loss +exp_losses     
+             
+        return loss 
         

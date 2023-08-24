@@ -105,7 +105,7 @@ class CELoss_3experts(nn.Module):
     def forward(self, output, targets):
         
         # Compute the classification loss for the head expert :
-        head_loss = self.celoss(output['exp_0'], targets)     
+        head_loss = self.celoss(output['exp_0'], targets)  .unsqueeze(0)   
         
         # Compute the classification loss from the body expert, only if there are pixel from body classes
         body_loss = torch.Tensor([0.]).to(self.device)

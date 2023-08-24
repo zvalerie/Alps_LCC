@@ -111,10 +111,6 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    args.bs = 16
-    args.debug = True
-    args.experts = 3 
-    args.epoch =3
-    args.aggregation = 'CNN_merge'   # 'CNN_merge' 'CNN_select' 'MLP_select'
+
     main(args)
         

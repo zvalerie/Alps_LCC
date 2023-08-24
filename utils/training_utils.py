@@ -68,7 +68,9 @@ def get_optimizer (model,args):
                                 )
         
     elif args.experts ==3 :
-        optimizer = optim.Adam(
+        optimizer = optim.Adam( model.parameters(),lr = args.lr, weight_decay= args.weight_decay)
+        if False :
+            optimizer = optim.Adam(
                                 [
                                 {'params': model.backbone.parameters()},
                                 {'params': model.classifier.project.parameters()},
@@ -80,7 +82,7 @@ def get_optimizer (model,args):
                                 ], 
                                 lr=args.lr, 
                                 weight_decay=args.weight_decay,
-                                                )          
+                               )          
     
     if False :
         for param_group in optimizer.param_groups:
@@ -160,9 +162,10 @@ def get_model(args):
     if args.finetune_classifier_only :      
         
         for name, param in model.named_parameters():
-            if not ('CNN' in name or 'MLP' in name):
-                param.requires_grad = False    
-            #print(name , param.requires_grad)      
+            if not ('classifier.classifier' in name or 'expert' in name):
+                param.requires_grad = False   
+        #   else : 
+        #      print('not frozen ', name , param.requires_grad)      
         print('Model weights are frozen except for CNN or MLP layers')
     
        
