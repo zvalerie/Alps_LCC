@@ -128,6 +128,6 @@ if __name__ == '__main__':
     
     x, y,z =  torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) 
    
-    mlp = CNN_select(num_experts=3, num_classes=10,return_expert_map=True)
+    mlp = MLP_select(num_experts=3, num_classes=10,return_expert_map=True)
     out,map = mlp ([ x,y,z ])
     print(out.shape,map.shape )

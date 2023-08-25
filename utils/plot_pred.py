@@ -62,13 +62,13 @@ def plot_predictions(image, dem , mask,preds ):
         plt.axis('off')
 
         plt.subplot(143)
-        plt.imshow(mask[k], cmap=cmap,vmin=0,vmax=9)
+        plt.imshow(mask[k], cmap=cmap,vmin=0,vmax=9, interpolation_stage = 'rgba')
         plt.title("Label")
         # plt.text(0,220,str(np.unique(mask[k])), fontsize = 10)
         plt.axis('off')
                     
         plt.subplot(144)
-        plt.imshow(preds[k], cmap=cmap,vmin=0,vmax=9.5)
+        plt.imshow(preds[k], cmap=cmap,vmin=0,vmax=9.5,interpolation_stage = 'rgba')
         plt.title("Predictions")
         plt.axis('off')
         #plt.colorbar(label = list(  classes.keys()) )
@@ -90,6 +90,79 @@ def plot_predictions(image, dem , mask,preds ):
         print('fig saved')
         plt.close()
 
+
+
+def plot_predictions_N_expertmap(image,dem,mask,preds,map): 
+    
+    classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                "Scree with grass" : 6,"Water" : 7,
+                "Forest" : 8, "Glacier" : 9, }
+    
+    # Process inputs : 
+    img =image.movedim(1,-1).cpu().numpy()
+    img = unnormalize_images(img)
+    dem = dem.squeeze().cpu().numpy()
+    mask = mask.squeeze().long().cpu().numpy()
+    preds = preds.squeeze().cpu().numpy()
+    
+    dest_path = args.out_dir +'/' + args.name +'/preds/' 
+    if not os.path.exists(dest_path):
+        os. mkdir (dest_path)
+
+    # Loop over the samples and plot them
+    colors = ['black', 'tab:grey', 'lightgrey', 'maroon', 'red', 'orange', 'yellow', 'royalblue', 'forestgreen','lightcyan',]
+    cmap=ListedColormap(colors)
+    exp_color =  [ 'lightcoral', 'palegreen', 'lavender',]
+    exp_cmap = ListedColormap(exp_color)
+    for k in  range( image.size(0)):
+        
+        plt.figure(figsize =[20,5])
+        plt.subplot(141)
+        plt.imshow(img[k])
+        plt.title("RGB Image")
+        plt.axis('off')
+
+        
+        plt.subplot(142)
+        plt.imshow(map[k,:,:], cmap=exp_cmap, vmin=0,vmax=2, interpolation_stage = 'rgba')
+        plt.title("Selected Expert ")
+        legend_element = [
+            mpatches.Patch(label='Expert 1', color=exp_color[0]),
+            mpatches.Patch(label='Expert 2', color=exp_color[1]),
+            mpatches.Patch(label='Expert 3', color=exp_color[2])
+        ]
+        plt.legend(handles=legend_element)
+        plt.axis('off')
+
+
+        plt.subplot(143)
+        plt.imshow(mask[k], cmap=cmap,vmin=0,vmax=9,interpolation_stage = 'rgba')
+        plt.title("Label")
+        plt.axis('off')
+        
+        plt.subplot(144)
+        plt.imshow(preds[k], cmap=cmap,vmin=0,vmax=9.5,interpolation_stage = 'rgba')
+        plt.title("Predictions")
+        plt.axis('off')
+        
+        # Colorbar parameters :        
+        colors = cmap.colors
+        values = list(  classes .values())
+        txt_labels = list(  classes.keys())
+        patches = [ mpatches.Patch(color=colors[i], label= txt_labels[i] ) for i in values ]
+        plt.legend(handles=patches, 
+            fontsize='small',
+            bbox_to_anchor=(1.05, 1), 
+            loc=2, 
+            frameon = False,
+            borderaxespad=0. )            
+            
+        plt.savefig(dest_path +str(TILE_IDS[k])+'.png',dpi = 300)
+        print('fig saved',TILE_IDS[k] ,)
+        plt.close()
+    
+    
 
 
 def predict_and_plot(args,model):
@@ -116,16 +189,15 @@ def predict_and_plot(args,model):
             # Run forwards pass : 
             output = model(input)  
             preds = get_predictions_from_logits(output, args)
-            print('predict  one batch')
-
+        
             if args.aggregation in ['MLP_select','CNN_select']:
-                plot_predictions(image,dem,mask,preds,)
+                map = output['aggregation'][1]
+                plot_predictions_N_expertmap(image,dem,mask,preds,map )
             
             else :
                 plot_predictions(image,dem,mask,preds,)
-            print('plot  one batch')
-            if args.debug :
-                break
+            print('plot  one batch and break')
+            break
 
                 
 def unnormalize_images(images, ):
@@ -147,7 +219,7 @@ def unnormalize_images(images, ):
          
 if __name__ == '__main__':
     
-    exp_path = '/home/valerie/Projects/Alps_LCC/out/august/debug/'
+    exp_path = '/home/valerie/Projects/Alps_LCC/out/august/WCEL/'
     config_fp = exp_path + 'config.json'
     checkpoint_path = exp_path + 'last_model.pt'
     
@@ -156,11 +228,9 @@ if __name__ == '__main__':
     with open(config_fp, 'r') as json_file:
         cfg = json.load(json_file)
         args = Namespace(**cfg)
-        args.pretrained_weights=False
-        args.force_cpu = True
-        args.finetune_classifier_only = False
-        args.bs = 2
+        args.bs = 32
         args.device = 'cpu'
+
     checkpoint = torch.load(checkpoint_path)
     model = get_model(args)
 

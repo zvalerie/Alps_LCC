@@ -53,8 +53,11 @@ class _MultiExpertModel(nn.Module):
         
         if aggregator_output != None:
             if isinstance(aggregator_output,tuple) :
-                aggregator_output = aggregator_output[0]
-
-            output['aggregation']= F.interpolate(aggregator_output, size=input_shape, mode='bilinear', align_corners=False)        
+                x = F.interpolate(aggregator_output[0], size=input_shape, mode='bilinear', align_corners=False) 
+                y = F.interpolate(aggregator_output[1].unsqueeze(1).float(), size=input_shape, mode='bilinear', align_corners=False) .long()
+                output['aggregation'] =  (x,y.squeeze())      
+            else : 
+                output['aggregation']=  F.interpolate(aggregator_output, size=input_shape, mode='bilinear', align_corners=False) 
+                
         
         return output

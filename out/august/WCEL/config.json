@@ -2,7 +2,7 @@
     "lr": 1e-05,
     "experts": 0,
     "epoch": 50,
-    "bs": 64,
+    "bs": 32,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
     "loss": "inverse_freq_weights",
@@ -12,7 +12,7 @@
     "num_workers": 16,
     "debug": false,
     "large_dataset": true,
-    "force_cpu": false,
+    "force_cpu": true,
     "seed": 2436,
     "name": "WCEL",
     "log_wandb": true,
@@ -20,9 +20,9 @@
     "L2penalty": false,
     "lws": false,
     "separate_backprop": false,
-    "CNN_aggregator": false,
-    "MLP_aggregator": false,
+    "aggregation": "mean",
     "finetune_classifier_only": false,
-    "pretrained_weights": "Nope",
-    "device": "cuda"
+    "zero_nontarget_expert": false,
+    "pretrained_weights": false,
+    "device": "cpu"
 }

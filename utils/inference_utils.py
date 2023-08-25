@@ -60,7 +60,7 @@ def get_predictions_from_logits(output,args):
         logits =   output['aggregation'] 
        
     elif args.aggregation in  ['CNN_select','MLP_select',]:
-        logits =   output['aggregation']
+        logits =   output['aggregation'][0]
      
     elif 'out' in output.keys():
         logits = output['out']    
