@@ -1,0 +1,19 @@
+Experiment results
+out/august/MCE3/metrics.csv
+2023-08-26 08:20:59
+"test_miou, 0.49"
+"test_macc, 0.634"
+"test_oacc, 0.845"
+"frequent_cls_acc, 0.872"
+"common_cls_acc, 0.613"
+"rare_cls_acc, 0.506"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.828"
+"test_acc_Bedrockwith grass, 0.389"
+"test_acc_Large blocks, 0.655"
+"test_acc_Large blocks with grass, 0.358"
+"test_acc_Scree, 0.817"
+"test_acc_Scree with grass, 0.516"
+"test_acc_Water, 0.933"
+"test_acc_Forest, 0.954"
+"test_acc_Glacier, 0.888"

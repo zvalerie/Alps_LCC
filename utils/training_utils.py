@@ -68,9 +68,8 @@ def get_optimizer (model,args):
                                 )
         
     elif args.experts ==3 :
-        optimizer = optim.Adam( model.parameters(),lr = args.lr, weight_decay= args.weight_decay)
-        if False :
-            optimizer = optim.Adam(
+
+        optimizer = optim.Adam(
                                 [
                                 {'params': model.backbone.parameters()},
                                 {'params': model.classifier.project.parameters()},
