@@ -1,18 +1,30 @@
 import torch
 import torch.nn as nn
 from losses.ACE_losses import CELoss_2experts, CELoss_3experts
-
+from losses.selectExpertLoss import selectExpertLoss
 
 class AggregatorLoss(nn.Module):
     def __init__(self, args, ignore_index=0):
         super(AggregatorLoss, self).__init__()
-        
-                
-        # Wegihts from class balanced loss :
-        #                            'Background', "Bedrock", "Bedrockwith grass", "Large blocks", "Large blocks with grass", "Scree",  "Scree with grass","Water", "Forest" , "Glacier" ,
-        class_balanced_weights = torch.Tensor ([0.0, 1e-3,      5e-3,               1e-2,             1e-1,                     1e-3 ,     2e-3,        3e-3,       1e-3,       1e-3  ]).to(args.device)
-        print('uses weights in the aggregator loss','*'*550)
-        self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight= class_balanced_weights)
+        self.aggregation = args.aggregation
+        if args.reweighted_aggregation == 'CBL':
+            # Weights from class balanced loss :
+            weights = torch.Tensor ([0.0,   1e-3,      5e-3,    1e-2,             
+                                     1e-1,  1e-3,     2e-3,     3e-3,       
+                                     1e-3,  1e-3  ]).to(args.device)
+            print('\t Uses CBL weights in the aggregator loss')
+            
+        elif args.reweighted_aggregation == 'inverse_frequency':
+            # Weights from inverse frequency loss :
+            weights= torch.tensor(
+                    [ 0.0,	3.5,	153.8,	7.9,	3.9,	
+                     388.6,	3586.6,	3.4,	70.1,	118.4]   ).to(args.device)
+            print('\t Uses inverse_frequency weights in the aggregator loss')
+        else :
+            weights = torch.ones(size = [10]).to(args.device)
+            
+        self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight= weights)
+        self.selectExpertLoss = selectExpertLoss(args)
         self.device = args.device
 
         self.finetune_classifier_only  = args.finetune_classifier_only 
@@ -27,7 +39,16 @@ class AggregatorLoss(nn.Module):
         
     def forward(self, output, targets):
         
-        loss = self.ce(output['aggregation'],targets)
+        if 'select' in self.aggregation:
+            
+            loss = self.selectExpertLoss(output['aggregation'],targets)
+            
+        else : 
+            assert 'merge' in self.aggregation, 'aggregation implemented only for merge or select'            
+            
+            loss = self.ce(output['aggregation'],targets)
+            
+    
         
         if  not self.finetune_classifier_only :
             

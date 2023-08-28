@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.nn.functional import softmax
+
 import os
 
 
@@ -56,11 +57,19 @@ def get_predictions_from_logits(output,args):
     if  isinstance(output, torch.TensorType):
        logits = output
        
-    elif args.aggregation in  ['CNN_merge','MLP_merge']:
+    elif 'merge' in args.aggregation:
         logits =   output['aggregation'] 
        
-    elif args.aggregation in  ['CNN_select','MLP_select',]:
-        logits =   output['aggregation'][0]
+    elif 'select' in  args.aggregation :
+        NotImplementedError 
+        logits =   output['aggregation']
+        exp_selected = torch.argmax( softmax( logits ,dim = 1),dim=1)
+        exp_selected_one_hot = F.one_hot(exp_selected).movedim(-1,1)  # shape is nb_pixel, nb experts 
+        experts_logits = [ output['exp_0'],output['exp_1'], output['exp_2']] 
+        x = torch.stack([experts_logits],dim=2)
+        x = x.reshape(size[0],self.num_classes, -1)
+        output = ( exp_selected_one_hot *x )
+        
      
     elif 'out' in output.keys():
         logits = output['out']    

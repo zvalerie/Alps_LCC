@@ -47,7 +47,7 @@ def parse_args():
                         default=16,
                         type=int)
     parser.add_argument('--debug',
-                        help='is debuging?',
+                        help='is debuging mode ?',
                         default=False,
                         type=bool)
     parser.add_argument('--large_dataset',
@@ -94,6 +94,10 @@ def parse_args():
                         help='Train MLP/CNN only, freeze Deeplabv3 backbone',
                         default=False,
                         type=bool)
+    parser.add_argument('--reweighted_aggregation',
+                        help='give weights to classes during the training of aggregation network: None, inverse_frequency, CBL',
+                        default='None',
+                        type=str)
     parser.add_argument('--zero_nontarget_expert',
                         help='Zero the prediction of expert on non target classes',
                         default=False,

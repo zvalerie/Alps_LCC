@@ -13,7 +13,7 @@
 #python train.py --name MCE2 --experts 2  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2   --large_dataset True 
 
 ## MCE 3 
-python train.py --name MCE3 --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True 
+#python train.py --name MCE3 --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True 
 
 #############################
 
@@ -44,17 +44,22 @@ python train.py --name MCE3 --experts 3  --log_wandb True  --lws True --L2penalt
 
 ############################# Aggregations methods
 
+
+# MCE + max_pool output
+python train.py --name MCE3 --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True  --aggregation max_pool
+
+
 # MCE + merge MLP
-python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_merge --name CNN_merge_sm
+#python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_merge --name CNN_merge_sm
 
 #MCE + merge CNN
-python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation MLP_merge --name MLP_merge_sm
+#python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation MLP_merge --name MLP_merge_sm
 
 # MCE + vote MLP
-python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_select --name CNN_select_sm
+#python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_select --name CNN_select_sm
 
 # MCE + vote CNN
-python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation MLP_select --name MLP_select_sm
+#python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation MLP_select --name MLP_select_sm
 
 ## MCE 3 
-python train.py --name MCE3_moptim --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True 
+#python train.py --name MCE3_moptim --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True 

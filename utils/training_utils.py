@@ -15,6 +15,7 @@ from models.models_utils import model_builder
   
 from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, WeightedCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
+from losses.selectExpertLoss import selectExpertLoss
 from losses.SeesawLoss import SeesawLoss
 from torch import optim
 
@@ -83,7 +84,7 @@ def get_optimizer (model,args):
                                 weight_decay=args.weight_decay,
                                )          
     
-    if False :
+    if False:
         for param_group in optimizer.param_groups:
             print(f"Learning rate for param group ", param_group['lr'])
                           
@@ -108,10 +109,12 @@ def get_criterion (args):
     elif args.loss == 'celoss' and args.experts == 0 :        
         criterion = MyCrossEntropyLoss(ignore_index=0)
 
-    elif  args.finetune_classifier_only or 'MLP' in args.aggregation or 'CNN' in args.aggregation :
+    elif  args.finetune_classifier_only or 'merge' in args.aggregation:
         assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
-        print('use end to end aggregation loss')
         criterion = AggregatorLoss(args)
+        
+    elif 'select' in args.aggregation :
+        criterion = selectExpertLoss(args)
         
     elif args.experts ==2 :    
         criterion = CELoss_2experts (args)
@@ -119,10 +122,6 @@ def get_criterion (args):
     elif args.experts == 3: 
         criterion = CELoss_3experts ( args)
     
-    elif  args.finetune_classifier_only :
-        assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
-        print('use end to end aggregation loss')
-        criterion = AggregatorLoss(args)
     
     else:
         raise NotImplementedError
@@ -161,10 +160,11 @@ def get_model(args):
     if args.finetune_classifier_only :      
         
         for name, param in model.named_parameters():
-            if not ('classifier.classifier' in name or 'expert' in name):
+            if not ('classifier.classifier' in name ):
                 param.requires_grad = False   
-        #   else : 
-        #      print('not frozen ', name , param.requires_grad)      
+            else : 
+                pass
+                #print('not frozen ', name , param.requires_grad)      
         print('Model weights are frozen except for CNN or MLP layers')
     
        
