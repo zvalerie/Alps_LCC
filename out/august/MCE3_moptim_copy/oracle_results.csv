@@ -1,0 +1,87 @@
+--------------------------------------------------
+Experiment results
+--------------------------------------------------
+out/august/MCE3_moptim/oracle_results.csv
+2023-08-28 14:34:57
+"test_miou, 0.728"
+"test_macc, 0.82"
+"test_oacc, 0.879"
+"frequent_cls_acc, 0.894"
+"common_cls_acc, 0.919"
+"rare_cls_acc, 0.932"
+"        test_acc_Background, 0.0"
+"        test_acc_Bedrock, 0.849"
+"        test_acc_Bedrockwith grass, 0.833"
+"        test_acc_Large blocks, 0.978"
+"        test_acc_Large blocks with grass, 0.886"
+"        test_acc_Scree, 0.867"
+"        test_acc_Scree with grass, 0.933"
+"        test_acc_Water, 0.99"
+"        test_acc_Forest, 0.963"
+"        test_acc_Glacier, 0.895"
+--------------------------------------------------
+Experiment results
+metrics for expert 0
+--------------------------------------------------
+out/august/MCE3_moptim/oracle_results.csv
+2023-08-28 14:34:57
+"test_miou, 0.406"
+"test_macc, 0.45"
+"test_oacc, 0.857"
+"frequent_cls_acc, 0.894"
+"common_cls_acc, 0.308"
+"rare_cls_acc, 0.0"
+"        test_acc_Background, 0.0"
+"        test_acc_Bedrock, 0.849"
+"        test_acc_Bedrockwith grass, 0.0"
+"        test_acc_Large blocks, 0.0"
+"        test_acc_Large blocks with grass, 0.0"
+"        test_acc_Scree, 0.867"
+"        test_acc_Scree with grass, 0.008"
+"        test_acc_Water, 0.916"
+"        test_acc_Forest, 0.963"
+"        test_acc_Glacier, 0.895"
+--------------------------------------------------
+Experiment results
+metrics for expert 1
+--------------------------------------------------
+out/august/MCE3_moptim/oracle_results.csv
+2023-08-28 14:34:57
+"test_miou, 0.028"
+"test_macc, 0.421"
+"test_oacc, 0.063"
+"frequent_cls_acc, 0.036"
+"common_cls_acc, 0.919"
+"rare_cls_acc, 0.655"
+"        test_acc_Background, 0.006"
+"        test_acc_Bedrock, 0.06"
+"        test_acc_Bedrockwith grass, 0.833"
+"        test_acc_Large blocks, 0.917"
+"        test_acc_Large blocks with grass, 0.392"
+"        test_acc_Scree, 0.021"
+"        test_acc_Scree with grass, 0.933"
+"        test_acc_Water, 0.99"
+"        test_acc_Forest, 0.05"
+"        test_acc_Glacier, 0.012"
+--------------------------------------------------
+Experiment results
+metrics for expert 2
+--------------------------------------------------
+out/august/MCE3_moptim/oracle_results.csv
+2023-08-28 14:34:57
+"test_miou, 0.008"
+"test_macc, 0.207"
+"test_oacc, 0.012"
+"frequent_cls_acc, 0.012"
+"common_cls_acc, 0.048"
+"rare_cls_acc, 0.932"
+"        test_acc_Background, 0.014"
+"        test_acc_Bedrock, 0.003"
+"        test_acc_Bedrockwith grass, 0.003"
+"        test_acc_Large blocks, 0.978"
+"        test_acc_Large blocks with grass, 0.886"
+"        test_acc_Scree, 0.006"
+"        test_acc_Scree with grass, 0.111"
+"        test_acc_Water, 0.031"
+"        test_acc_Forest, 0.036"
+"        test_acc_Glacier, 0.002"

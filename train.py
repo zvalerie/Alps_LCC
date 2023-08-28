@@ -66,6 +66,7 @@ def main(args):
     best_miou = 0.0 # best performance so far (mean IoU)
     start_epoch = 0
     miou=0.
+    best_loss = 1e5
     
     if not args.test_only: 
         for epoch in range( args.epoch):
@@ -92,6 +93,11 @@ def main(args):
                 best_miou = miou
                 print('Model saved, best miou')
                 torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'current_best.pt'))
+
+            if val_loss > best_loss and epoch>10 :
+                best_loss = val_loss
+                print('Model saved, best miou')
+                torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'best_loss.pt'))
 
         
         # End of training : save final model

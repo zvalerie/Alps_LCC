@@ -68,6 +68,7 @@ def get_predictions_from_logits(output,args):
     elif  args.aggregation == 'mean' :
         # Aggregation is simple average : the output logits of class c is the average among the ouputs 
         # from set of experts that trained with class c,  then softmax is applied. 
+        
         device = output['exp_1'].device
         sum_logits = ( output['exp_0'] + output['exp_1'] ) if args.experts ==2  \
             else  ( output['exp_0'] + output['exp_1'] + output['exp_2'] )

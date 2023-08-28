@@ -104,7 +104,7 @@ def main(args):
             
             # Record metrics
             gt = mask.squeeze().detach().cpu().numpy()
-            logits = get_oracle_logits_from_experts(output)
+            logits = get_oracle_logits_from_experts(output,mask)
             preds = torch.argmax(logits.detach().cpu(),axis=1)  
             metrics.update(gt, preds.numpy())         
             
@@ -169,42 +169,26 @@ def main(args):
         return
 
 
-def get_oracle_logits_from_experts(output):
+def get_oracle_logits_from_experts(output,gt):
     
     assert isinstance(output,dict)
     nb_experts  = len(output)
+    assert nb_experts ==3, 'not implemented for other than 3 experts'
     device = output['exp_0'].device
     
-    logits = torch.zeros_like(output['exp_0'])
-
-    head_index =  [1, 5, 8, 9]
-    exp_0 = output['exp_0']
-    mask = torch.zeros_like(output['exp_0'])
-    mask[:, head_index,:,:] = 1 
-    logits += mask * exp_0
+    # Compute one hot encoded expert layer, based on GT label
+    body_index = torch.tensor([2,  6, 7]).to(device)
+    body_mask =torch.isin(gt,body_index) .float()
+    tail_index = torch.tensor([3, 4]).to(device)
+    tail_mask = torch.isin(gt, tail_index).float()
+    oracle_expert = body_mask + tail_mask*2
+    oracle_expert_onehot = torch.nn.functional.one_hot(oracle_expert.long(),nb_experts).moveaxis(-1,0)
     
-    if nb_experts ==2 :
-        tail_index = [2, 3, 4, 6, 7]
-        mask = torch.zeros_like(output['exp_0'])
-        mask[:, tail_index,:,:] = 1 
-        exp_1 = output['exp_1']
-        logits += mask * exp_1   
-        
-    elif nb_experts ==3 :
-        tail_index = [3, 4]
-        mask = torch.zeros_like(output['exp_0'])
-        mask[:, tail_index,:,:] = 1 
-        exp_1 = output['exp_1']
-        logits += mask * exp_1 
-        
-        body_index = [ 2, 6, 7 ]
-        mask = torch.zeros_like(output['exp_0'])
-        mask[:,body_index,:,:] = 1 
-        exp_2 = output['exp_2']
-        logits += mask * exp_2       
-
+    exp_logits = torch.stack([output['exp_0'],output['exp_1'],output['exp_2']])
+    
+    logits =  exp_logits * oracle_expert_onehot
      
-    return logits 
+    return logits .sum(0)
 
 
 def get_score_per_expert(metrics):
@@ -241,7 +225,15 @@ def get_score_per_expert(metrics):
 
 
 
-
+if __name__ == '__xmain__':
+    size= 8,10,5,5
+    
+    logits = torch.rand(size=size)
+    gt = torch.randint(high =10,size=[8,5,5],  )
+    output = {'exp_0': logits, 'exp_1':logits, 'exp_2':logits}
+    get_oracle_logits_from_experts(output,gt)
+    
+    
 
 
 if __name__ == '__main__':
@@ -256,9 +248,8 @@ if __name__ == '__main__':
     args.model ='MCE'
     args.experts = 3
     args.out_dir='out/august/'
-    args.name = 'MCE3'
+    args.name = 'MCE3_moptim'
     args.test_only = True
-    args.debug = True
     main(args)
         
 

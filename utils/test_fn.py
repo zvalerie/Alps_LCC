@@ -103,8 +103,13 @@ def write_result_to_csv(data,args=None):
     import datetime
     time_string = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
-    if args is not None : 
+    if args is not None :        
         filename = os.path.join( args.out_dir, args.name,'metrics.csv')
+            
+        if args.zero_nontarget_expert :
+            filename = os.path.join( args.out_dir, args.name,'metrics_zero_nontarget_exp.csv')
+            
+            
     else :
         filename = os.path.join('metrics.csv')
         
