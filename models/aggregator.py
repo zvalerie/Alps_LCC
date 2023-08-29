@@ -18,13 +18,15 @@ class CNN_merge(nn.Module):
         return self.cnn(x) 
     
 class MLP_merge(nn.Module):
-    def __init__(self, input_dim, output_dim, hidden_layers = 256):
+    def __init__(self, input_dim, output_dim, hidden_layers = 512):
         
         super(MLP_merge, self).__init__()
         self.mlp = nn.Sequential(    
                     nn.Linear(input_dim, hidden_layers),
                     nn.ReLU(),
-                    nn.Linear(hidden_layers, output_dim),              
+                    nn.Linear(hidden_layers, hidden_layers//2), 
+                    nn.ReLU(),
+                    nn.Linear( hidden_layers//2,output_dim),        
                     )
 
     def forward(self, x):
@@ -37,7 +39,7 @@ class MLP_merge(nn.Module):
 
 class MLP_select(nn.Module):
 
-    def __init__(self, num_experts, num_classes, hidden_layers = 256, return_expert_map=False):
+    def __init__(self, num_experts, num_classes, hidden_layers = 512, return_expert_map=False):
         """
         Combine the prediction of several experts, by picking the best expert for each pixel.
         """
@@ -45,25 +47,27 @@ class MLP_select(nn.Module):
         self.num_experts = num_experts
         self.num_classes = num_classes
         self.return_expert_map = return_expert_map
-        self.mlp = nn.Sequential(
-            nn.Linear(in_features= num_experts*num_classes,out_features=hidden_layers),
-            nn.ReLU(),
-            nn.Linear(hidden_layers, num_experts)            
-        )
+        self.mlp = nn.Sequential(    
+                    nn.Linear(num_experts* num_classes, hidden_layers),
+                    nn.ReLU(),
+                    nn.Linear(hidden_layers, hidden_layers//2), 
+                    nn.ReLU(),
+                    nn.Linear( hidden_layers//2, num_experts),        
+                    )
 
 
     def forward(self, input):
         
         # Get prediction from each experts head : 
-        size = input[0].size()
-        head_logits = torch.stack(input,0)
-        head_logits = torch.movedim(head_logits,2,1 ).reshape(self.num_experts,self.num_classes, -1)
-
+        size = input[0].size()  # 64x10x50x50
+        head_logits = torch.cat(input,1)      
+        head_logits = torch.movedim(head_logits,1,-1 )# 64x50x50 x30 
+        head_logits = head_logits.flatten(end_dim=-2)#160000x30 
         
         # Select the expert with MLP : 
-        x = head_logits.reshape(self.num_classes*self.num_experts,-1).t()
-        exp_logits = self.mlp(x)
+        exp_logits = self.mlp(head_logits) # [160000, 3])
 
+        exp_logits = exp_logits.reshape(size[0],size[-2],size[-1],self.num_experts ).movedim(-1,1)
         
 
         return exp_logits
@@ -90,7 +94,6 @@ class CNN_select(nn.Module):
         
         
         # Get prediction from each experts head : 
-        size = input[0].size()
         x = torch.stack(input,dim=2)
         
         # Select the expert with the CNN :

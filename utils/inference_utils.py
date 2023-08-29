@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import torch.nn.functional as F
 from torch.nn.functional import softmax
 
 import os
@@ -61,14 +62,21 @@ def get_predictions_from_logits(output,args):
         logits =   output['aggregation'] 
        
     elif 'select' in  args.aggregation :
-        NotImplementedError 
+        
         logits =   output['aggregation']
+
+        # Get the selected expert from aggregation method :
         exp_selected = torch.argmax( softmax( logits ,dim = 1),dim=1)
-        exp_selected_one_hot = F.one_hot(exp_selected).movedim(-1,1)  # shape is nb_pixel, nb experts 
-        experts_logits = [ output['exp_0'],output['exp_1'], output['exp_2']] 
-        x = torch.stack([experts_logits],dim=2)
-        x = x.reshape(size[0],self.num_classes, -1)
-        output = ( exp_selected_one_hot *x )
+        exp_selected_one_hot = F.one_hot(exp_selected,num_classes = args.experts)
+        exp_selected_one_hot = exp_selected_one_hot.movedim(-1,1).unsqueeze(1)  # shape is nb_pixel, nb experts 
+        
+        # aggregatate and select the class logits :
+        experts_logits = [ output['exp_0'],output['exp_1'], output['exp_2']] if args.experts ==3 else \
+                         [ output['exp_0'],output['exp_1']]
+        
+        x = torch.stack(experts_logits,dim=2)
+        
+        logits = ( exp_selected_one_hot *x ).sum(1)
         
      
     elif 'out' in output.keys():
@@ -89,10 +97,10 @@ def get_predictions_from_logits(output,args):
             
                 
         
-    elif  args.aggregation == 'max_pool' :          
+    elif  args.aggregation == 'max_pool' :         
         group = torch.stack( output['exp_0'] , output['exp_1'] ) if args.experts ==2  \
             else  torch.stack( [output['exp_0'], output['exp_1'], output['exp_2']])
-        logits = group.max(group,0)
+        logits = group.max(dim=0)[0]
          
         
     preds = torch.argmax(logits.detach().cpu(),axis=1)    

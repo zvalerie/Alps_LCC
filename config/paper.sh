@@ -46,9 +46,9 @@
 
 
 # MCE + max_pool output
-python train.py --name MCE3 --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2  --weight_decay 0.2  --large_dataset True  --aggregation max_pool
+python train.py --name MCE3_max_pool --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2    --large_dataset True  --aggregation max_pool
 
-
+python train.py --name MCE3_small_bs --experts 3  --log_wandb True --bs 8
 # MCE + merge MLP
 #python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_merge --name CNN_merge_sm
 

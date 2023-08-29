@@ -11,7 +11,7 @@
     "model": "MCE",
     "num_workers": 16,
     "debug": false,
-    "large_dataset": false,
+    "large_dataset": true,
     "force_cpu": false,
     "seed": 2436,
     "name": "CNN_merge_lr_1e-4",

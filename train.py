@@ -35,7 +35,7 @@ def main(args):
     
     # Choose model and device :
     model = get_model(args)
-    device =  "cuda" if torch.cuda.is_available() or not args.force_cpu else 'cpu'
+    device =  "cuda" if torch.cuda.is_available() and not args.force_cpu else 'cpu'
     args.device = device
     model = model.to(device)
     

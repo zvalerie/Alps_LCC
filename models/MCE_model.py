@@ -54,7 +54,7 @@ class MCE(nn.Module):
             self.classifier = MLP_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
         
         elif aggregation == 'CNN_select':            
-            self.classifier = MLP_select(num_experts, num_classes,)    
+            self.classifier = CNN_select(num_experts, num_classes,)    
         
         elif aggregation == 'MLP_select':
             self.classifier = MLP_select(num_experts, num_classes,) 
