@@ -102,6 +102,10 @@ def parse_args():
                         help='Zero the prediction of expert on non target classes',
                         default=False,
                         type=bool)
+    parser.add_argument('--not_adaptive_lr',
+                        help='use the same lr for all experts, default : False (use adaptative lr)',
+                        default=False,
+                        type=bool)
     parser.add_argument('--pretrained_weights',
                         help='pretrained weights',
                         default='Nope',

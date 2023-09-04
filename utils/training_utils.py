@@ -84,10 +84,16 @@ def get_optimizer (model,args):
                                 weight_decay=args.weight_decay,
                                )          
     
-    if False:
-        for param_group in optimizer.param_groups:
-            print(f"Learning rate for param group ", param_group['lr'])
-                          
+    if args.not_adaptive_lr :
+        optimizer = optim.Adam(model.parameters(), 
+                               lr=args.lr, 
+                               weight_decay=args.weight_decay
+                               )
+        print('--- use uniform lr for all layers (not adaptive lr)---')
+        if False :
+            for param_group in optimizer.param_groups:
+                print(f"Learning rate for param group ", param_group['lr'])
+                            
     
     return optimizer
 

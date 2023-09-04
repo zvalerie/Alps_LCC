@@ -35,7 +35,10 @@
 
 
 ## MCE no WDT 
-#python train.py --name mce_no_wd --experts 3  --log_wandb True  --lws True --L2penalty True  --weight_decay 0.  --large_dataset True 
+python train.py --name mce_no_wd --experts 3  --log_wandb True  --lws True --L2penalty True  --weight_decay 0.  --large_dataset True 
+
+### Non adaptive LR
+python train.py --name mce_not_adaptive_kr --experts 3  --log_wandb True  --lws True --L2penalty True   --not_adaptive_lr True  --large_dataset True 
 
 ## MCE + smaller batch size 
 #python train.py --name mce_small_bs --experts 3  --log_wandb True --bs 8
@@ -46,9 +49,8 @@
 
 
 # MCE + max_pool output
-python train.py --name MCE3_max_pool --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2    --large_dataset True  --aggregation max_pool
+#python train.py --name MCE3_max_pool --experts 3  --log_wandb True  --lws True --L2penalty True --weight_decay 0.2    --large_dataset True  --aggregation max_pool
 
-python train.py --name MCE3_small_bs --experts 3  --log_wandb True --bs 8
 # MCE + merge MLP
 #python train.py  --log_wandb True --experts 3  --lws True --L2penalty True --weight_decay 0.2 --aggregation CNN_merge --name CNN_merge_sm
 
