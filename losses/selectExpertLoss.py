@@ -10,7 +10,8 @@ class selectExpertLoss(nn.Module):
         self.body_index = torch.tensor([2,  6, 7]).to(device)
         self.tail_index = torch.tensor([3, 4]).to(device)
         experts_weigths = torch.Tensor([1.04,34.,350.]).to(device)
-        self.ce = nn.CrossEntropyLoss(weight=experts_weigths)
+       # self.ce = nn.CrossEntropyLoss(weight=experts_weigths)
+        self.ce = nn.CrossEntropyLoss()
     
     def forward(self, output, targets):
         
