@@ -39,7 +39,7 @@ class MLP_merge(nn.Module):
 
 class MLP_select(nn.Module):
 
-    def __init__(self, num_experts, num_classes, hidden_layers = 512, return_expert_map=False):
+    def __init__(self, num_experts, num_classes, hidden_layers = 16, return_expert_map=False):
         """
         Combine the prediction of several experts, by picking the best expert for each pixel.
         """
@@ -61,13 +61,12 @@ class MLP_select(nn.Module):
         # Get prediction from each experts head : 
         size = input[0].size()  # 64x10x50x50
         head_logits = torch.cat(input,1)      
-        head_logits = torch.movedim(head_logits,1,-1 )# 64x50x50 x30 
-        head_logits = head_logits.flatten(end_dim=-2)#160000x30 
+        head_logits = torch.movedim(head_logits,1,-1 )# BxHxW x nb_expert*nb_classes
+
         
         # Select the expert with MLP : 
-        exp_logits = self.mlp(head_logits) # [160000, 3])
-
-        exp_logits = exp_logits.reshape(size[0],size[-2],size[-1],self.num_experts ).movedim(-1,1)
+        exp_logits = self.mlp(head_logits) # [BxHxW, nb_expert])
+        exp_logits = exp_logits.movedim(-1,1)
         
 
         return exp_logits
@@ -75,7 +74,7 @@ class MLP_select(nn.Module):
   
     
 class CNN_select(nn.Module):
-    def __init__(self, num_experts, num_classes, hidden_layers = 256, return_expert_map=False):
+    def __init__(self, num_experts, num_classes, hidden_layers = 16, return_expert_map=False):
         """
         Combine the prediction of several experts, by picking the best expert for each pixel.
         """
@@ -93,9 +92,6 @@ class CNN_select(nn.Module):
     def forward(self, input):
         
         
-        # Get prediction from each experts head : 
-        x = torch.stack(input,dim=2)
-        
         # Select the expert with the CNN :
         input = torch.cat( input, dim=1 ) 
         exp_logits = self.cnn(input)
@@ -109,6 +105,6 @@ if __name__ == '__main__':
     
     x, y,z =  torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) 
    
-    mlp = MLP_select(num_experts=3, num_classes=10,return_expert_map=True)
-    out,map = mlp ([ x,y,z ])
+    mlp = CNN_select(num_experts=3, num_classes=10,return_expert_map=True)
+    out = mlp ([ x,y,z ])
     print(out.shape,map.shape )

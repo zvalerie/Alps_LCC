@@ -9,7 +9,8 @@ class selectExpertLoss(nn.Module):
         assert args.experts ==3, 'not implemented for other than 3 experts'
         self.body_index = torch.tensor([2,  6, 7]).to(device)
         self.tail_index = torch.tensor([3, 4]).to(device)
-        self.ce = nn.CrossEntropyLoss()
+        experts_weigths = torch.Tensor([1.04,34.,350.]).to(device)
+        self.ce = nn.CrossEntropyLoss(weight=experts_weigths)
     
     def forward(self, output, targets):
         

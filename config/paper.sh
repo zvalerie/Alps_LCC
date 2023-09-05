@@ -34,16 +34,18 @@
 ## MCE + Lcon 
 
 
-## MCE no WDT 
-python train.py --name mce_no_wd --experts 3  --log_wandb True  --lws True --L2penalty True  --weight_decay 0.  --large_dataset True 
+## MCE no WDT #
+#python train.py --name mce_no_wd --experts 3  --log_wandb True  --lws True --L2penalty True  --weight_decay 0.  --large_dataset True 
 
 ### Non adaptive LR
-python train.py --name mce_not_adaptive_kr --experts 3  --log_wandb True  --lws True --L2penalty True   --not_adaptive_lr True  --large_dataset True 
+#python train.py --name mce_not_adaptive_kr --experts 3  --log_wandb True  --lws True --L2penalty True   --not_adaptive_lr True  --large_dataset True 
 
 ## MCE + smaller batch size 
 #python train.py --name mce_small_bs --experts 3  --log_wandb True --bs 8
 
 
+#### BASE wo adaptive lr : 
+python train.py --name MCE_base_no_adap_lr --experts 3  --log_wandb True --large_dataset True   --not_adaptive_lr True 
 
 ############################# Aggregations methods
 
