@@ -48,10 +48,10 @@ class MCE(nn.Module):
         
         # Build classifier :
         if   aggregation == 'MLP_merge':
-            self.classifier = CNN_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
+            self.classifier = MLP_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
             
         elif aggregation == 'CNN_merge':
-            self.classifier = MLP_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
+            self.classifier = CNN_merge(input_dim= num_experts * num_classes, output_dim= num_classes)    
         
         elif aggregation == 'CNN_select':            
             self.classifier = CNN_select(num_experts, num_classes,)    

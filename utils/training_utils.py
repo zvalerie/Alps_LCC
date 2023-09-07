@@ -53,9 +53,7 @@ def get_optimizer (model,args):
                                weight_decay=args.weight_decay
                                )
         
-    elif args.experts ==2 :
-       
-       
+    elif args.experts ==2 :      
         optimizer = optim.Adam([
                                 {'params': model.backbone.parameters()},
                                 {'params': model.classifier.project.parameters()},
@@ -69,7 +67,6 @@ def get_optimizer (model,args):
                                 )
         
     elif args.experts ==3 :
-
         optimizer = optim.Adam(
                                 [
                                 {'params': model.backbone.parameters()},
@@ -82,7 +79,13 @@ def get_optimizer (model,args):
                                 ], 
                                 lr=args.lr, 
                                 weight_decay=args.weight_decay,
-                               )          
+                               )    
+    
+    if args.finetune_classifier_only  :
+        optimizer = optim.SGD( model.classifier.classifier.parameters(),                                
+                                lr=args.lr, 
+                                weight_decay=args.weight_decay,
+                               )  
     
     if args.not_adaptive_lr :
         optimizer = optim.Adam(model.parameters(), 
@@ -90,9 +93,9 @@ def get_optimizer (model,args):
                                weight_decay=args.weight_decay
                                )
         print('--- use uniform lr for all layers (not adaptive lr)---')
-        if False :
-            for param_group in optimizer.param_groups:
-                print(f"Learning rate for param group ", param_group['lr'])
+    if False :
+        for param_group in optimizer.param_groups:
+            print(f"Learning rate for param group ", param_group['lr'])
                             
     
     return optimizer
@@ -168,9 +171,9 @@ def get_model(args):
         for name, param in model.named_parameters():
             if not ('classifier.classifier' in name ):
                 param.requires_grad = False   
-            else : 
-                pass
-                #print('not frozen ', name , param.requires_grad)      
+            else :  
+                pass              
+                #print('not frozen: ', name , param.requires_grad)      
         print('Model weights are frozen except for CNN or MLP layers')
     
        
@@ -318,7 +321,7 @@ def setup_wandb_log(args):
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_ALPS_Au18", 
+        wandb.init(project = "ACE_aggregation_Sep06", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           

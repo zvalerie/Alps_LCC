@@ -1,0 +1,19 @@
+Experiment results
+out/august/CNN_select_ll_lr1e_5/metrics.csv
+2023-09-06 00:52:39
+"test_miou, 0.034"
+"test_macc, 0.112"
+"test_oacc, 0.275"
+"frequent_cls_acc, 0.238"
+"common_cls_acc, 0.017"
+"rare_cls_acc, 0.0"
+"test_acc_Background, 0.116"
+"test_acc_Bedrock, 0.952"
+"test_acc_Bedrockwith grass, 0.051"
+"test_acc_Large blocks, 0.0"
+"test_acc_Large blocks with grass, 0.0"
+"test_acc_Scree, 0.0"
+"test_acc_Scree with grass, 0.0"
+"test_acc_Water, 0.0"
+"test_acc_Forest, 0.0"
+"test_acc_Glacier, 0.0"

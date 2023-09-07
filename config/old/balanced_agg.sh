@@ -7,6 +7,10 @@
 
 #python train.py --experts 3 --aggregation MLP_merge   --epoch 50 --reweighted_aggregation CBL   --lr 0.000001  --name MLP_merge_CBL_lr_1e-6   --log_wandb True      --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
 
+python train.py --experts 3 --aggregation MLP_merge   --epoch 50 --reweighted_aggregation CBL   --lr 0.000001  --name MLP_merge_CBL_lr_1e-6_0609   --log_wandb True      --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
+
+python train.py --experts 3 --aggregation MLP_merge   --epoch 50 --reweighted_aggregation CBL   --lr 0.000005  --name MLP_merge_CBL_lr_5e-6_0609   --log_wandb True      --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
+
 
 #### inverse_frequency 
 
@@ -15,18 +19,5 @@
 #python train.py --experts 3 --aggregation MLP_merge   --epoch 50 --reweighted_aggregation inverse_frequency   --lr 0.00005   --name MLP_merge_invf_lr_5e-5   --log_wandb True     --weight_decay 0.2     --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
 
 #python train.py --experts 3 --aggregation MLP_merge   --epoch 50 --reweighted_aggregation inverse_frequency   --lr 0.000001  --name MLP_merge_invf_lr_1e-6   --log_wandb True     --weight_decay 0.2     --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
-
-
-######### Balanced CNN merge CBL 
-
-python train.py --experts 3 --aggregation MLP_select   --epoch 50   --lr 0.00001  --name MLP_select_ll_lr1e_5   --log_wandb True   --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
-
-python train.py --experts 3 --aggregation CNN_select   --epoch 50   --lr 0.00001  --name CNN_select_ll_lr1e_5   --log_wandb True   --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
-
-python train.py --experts 3 --aggregation MLP_select   --epoch 50   --lr 0.000001  --name MLP_select_ll_lr1e_6   --log_wandb True   --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
-
-python train.py --experts 3 --aggregation CNN_select   --epoch 50   --lr 0.000001  --name CNN_select_ll_lr1e_6   --log_wandb True   --weight_decay 0.2    --lws True   --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
-
-
 
 

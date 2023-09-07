@@ -38,9 +38,7 @@ class MLP_merge(nn.Module):
         self.mlp = nn.Sequential(    
                     nn.Linear(input_dim, hidden_layers),
                     nn.ReLU(),
-                    nn.Linear(hidden_layers, hidden_layers//2), 
-                    nn.ReLU(),
-                    nn.Linear( hidden_layers//2,output_dim),        
+                    nn.Linear( hidden_layers,output_dim),        
                     )
         _init_weight(self.mlp)
 
@@ -75,16 +73,16 @@ class MLP_select(nn.Module):
         
         # Get prediction from each experts head :  
         input = [ F.normalize(x, p = 2, dim =1,) for x in input]
-        head_logits = torch.cat(input,1)   
-        head_logits = torch.movedim(head_logits,1,-1 )# BxHxW x nb_expert*nb_classes
+        experts_output = torch.cat(input,1)   
+        experts_output = torch.movedim(experts_output,1,-1 )# BxHxW x nb_expert*nb_classes
 
         
         # Select the expert with MLP : 
-        exp_logits = self.mlp(head_logits) # [BxHxW, nb_expert])
-        exp_logits = exp_logits.movedim(-1,1)
+        select_logits = self.mlp(experts_output) # [BxHxW, nb_expert])
+        select_logits = select_logits.movedim(-1,1)
         
 
-        return exp_logits
+        return select_logits
 
   
     
@@ -111,9 +109,52 @@ class CNN_select(nn.Module):
         # Select the expert with the CNN :
         input = [ F.normalize(x, p = 2, dim =1,) for x in input]
         input = torch.cat( input, dim=1 ) 
-        exp_logits = self.cnn(input)
+        select_logits = self.cnn(input)
                 
-        return exp_logits
+        return select_logits
+    
+    
+    
+class MLP_moe(nn.Module):
+    
+    def __init__(self, num_experts, num_classes, hidden_layers = 16, return_expert_map=False):
+        """
+        Combine the prediction of several experts, by giving a weight to each expert logits. (Mixture of expert)
+        """
+        super(MLP_moe, self).__init__()
+        self.num_experts = num_experts
+        self.num_classes = num_classes
+        self.return_expert_map = return_expert_map
+        self.mlp = nn.Sequential(    
+                    nn.Linear(num_experts* num_classes, hidden_layers),
+                    nn.ReLU(),
+                    nn.Linear(hidden_layers, hidden_layers//2), 
+                    nn.ReLU(),
+                    nn.Linear( hidden_layers//2, num_experts),        
+                    )
+        _init_weight(self.mlp)
+
+    def forward(self, input):
+        
+        # Normalize and reshape the logits 
+        input = [ F.normalize(x, p = 2, dim =1,) for x in input]
+        experts_output = torch.cat(input,1)   
+        experts_output = torch.movedim(experts_output,1,-1 )# BxHxW x nb_expert*nb_classes
+
+        
+        # Predict each expert weight for each pixel  with MLP : 
+        mixture_logits = self.mlp(experts_output) # [BxHxW, nb_expert])
+        mixture_logits = mixture_logits.movedim(-1,1) # [B x nb_expert x H x W])
+        
+        # Multiply  the logits for each pixel by their expert weight and sum them :
+        logits = torch.stack(input,1)  # B xnb_ expert x nb_classes x H x W x nb_exp 
+        logits = logits * mixture_logits.unsqueeze(2)
+        logits = logits.sum(1)
+        
+        if self.return_expert_map :
+            return logits, mixture_logits
+
+        return logits
 
 
     
@@ -122,7 +163,7 @@ if __name__ == '__main__':
     
     x, y,z =  torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) ,torch.rand([64,10,200,200]) 
    
-    mlp = MLP_select(num_experts=3, num_classes=10,return_expert_map=True)
+    mlp = MLP_moe(num_experts=3, num_classes=10,return_expert_map=True)
     #mlp = CNN_merge(input_dim=30,output_dim=10)
-    out = mlp ([ x,y,z ])
+    out, map = mlp ([ x,y,z ])
     print(out.shape )

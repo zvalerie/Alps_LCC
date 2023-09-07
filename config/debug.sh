@@ -1,1 +1,0 @@
-python train.py --experts 3  --debug True --bs 64 --aggregation MLP_select   --epoch 1   --lr 0.00001 --lws True  --finetune_classifier_only True  --pretrained_weights /home/valerie/Projects/Alps_LCC/out/august/MCE3_moptim/current_best.pt 
