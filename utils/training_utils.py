@@ -122,6 +122,9 @@ def get_criterion (args):
         assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
         criterion = AggregatorLoss(args)
         
+    elif 'moe' in args.aggregation :
+        criterion = AggregatorLoss(args)
+        
     elif 'select' in args.aggregation :
         criterion = selectExpertLoss(args)
         
@@ -289,7 +292,7 @@ def get_dataloader(args=None, phase ='train'):
         return test_loader
     
     elif phase == 'plot':
-        plot_csv = '/home/valerie/Projects/Alps_LCC/data/split/interesting_dataset.csv'
+        plot_csv = '/home/valerie/Projects/Alps_LCC/data/split/interesting_dataset_v2.csv'
         test_dataset = SwissImage(
             dataset_csv = plot_csv,
             img_dir = img_dir,

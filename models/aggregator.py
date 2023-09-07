@@ -38,7 +38,9 @@ class MLP_merge(nn.Module):
         self.mlp = nn.Sequential(    
                     nn.Linear(input_dim, hidden_layers),
                     nn.ReLU(),
-                    nn.Linear( hidden_layers,output_dim),        
+                    nn.Linear(hidden_layers, hidden_layers//2), 
+                    nn.ReLU(),
+                    nn.Linear( hidden_layers//2,output_dim),        
                     )
         _init_weight(self.mlp)
 

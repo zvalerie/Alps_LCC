@@ -1,0 +1,5 @@
+python train.py --experts 3 --reweighted_aggregation CBL --aggregation MLP_moe --epoch 50 --lr 0.001     --name  MLP_moe_lr_1e-3_CBL     --finetune_classifier_only True --pretrained_weights  '/home/valerie/project/Alps_LCC/out/MCE3_moptim/final.pt'  --log_wandb True
+python train.py --experts 3 --reweighted_aggregation CBL --aggregation MLP_moe --epoch 50 --lr 0.01      --name  MLP_moe_lr_1e-2_CBL     --finetune_classifier_only True --pretrained_weights  '/home/valerie/project/Alps_LCC/out/MCE3_moptim/final.pt'  --log_wandb True
+
+python train.py --experts 3 --reweighted_aggregation CBL --aggregation MLP_moe --epoch 50 --lr 0.001     --name  MLP_moe_lr_1e-3_CBL_large     --finetune_classifier_only True --pretrained_weights  '/home/valerie/project/Alps_LCC/out/MCE3_moptim/final.pt'  --log_wandb True --large_dataset True
+python train.py --experts 3 --reweighted_aggregation CBL --aggregation MLP_moe --epoch 50 --lr 0.01      --name  MLP_moe_lr_1e-2_CBL_large     --finetune_classifier_only True --pretrained_weights  '/home/valerie/project/Alps_LCC/out/MCE3_moptim/final.pt'  --log_wandb True  --large_dataset True

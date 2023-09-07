@@ -7,19 +7,20 @@ class AggregatorLoss(nn.Module):
     def __init__(self, args, ignore_index=0):
         super(AggregatorLoss, self).__init__()
         self.aggregation = args.aggregation
-        if args.reweighted_aggregation == 'CBL':
-            # Weights from class balanced loss :
-            weights = torch.Tensor ([0.0,   1e-3,      5e-3,    1e-2,             
+        
+        if args.reweighted_aggregation == 'CBL':# Weights from class balanced loss :  
+            print('\t Uses CBL weights in the aggregator loss')
+            weights = torch.Tensor ([0.0,   1e-3,      5e-3,    1e-2,            
                                      1e-1,  1e-3,     2e-3,     3e-3,       
                                      1e-3,  1e-3  ]).to(args.device)
-            print('\t Uses CBL weights in the aggregator loss')
+            
             
         elif args.reweighted_aggregation == 'inverse_frequency':
-            # Weights from inverse frequency loss :
-            weights= torch.tensor(
+            print('\t Uses inverse_frequency weights in the aggregator loss')
+            weights= torch.tensor( # Weights from inverse frequency loss :
                     [ 0.0,	3.5,	153.8,	7.9,	3.9,	
                      388.6,	3586.6,	3.4,	70.1,	118.4]   ).to(args.device)
-            print('\t Uses inverse_frequency weights in the aggregator loss')
+            
         else :
             weights = torch.ones(size = [10]).to(args.device)
             
@@ -43,12 +44,10 @@ class AggregatorLoss(nn.Module):
             
             loss = self.selectExpertLoss(output['aggregation'],targets)
             
-        else : 
-            assert 'merge' in self.aggregation, 'aggregation implemented only for merge or select'            
+        else :         
             
             loss = self.ce(output['aggregation'],targets)
             
-    
         
         if  not self.finetune_classifier_only :
             

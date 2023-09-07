@@ -20,7 +20,7 @@
     "L2penalty": false,
     "lws": false,
     "separate_backprop": false,
-    "aggregation": "MLP_select",
+    "aggregation": "MLP_moe",
     "finetune_classifier_only": true,
     "reweighted_aggregation": "None",
     "zero_nontarget_expert": false,

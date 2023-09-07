@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import sys
-sys.path.append("/home/valerie/Projects/Alps_LCC/") 
+sys.path.append("/home/valerie/project/Alps_LCC/") 
 print(sys.path)
 
 import csv
@@ -22,9 +22,7 @@ import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 from pprint import pprint
 
-TILE_IDS = ['26403_11058', '26370_11109', '26318_11151', '26366_11119', '26308_11133', '25882_11332', '25847_11298', '25659_11101',
-            '25869_11328', '26610_11328', '25881_11333', '26308_11149', '25857_11277', '25819_11343', '25954_10892', '26048_11139',
-            '26041_11004', '25757_10998', '25811_10849', '25861_10980', '26080_11014', '26301_10891', '25939_10979'  ] 
+
     
 
 def plot_predictions(image, dem , mask,preds ):
@@ -86,7 +84,8 @@ def plot_predictions(image, dem , mask,preds ):
             frameon = False,
             borderaxespad=0. )            
             
-        plt.savefig(dest_path +str(TILE_IDS[k])+'.png',dpi = 300)
+        out_name = dest_path +str(TILE_IDS[k])+'.png'
+        plt.savefig(out_name,dpi = 300)
         print('fig saved')
         plt.close()
 
@@ -163,21 +162,112 @@ def plot_predictions_N_expertmap(image,dem,mask,preds,map):
         plt.close()
     
     
+def get_each_expert_pred (output) :
+    keys = [x for x in  list( output.keys())  if 'exp' in x]
+    print(keys)
+    
+    expert_preds = {}
+    for key in keys :
+        pred = torch.argmax(output[key], dim = 1)
+        expert_preds[key]=  pred
+        
+    return expert_preds
 
+def plot_predictions_for_each_expert(image,mask,preds, expert_preds,):
+    
+    classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                "Scree with grass" : 6,"Water" : 7,
+                "Forest" : 8, "Glacier" : 9, }
+    
+    colors = ['black', 'tab:grey', 'lightgrey', 'maroon', 'red', 'orange', 'yellow', 'royalblue', 'forestgreen','lightcyan',]
+    cmap=ListedColormap(colors)
+    
+    # Process inputs : 
+    img =image.movedim(1,-1).cpu().numpy()
+    img = unnormalize_images(img)
+    mask = mask.squeeze().long().cpu().numpy()
+    preds = preds.squeeze().cpu().numpy()
+    expert_preds = [ expert_preds[key].squeeze().cpu().numpy() for key in expert_preds.keys() ]
+    
+        
+    dest_path = args.out_dir +'/' + args.name +'/preds_each_expert/' 
+    if not os.path.exists(dest_path):
+        os. mkdir (dest_path)
+
+    # Loop over the samples and plot them
+    
+    for k in  range( image.size(0)):
+        
+        num_fig = 6
+        plt.figure(figsize =[18,5])
+        
+        # RGB
+        plt.subplot(1,num_fig,1)
+        plt.imshow(img[k])
+        plt.title("RGB Image")
+        plt.axis('off')
+
+        # Label
+        plt.subplot(1,num_fig,2)
+        plt.imshow(mask[k], cmap=cmap,vmin=0,vmax=9, interpolation_stage = 'rgba')
+        plt.title("Label")
+        plt.axis('off')
+        
+        # Pred
+        plt.subplot(1,num_fig,3)
+        plt.imshow(preds[k], cmap=cmap,vmin=0,vmax=9, interpolation_stage = 'rgba')
+        plt.title("Predictions")
+        plt.axis('off')
+        
+        
+        for j in range(len(expert_preds)):
+            plt.subplot(1,num_fig, j+4 )
+            plt.imshow(expert_preds[j][k,:,:], cmap=cmap,vmin=0,vmax=9.5,interpolation_stage = 'rgba')
+            plt.title("Predictions of expert " + str(j+1))
+            plt.axis('off')
+
+        # Colorbar parameters :        
+        colors = cmap.colors
+        values = list(  classes .values())
+        txt_labels = list(  classes.keys())
+        patches = [ mpatches.Patch(color=colors[i], label= txt_labels[i] ) for i in values ]
+        plt.legend(handles=patches, 
+            fontsize='small',
+            bbox_to_anchor=(1.05, 1), 
+            loc=2, 
+            frameon = False,
+            borderaxespad=0. )  
+        
+        plt.subplots_adjust(wspace=0.02)
+        
+        
+        out_name = dest_path +str(TILE_IDS[k])+'.png'
+        plt.savefig(out_name,dpi = 300)
+        print('fig saved', out_name)
+        plt.close()
+
+    
+    
+    
+    
 
 def predict_and_plot(args,model):
     """ plot some  predictions from the model
     """ 
- 
+
     device = args.device
     model.to(device)
     print('Start plotting some examples....')
+    phase = 'test' # plot 
     test_loader = get_dataloader(args=args,phase='plot')
+    global TILE_IDS
+    TILE_IDS = test_loader.dataset.img_dem_label['rbg'].to_list()
+    TILE_IDS = [x.split('_rgb')[0] for x in TILE_IDS] 
+        
+        
     if __name__ != '__main__':
         load_best_model_weights(model,args)
-    
-    nb_img = len(test_loader.dataset)
- 
     
     with torch.no_grad():
         # switch to evaluate mode
@@ -194,12 +284,17 @@ def predict_and_plot(args,model):
                 map = output['aggregation'][1]
                 plot_predictions_N_expertmap(image,dem,mask,preds,map )
             
+            
             else :
-                plot_predictions(image,dem,mask,preds,)
-            print('plot  one batch and break')
-            break
+                if True : 
+                    expert_preds = get_each_expert_pred (output)
+                    plot_predictions_for_each_expert(image,mask,preds, expert_preds,)
+                else:
+                    plot_predictions(image,dem,mask,preds,)
+            #print('plot  one batch and break')
+            #break
 
-                
+
 def unnormalize_images(images, ):
     # Assuming images is a NumPy array with shape (batch_size, height, width, channels)
     # mean and std should be lists or arrays with length equal to the number of channels
@@ -211,15 +306,11 @@ def unnormalize_images(images, ):
         unnormalized_images[:, :, :, i] = (unnormalized_images[:, :, :, i] * std[i]) + mean[i]
     
     return unnormalized_images     
-            
-    
-    
-    
-    
-         
+
+
 if __name__ == '__main__':
     
-    exp_path = '/home/valerie/Projects/Alps_LCC/out/august/WCEL/'
+    exp_path = '/home/valerie/project/Alps_LCC/out/MCE3_moptim/'
     config_fp = exp_path + 'config.json'
     checkpoint_path = exp_path + 'last_model.pt'
     
@@ -228,8 +319,8 @@ if __name__ == '__main__':
     with open(config_fp, 'r') as json_file:
         cfg = json.load(json_file)
         args = Namespace(**cfg)
-        args.bs = 32
-        args.device = 'cpu'
+        args.bs = 256
+        args.device = 'cuda:0'
 
     checkpoint = torch.load(checkpoint_path)
     model = get_model(args)

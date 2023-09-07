@@ -60,6 +60,10 @@ def get_predictions_from_logits(output,args):
        
     elif 'merge' in args.aggregation:
         logits =   output['aggregation'] 
+        
+    elif 'moe' in args.aggregation:
+        logits =   output['aggregation'] 
+       
        
     elif 'select' in  args.aggregation :
         

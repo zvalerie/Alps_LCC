@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from torchvision.models.segmentation.deeplabv3 import ASPP
 from torch.linalg import vector_norm
 from torch.nn.functional import relu
-from aggregator import CNN_merge, MLP_merge, MLP_select, CNN_select
+from aggregator import CNN_merge, MLP_merge, MLP_select, CNN_select, MLP_moe
 
    
 class Expert(nn.Module):
@@ -58,6 +58,10 @@ class MCE(nn.Module):
         
         elif aggregation == 'MLP_select':
             self.classifier = MLP_select(num_experts, num_classes,) 
+        
+        elif aggregation == 'MLP_moe':
+            #raise NotImplementedError
+            self.classifier = MLP_moe(num_experts=num_experts, num_classes=num_classes)
                
         else:
             self.classifier = nn.Sequential( nn.ReLU(inplace=True))    # Useless layer too avoid empty and bug

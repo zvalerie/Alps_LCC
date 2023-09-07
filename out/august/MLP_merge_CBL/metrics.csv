@@ -1,0 +1,19 @@
+Experiment results
+out/august/MLP_merge_CBL/metrics.csv
+2023-09-07 13:18:35
+"test_miou, 0.41"
+"test_macc, 0.452"
+"test_oacc, 0.855"
+"frequent_cls_acc, 0.89"
+"common_cls_acc, 0.294"
+"rare_cls_acc, 0.039"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.858"
+"test_acc_Bedrockwith grass, 0.0"
+"test_acc_Large blocks, 0.078"
+"test_acc_Large blocks with grass, 0.0"
+"test_acc_Scree, 0.853"
+"test_acc_Scree with grass, 0.0"
+"test_acc_Water, 0.881"
+"test_acc_Forest, 0.946"
+"test_acc_Glacier, 0.905"

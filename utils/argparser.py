@@ -87,7 +87,7 @@ def parse_args():
                         default=False,
                         type=bool)
     parser.add_argument('--aggregation',
-                        help='method used for aggregation choose from :mean,CNN_merge,MLP_merge,CNN_select,MLP_select,max_pool,',
+                        help='method used for aggregation choose from :mean,CNN_merge,MLP_merge,CNN_select,MLP_select,max_pool,MLP_moe',
                         default='mean',
                         type=str)
     parser.add_argument('--finetune_classifier_only',
