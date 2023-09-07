@@ -26,7 +26,7 @@ def model_builder(num_classes, num_experts,
     # give an informative name :
     name = "MCE"
     name += ' use_lws' if use_lws else ''
-    name +=  ' with '+ aggregation  + ' aggregation '
+    name +=  ' with '+ model.classifier.classifier.__class__.__name__  + ' aggregation '
 
     model.__class__.__name__ = name
     return model

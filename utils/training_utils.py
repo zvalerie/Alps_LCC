@@ -321,7 +321,7 @@ def setup_wandb_log(args):
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_aggregation_Sep06", 
+        wandb.init(project = "ACE_aggregation", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           
