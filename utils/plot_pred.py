@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import sys
-sys.path.append("/home/valerie/project/Alps_LCC/") 
+sys.path.append("/home/valerie/Projects/Alps_LCC/") 
 print(sys.path)
 
 import csv
@@ -310,9 +310,9 @@ def unnormalize_images(images, ):
 
 if __name__ == '__main__':
     
-    exp_path = '/home/valerie/project/Alps_LCC/out/MCE3_moptim/'
+    exp_path = '/home/valerie/Projects/Alps_LCC/out/best/mce_lcom_ws13/'
     config_fp = exp_path + 'config.json'
-    checkpoint_path = exp_path + 'last_model.pt'
+    checkpoint_path = exp_path + 'current_best.pt'
     
     
     # Open the JSON file and load its contents as a dictionary

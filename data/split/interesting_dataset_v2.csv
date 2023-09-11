@@ -1,4 +1,4 @@
-rbg,dem,mask,mainclassdata/split/interesting_dataset.csv
+rbg,dem,mask,mainclass
 26416_11445_rgb.tif,26416_11445_dem.tif,26416_11445_label.tif,1.0
 26168_11398_rgb.tif,26168_11398_dem.tif,26168_11398_label.tif,1.0
 26470_11082_rgb.tif,26470_11082_dem.tif,26470_11082_label.tif,1.0

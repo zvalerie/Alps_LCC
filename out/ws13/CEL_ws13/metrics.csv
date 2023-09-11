@@ -1,0 +1,19 @@
+Experiment results
+out/august/CEL_ws13/metrics.csv
+2023-08-26 23:24:32
+"test_miou, 0.532"
+"test_macc, 0.596"
+"test_oacc, 0.892"
+"frequent_cls_acc, 0.917"
+"common_cls_acc, 0.608"
+"rare_cls_acc, 0.236"
+"test_acc_Background, 0.0"
+"test_acc_Bedrock, 0.884"
+"test_acc_Bedrockwith grass, 0.445"
+"test_acc_Large blocks, 0.472"
+"test_acc_Large blocks with grass, 0.0"
+"test_acc_Scree, 0.872"
+"test_acc_Scree with grass, 0.451"
+"test_acc_Water, 0.929"
+"test_acc_Forest, 0.968"
+"test_acc_Glacier, 0.943"
