@@ -65,7 +65,7 @@ def main(args):
     # Start model training :     
     best_miou = 0.0 # best performance so far (mean IoU)
     start_epoch = 0
-    miou=0.
+    macc=0.
     best_loss = 1e5
     
     if not args.test_only: 
@@ -76,7 +76,7 @@ def main(args):
             
             
             # evaluate on validation set
-            val_loss, miou = validate_ACE(val_loader, model, criterion, epoch, args)
+            val_loss, macc = validate_ACE(val_loader, model, criterion, epoch, args)
             
             scheduler.step(metrics=val_loss)
             
@@ -84,19 +84,19 @@ def main(args):
             model_checkpoint = {
                             'epoch': epoch ,
                             'state_dict': deepcopy(model.state_dict()),
-                            'perf': miou,
+                            'perf': macc,
                             'last_epoch': epoch,
                             'optimizer': optimizer.state_dict(),
                             }
             torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'last_model.pt'))
-            if miou > best_miou and epoch>10 :
-                best_miou = miou
-                print('Model saved, best miou')
+            if macc > best_miou and epoch>10 :
+                best_miou = macc
+                print('Model saved, best macc')
                 torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'current_best.pt'))
 
             if val_loss > best_loss and epoch>10 :
                 best_loss = val_loss
-                print('Model saved, best miou')
+                print('Model saved, best macc')
                 torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'best_loss.pt'))
 
         
@@ -104,7 +104,7 @@ def main(args):
         model_checkpoint = {
                             'epoch': epoch ,
                             'state_dict': deepcopy (model.state_dict()),
-                            'perf': miou,
+                            'perf': macc,
                             'last_epoch': epoch,
                             'optimizer': optimizer.state_dict(),
                             }

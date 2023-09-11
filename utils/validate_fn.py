@@ -94,7 +94,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
         print(msg)
                            
         
-        perf_indicator = mean_iou
+        perf_indicator = mean_acc
         metrics.reset()
         
         if args.log_wandb :        
