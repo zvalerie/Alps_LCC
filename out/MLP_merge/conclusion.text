@@ -1,0 +1,6 @@
+ideal learning rate seems to be 1e-5 or 1e-6
+inverse frequency weights do not WORK
+
+best models are 
+MLP_merge CBL lr 1e-6 (did not manage to reproduce results in september)
+MLP_merge_lr 1e-6 (no cbl but normalize logits after each expert)

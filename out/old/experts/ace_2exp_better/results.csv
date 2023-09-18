@@ -1,7 +1,0 @@
-Experiment results
-2023-06-25 13:06:58
-test_macc0.643
-test_miou0.347
-test_oacc0.712
-Background,Bedrock,Bedrockwith grass,Large blocks,Large blocks with grass,Scree,Scree with grass,Water,Forest,Glacier
-0.0,0.652,0.697,0.85,0.161,0.591,0.825,0.967,0.822,0.861

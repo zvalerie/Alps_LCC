@@ -1,0 +1,5 @@
+best models : 
+cnn merge_no_w
+cnn_merge_sm
+
+otherwise struggle to predict body classes or all classes

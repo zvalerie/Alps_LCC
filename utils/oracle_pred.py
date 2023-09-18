@@ -247,8 +247,8 @@ if __name__ == '__main__':
 
     args.model ='MCE'
     args.experts = 3
-    args.out_dir='out/best/'
-    args.name = 'mce_lcom_ws13'
+    args.out_dir='out/ws13/'
+    args.name = 'MCE-3_lcom_ws13'
     args.test_only = True
     main(args)
         
