@@ -2,7 +2,7 @@
     "lr": 1e-05,
     "experts": 3,
     "epoch": 50,
-    "bs": 256,
+    "bs": 64,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
     "loss": "celoss",
@@ -15,7 +15,7 @@
     "force_cpu": false,
     "seed": 2436,
     "name": "mce_lcom_ws13",
-    "log_wandb": true,
+    "log_wandb": false,
     "test_only": true,
     "L2penalty": true,
     "lws": false,
@@ -25,6 +25,7 @@
     "reweighted_aggregation": "None",
     "zero_nontarget_expert": true,
     "not_adaptive_lr": false,
+    "catchup_training": false,
     "pretrained_weights": "/home/valerie/Projects/Alps_LCC/out/best/mce_lcom_ws13/current_best.pt",
-    "device": "cuda:0"
+    "device": "cuda"
 }

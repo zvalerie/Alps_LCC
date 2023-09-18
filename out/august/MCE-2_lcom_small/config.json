@@ -25,6 +25,7 @@
     "reweighted_aggregation": "None",
     "zero_nontarget_expert": false,
     "not_adaptive_lr": false,
+    "catchup_training": true,
     "pretrained_weights": "Nope",
     "device": "cuda"
 }

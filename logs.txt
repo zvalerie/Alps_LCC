@@ -1,0 +1,120 @@
+{'L2penalty': True,
+ 'aggregation': 'mean',
+ 'bs': 64,
+ 'debug': False,
+ 'epoch': 50,
+ 'experts': 2,
+ 'finetune_classifier_only': False,
+ 'force_cpu': False,
+ 'large_dataset': True,
+ 'log_wandb': True,
+ 'loss': 'celoss',
+ 'lr': 1e-05,
+ 'lr_decay_rate': 0.1,
+ 'lws': False,
+ 'model': 'MCE',
+ 'name': 'MCE-2_lcom_small',
+ 'not_adaptive_lr': False,
+ 'num_workers': 16,
+ 'out_dir': 'out/august/',
+ 'pretrained_weights': 'Nope',
+ 'reweighted_aggregation': 'None',
+ 'seed': 2436,
+ 'separate_backprop': False,
+ 'step_size': 10,
+ 'test_only': False,
+ 'weight_decay': 0.01,
+ 'zero_nontarget_expert': False}
+********************************************************************************
+Experiment set up : 
+	Model    :   MCE with Sequential aggregation 
+	Nb Expert:   2
+	Loss     :   CELoss_2experts
+	Optimizer:   Adam
+	Device   :   cuda
+	Train set:   137721 samples
+	Val set  :   45907 samples
+********************************************************************************
+Epoch: [0]	Time 2282.058s 	Loss 1.69883 	MediumLoss 0.00000	FewLoss 1.01706	
+Validate: [0]	Time 671.503s 	Loss 1.293 	MediumLoss 0.00000	FewLoss 0.81679	Mean Accuracy 0.573 	Mean IoU 0.453 	Overall Acc 0.828 	
+Epoch: [1]	Time 2253.099s 	Loss 1.25723 	MediumLoss 0.00000	FewLoss 0.78243	
+Validate: [1]	Time 706.956s 	Loss 1.119 	MediumLoss 0.00000	FewLoss 0.70754	Mean Accuracy 0.601 	Mean IoU 0.466 	Overall Acc 0.841 	
+Epoch: [2]	Time 2259.460s 	Loss 1.16320 	MediumLoss 0.00000	FewLoss 0.72915	
+Validate: [2]	Time 716.891s 	Loss 1.051 	MediumLoss 0.00000	FewLoss 0.66423	Mean Accuracy 0.637 	Mean IoU 0.479 	Overall Acc 0.846 	
+Epoch: [3]	Time 2257.729s 	Loss 1.10265 	MediumLoss 0.00000	FewLoss 0.68852	
+Validate: [3]	Time 714.505s 	Loss 1.017 	MediumLoss 0.00000	FewLoss 0.64188	Mean Accuracy 0.625 	Mean IoU 0.477 	Overall Acc 0.850 	
+Epoch: [4]	Time 2253.695s 	Loss 1.04304 	MediumLoss 0.00000	FewLoss 0.64178	
+Validate: [4]	Time 718.556s 	Loss 1.016 	MediumLoss 0.00000	FewLoss 0.64780	Mean Accuracy 0.658 	Mean IoU 0.520 	Overall Acc 0.856 	
+Epoch: [5]	Time 2255.652s 	Loss 1.02358 	MediumLoss 0.00000	FewLoss 0.63223	
+Validate: [5]	Time 722.794s 	Loss 0.968 	MediumLoss 0.00000	FewLoss 0.60785	Mean Accuracy 0.644 	Mean IoU 0.513 	Overall Acc 0.858 	
+Epoch: [6]	Time 2254.866s 	Loss 0.98747 	MediumLoss 0.00000	FewLoss 0.60392	
+Validate: [6]	Time 738.116s 	Loss 0.985 	MediumLoss 0.00000	FewLoss 0.62780	Mean Accuracy 0.685 	Mean IoU 0.519 	Overall Acc 0.854 	
+Epoch: [7]	Time 2255.219s 	Loss 0.95490 	MediumLoss 0.00000	FewLoss 0.57778	
+Validate: [7]	Time 746.338s 	Loss 0.959 	MediumLoss 0.00000	FewLoss 0.60380	Mean Accuracy 0.685 	Mean IoU 0.530 	Overall Acc 0.855 	
+Epoch: [8]	Time 2254.273s 	Loss 0.94938 	MediumLoss 0.00000	FewLoss 0.57640	
+Validate: [8]	Time 725.432s 	Loss 0.969 	MediumLoss 0.00000	FewLoss 0.61650	Mean Accuracy 0.678 	Mean IoU 0.527 	Overall Acc 0.858 	
+Epoch: [9]	Time 2253.915s 	Loss 0.92412 	MediumLoss 0.00000	FewLoss 0.55575	
+Validate: [9]	Time 745.290s 	Loss 0.934 	MediumLoss 0.00000	FewLoss 0.58694	Mean Accuracy 0.672 	Mean IoU 0.532 	Overall Acc 0.862 	
+Epoch: [10]	Time 2253.699s 	Loss 0.90351 	MediumLoss 0.00000	FewLoss 0.53717	
+Validate: [10]	Time 734.641s 	Loss 0.985 	MediumLoss 0.00000	FewLoss 0.63421	Mean Accuracy 0.687 	Mean IoU 0.510 	Overall Acc 0.858 	
+Epoch: [11]	Time 2260.316s 	Loss 0.89060 	MediumLoss 0.00000	FewLoss 0.52761	
+Validate: [11]	Time 752.425s 	Loss 0.957 	MediumLoss 0.00000	FewLoss 0.60968	Mean Accuracy 0.680 	Mean IoU 0.534 	Overall Acc 0.862 	
+Model saved, best macc
+Epoch: [12]	Time 2255.616s 	Loss 0.89636 	MediumLoss 0.00000	FewLoss 0.53527	
+Validate: [12]	Time 762.811s 	Loss 0.955 	MediumLoss 0.00000	FewLoss 0.60688	Mean Accuracy 0.650 	Mean IoU 0.522 	Overall Acc 0.859 	
+Epoch: [13]	Time 2257.046s 	Loss 0.87214 	MediumLoss 0.00000	FewLoss 0.51311	
+Validate: [13]	Time 779.432s 	Loss 0.945 	MediumLoss 0.00000	FewLoss 0.60038	Mean Accuracy 0.693 	Mean IoU 0.530 	Overall Acc 0.859 	
+Model saved, best macc
+Epoch: [14]	Time 2255.780s 	Loss 0.86337 	MediumLoss 0.00000	FewLoss 0.50715	
+Validate: [14]	Time 779.213s 	Loss 0.967 	MediumLoss 0.00000	FewLoss 0.61926	Mean Accuracy 0.685 	Mean IoU 0.508 	Overall Acc 0.860 	
+Epoch: [15]	Time 2255.897s 	Loss 0.85788 	MediumLoss 0.00000	FewLoss 0.50224	
+Validate: [15]	Time 789.556s 	Loss 0.918 	MediumLoss 0.00000	FewLoss 0.58444	Mean Accuracy 0.671 	Mean IoU 0.526 	Overall Acc 0.867 	
+Epoch: [16]	Time 2255.337s 	Loss 0.86180 	MediumLoss 0.00000	FewLoss 0.50679	
+Validate: [16]	Time 769.359s 	Loss 0.925 	MediumLoss 0.00000	FewLoss 0.58613	Mean Accuracy 0.707 	Mean IoU 0.529 	Overall Acc 0.859 	
+Model saved, best macc
+Epoch: [17]	Time 2255.796s 	Loss 0.85282 	MediumLoss 0.00000	FewLoss 0.49870	
+Validate: [17]	Time 801.229s 	Loss 0.924 	MediumLoss 0.00000	FewLoss 0.58387	Mean Accuracy 0.698 	Mean IoU 0.535 	Overall Acc 0.861 	
+Epoch: [18]	Time 2254.762s 	Loss 0.82556 	MediumLoss 0.00000	FewLoss 0.47470	
+Validate: [18]	Time 800.973s 	Loss 0.910 	MediumLoss 0.00000	FewLoss 0.57456	Mean Accuracy 0.704 	Mean IoU 0.533 	Overall Acc 0.862 	
+Epoch: [19]	Time 2254.424s 	Loss 0.82820 	MediumLoss 0.00000	FewLoss 0.47674	
+Validate: [19]	Time 812.478s 	Loss 0.941 	MediumLoss 0.00000	FewLoss 0.59917	Mean Accuracy 0.691 	Mean IoU 0.520 	Overall Acc 0.861 	
+Epoch: [20]	Time 2252.047s 	Loss 0.81319 	MediumLoss 0.00000	FewLoss 0.46416	
+Validate: [20]	Time 819.256s 	Loss 0.959 	MediumLoss 0.00000	FewLoss 0.61514	Mean Accuracy 0.680 	Mean IoU 0.533 	Overall Acc 0.865 	
+Epoch: [21]	Time 2253.681s 	Loss 0.82137 	MediumLoss 0.00000	FewLoss 0.46946	
+Validate: [21]	Time 816.491s 	Loss 0.952 	MediumLoss 0.00000	FewLoss 0.61252	Mean Accuracy 0.696 	Mean IoU 0.511 	Overall Acc 0.862 	
+Epoch: [22]	Time 2252.245s 	Loss 0.80787 	MediumLoss 0.00000	FewLoss 0.45767	
+Validate: [22]	Time 828.578s 	Loss 0.922 	MediumLoss 0.00000	FewLoss 0.58486	Mean Accuracy 0.699 	Mean IoU 0.535 	Overall Acc 0.865 	
+Epoch: [23]	Time 2250.734s 	Loss 0.80099 	MediumLoss 0.00000	FewLoss 0.45272	
+Validate: [23]	Time 838.569s 	Loss 0.888 	MediumLoss 0.00000	FewLoss 0.55656	Mean Accuracy 0.697 	Mean IoU 0.546 	Overall Acc 0.869 	
+Epoch: [24]	Time 2250.942s 	Loss 0.79615 	MediumLoss 0.00000	FewLoss 0.44855	
+Validate: [24]	Time 840.840s 	Loss 0.989 	MediumLoss 0.00000	FewLoss 0.64291	Mean Accuracy 0.642 	Mean IoU 0.530 	Overall Acc 0.868 	
+Epoch: [25]	Time 2252.297s 	Loss 0.79110 	MediumLoss 0.00000	FewLoss 0.44268	
+Validate: [25]	Time 846.194s 	Loss 0.929 	MediumLoss 0.00000	FewLoss 0.58917	Mean Accuracy 0.703 	Mean IoU 0.507 	Overall Acc 0.865 	
+Epoch: [26]	Time 2250.644s 	Loss 0.79564 	MediumLoss 0.00000	FewLoss 0.44888	
+Validate: [26]	Time 852.104s 	Loss 0.959 	MediumLoss 0.00000	FewLoss 0.61430	Mean Accuracy 0.680 	Mean IoU 0.525 	Overall Acc 0.864 	
+Epoch: [27]	Time 2253.819s 	Loss 0.79253 	MediumLoss 0.00000	FewLoss 0.44296	
+Validate: [27]	Time 854.056s 	Loss 0.907 	MediumLoss 0.00000	FewLoss 0.56791	Mean Accuracy 0.683 	Mean IoU 0.531 	Overall Acc 0.867 	
+Epoch: [28]	Time 2250.929s 	Loss 0.79131 	MediumLoss 0.00000	FewLoss 0.44285	
+Validate: [28]	Time 859.991s 	Loss 0.937 	MediumLoss 0.00000	FewLoss 0.59457	Mean Accuracy 0.692 	Mean IoU 0.517 	Overall Acc 0.861 	
+Epoch: [29]	Time 2252.367s 	Loss 0.78270 	MediumLoss 0.00000	FewLoss 0.43435	
+Validate: [29]	Time 868.954s 	Loss 0.915 	MediumLoss 0.00000	FewLoss 0.57372	Mean Accuracy 0.684 	Mean IoU 0.517 	Overall Acc 0.862 	
+Epoch: [30]	Time 2262.408s 	Loss 0.78287 	MediumLoss 0.00000	FewLoss 0.43357	
+Validate: [30]	Time 889.052s 	Loss 0.909 	MediumLoss 0.00000	FewLoss 0.57189	Mean Accuracy 0.695 	Mean IoU 0.532 	Overall Acc 0.867 	
+Epoch: [31]	Time 2254.277s 	Loss 0.76230 	MediumLoss 0.00000	FewLoss 0.41646	
+Validate: [31]	Time 867.353s 	Loss 0.909 	MediumLoss 0.00000	FewLoss 0.57182	Mean Accuracy 0.687 	Mean IoU 0.549 	Overall Acc 0.870 	
+Epoch: [32]	Time 2254.599s 	Loss 0.78581 	MediumLoss 0.00000	FewLoss 0.43704	
+Validate: [32]	Time 882.244s 	Loss 0.916 	MediumLoss 0.00000	FewLoss 0.57257	Mean Accuracy 0.708 	Mean IoU 0.525 	Overall Acc 0.865 	
+Model saved, best macc
+Epoch: [33]	Time 2283.108s 	Loss 0.75910 	MediumLoss 0.00000	FewLoss 0.41246	
+Validate: [33]	Time 894.705s 	Loss 0.903 	MediumLoss 0.00000	FewLoss 0.56400	Mean Accuracy 0.690 	Mean IoU 0.532 	Overall Acc 0.864 	
+Epoch: [34]	Time 2310.837s 	Loss 0.76563 	MediumLoss 0.00000	FewLoss 0.41679	
+Validate: [34]	Time 894.577s 	Loss 0.913 	MediumLoss 0.00000	FewLoss 0.57111	Mean Accuracy 0.697 	Mean IoU 0.526 	Overall Acc 0.865 	
+Epoch 00035: reducing learning rate of group 0 to 1.0000e-06.
+Epoch 00035: reducing learning rate of group 1 to 1.0000e-06.
+Epoch 00035: reducing learning rate of group 2 to 1.0000e-06.
+Epoch 00035: reducing learning rate of group 3 to 1.0000e-06.
+Epoch 00035: reducing learning rate of group 4 to 1.0000e-06.
+Epoch 00035: reducing learning rate of group 5 to 3.0000e-08.
+Epoch: [35]	Time 2337.232s 	Loss 0.68479 	MediumLoss 0.00000	FewLoss 0.35513	
+Validate: [35]	Time 901.910s 	Loss 0.866 	MediumLoss 0.00000	FewLoss 0.54050	Mean Accuracy 0.710 	Mean IoU 0.545 	Overall Acc 0.873 	
+Model saved, best macc

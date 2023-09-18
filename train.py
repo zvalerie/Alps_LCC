@@ -15,7 +15,9 @@ from torch.optim.lr_scheduler import StepLR, LambdaLR, ReduceLROnPlateau
 from pprint import pprint
 from copy import deepcopy
 
-from utils.training_utils import get_dataloader, get_model, get_criterion, set_all_random_seeds, setup_wandb_log, get_optimizer 
+from utils.training_utils import get_dataloader, get_model, get_criterion
+from utils.training_utils import  set_all_random_seeds, setup_wandb_log, get_optimizer 
+from utils.training_utils import load_last_checkpoint
 from utils.argparser import parse_args
 
 
@@ -49,7 +51,18 @@ def main(args):
     optimizer = get_optimizer(model=model,args=args)
     scheduler = ReduceLROnPlateau(optimizer, min_lr = 1e-8, factor = args.lr_decay_rate, threshold = 1e-2, verbose = True)
     
-    ## Show experiment setup : 
+    
+    # Start model training :     
+    best_miou = 0.0 # best performance so far (mean IoU)
+    start_epoch = 0
+    macc=0.
+    best_loss = 1e5
+    
+    if args.catchup_training :
+        
+       model, optimizer, _ , macc =  load_last_checkpoint(model,optimizer, args)
+        
+        ## Show experiment setup : 
     print('*'*80)    
     print('Experiment set up : ') 
     print('\tModel    :  ', type(model).__name__,)
@@ -61,12 +74,6 @@ def main(args):
     print('\tVal set  :  ', len(val_loader.dataset),   'samples')  
     print('*'*80)
     
-    
-    # Start model training :     
-    best_miou = 0.0 # best performance so far (mean IoU)
-    start_epoch = 0
-    macc=0.
-    best_loss = 1e5
     
     if not args.test_only: 
         for epoch in range( args.epoch):
@@ -87,7 +94,9 @@ def main(args):
                             'perf': macc,
                             'last_epoch': epoch,
                             'optimizer': optimizer.state_dict(),
+                            'val_loss':val_loss,
                             }
+            
             torch.save(model_checkpoint, os.path.join( args.out_dir, args.name,'last_model.pt'))
             if macc > best_miou and epoch>10 :
                 best_miou = macc

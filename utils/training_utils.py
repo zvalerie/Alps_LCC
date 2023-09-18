@@ -96,7 +96,8 @@ def get_optimizer (model,args):
     if False :
         for param_group in optimizer.param_groups:
             print(f"Learning rate for param group ", param_group['lr'])
-                            
+    
+
     
     return optimizer
 
@@ -179,10 +180,34 @@ def get_model(args):
                 #print('not frozen: ', name , param.requires_grad)      
         print('Model weights are frozen except for CNN or MLP layers')
     
-       
-    
+        
     return model
 
+def load_last_checkpoint (model,optimizer, args):
+    
+    last_model_path = os.path.join( args.out_dir, args.name,'last_model.pt')
+        
+    if not os.path.isfile(last_model_path):
+        raise NameError ('Last model weights are not found in folder', args.out_dir , args.name )
+    
+    else :    
+        checkpoint = torch.load(last_model_path)       
+        best_weights = checkpoint['state_dict']
+        model.load_state_dict (best_weights)
+        
+        state = checkpoint['optimizer']
+        optimizer.load_state_dict(state)
+        last_epoch = checkpoint['last_epoch']
+        macc = checkpoint['perf']
+        print('Catchup training. Using last model weights, last optimizer state, and start from epoch ', last_epoch )     
+        
+        return model, optimizer,last_epoch , macc
+    
+   
+        
+    
+    
+    
 
 
 def get_dataloader(args=None, phase ='train'):
@@ -195,7 +220,7 @@ def get_dataloader(args=None, phase ='train'):
    
     img_dir = '/home/valerie/data/rocky_tlm/rgb/' 
     dem_dir = '/home/valerie/data/rocky_tlm/dem/' 
-    label_dir = '/home/valerie/data/ace_alps/mask' 
+    label_dir = '/home/valerie/data/ace_Xiaolong/mask' 
     
     # Create output folder if needed :
     if args is not None and not os.path.exists(args.out_dir):

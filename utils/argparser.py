@@ -106,6 +106,10 @@ def parse_args():
                         help='use the same lr for all experts, default : False (use adaptative lr)',
                         default=False,
                         type=bool)
+    parser.add_argument('--catchup_training',
+                        help='catch up the training if it was interrupted',
+                        default=False,
+                        type=bool)
     parser.add_argument('--pretrained_weights',
                         help='pretrained weights',
                         default='Nope',

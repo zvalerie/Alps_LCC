@@ -56,8 +56,8 @@ def test_ACE( model,  args):
             metrics.update(gt, preds.numpy())
                         
         # measure elapsed time
-        tick= time.time()
-        print('Elapsed time [s]:',tick)
+        tack= time.time()
+        print('Elapsed time [s]:',int(tack-tick))
         
         # Compute and save metrics : 
         classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
