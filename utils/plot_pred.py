@@ -6,23 +6,22 @@ import torch
 import torch.nn as nn
 import sys
 sys.path.append("/home/valerie/Projects/Alps_LCC/") 
-print(sys.path)
 
+import matplotlib.gridspec as gridspec
 import csv
 from numpy import linalg as LA
-from training_utils import get_dataloader, get_model
-from inference_utils import  get_predictions_from_logits, load_best_model_weights
 from tqdm import tqdm
-from utils.training_utils import get_dataloader
-from dataset.SwissImageDataset import  unnormalize_batch
 from pprint import pprint
 from argparse import Namespace
 from matplotlib.colors import ListedColormap
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-from pprint import pprint
 
 
+from training_utils import get_dataloader, get_model
+from inference_utils import  get_predictions_from_logits, load_best_model_weights
+from utils.training_utils import get_dataloader
+from dataset.SwissImageDataset import  unnormalize_batch
     
 
 def plot_predictions(image, dem , mask,preds ):
@@ -173,7 +172,7 @@ def get_each_expert_pred (output) :
         
     return expert_preds
 
-def plot_predictions_for_each_expert(image,mask,preds, expert_preds,):
+def plot_predictions_for_each_expert(image,mask,preds, expert_preds,plot_legend = False ):
     
     classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
                 "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
@@ -200,50 +199,67 @@ def plot_predictions_for_each_expert(image,mask,preds, expert_preds,):
     for k in  range( image.size(0)):
         
         num_fig = 6
-        plt.figure(figsize =[18,5])
+        plt.figure(figsize=[30,5])
+        gs = gridspec.GridSpec(1, num_fig + 1, 
+                               width_ratios=[ 0.9, 0.9, 0.9, 0.05, 0.9, 0.9, 0.9 ] ,
+                               #wspace= 1.0,
+                               #hspace =1.,
+                               )  
+
+
+        
         
         # RGB
-        plt.subplot(1,num_fig,1)
+        plt.subplot(gs[0])
         plt.imshow(img[k])
-        plt.title("RGB Image")
+       # plt.title("RGB Image")
         plt.axis('off')
 
         # Label
-        plt.subplot(1,num_fig,2)
+        plt.subplot(gs[1])
         plt.imshow(mask[k], cmap=cmap,vmin=0,vmax=9, interpolation_stage = 'rgba')
-        plt.title("Label")
+      #  plt.title("Label")
         plt.axis('off')
         
         # Pred
-        plt.subplot(1,num_fig,3)
+        plt.subplot(gs[2])
         plt.imshow(preds[k], cmap=cmap,vmin=0,vmax=9, interpolation_stage = 'rgba')
-        plt.title("Predictions")
+        # plt.title("Predictions")
         plt.axis('off')
         
+        # Add white space (empty subplot)s
+        plt.subplot(gs[3])
+        plt.axis('off')
+                
         
         for j in range(len(expert_preds)):
-            plt.subplot(1,num_fig, j+4 )
+            plt.subplot(gs[j+4] )
             plt.imshow(expert_preds[j][k,:,:], cmap=cmap,vmin=0,vmax=9.5,interpolation_stage = 'rgba')
-            plt.title("Predictions of expert " + str(j+1))
+        #    plt.title("Predictions of expert " + str(j+1))
             plt.axis('off')
 
         # Colorbar parameters :        
-        colors = cmap.colors
-        values = list(  classes .values())
-        txt_labels = list(  classes.keys())
-        patches = [ mpatches.Patch(color=colors[i], label= txt_labels[i] ) for i in values ]
-        plt.legend(handles=patches, 
-            fontsize='small',
-            bbox_to_anchor=(1.05, 1), 
-            loc=2, 
-            frameon = False,
-            borderaxespad=0. )  
+        if plot_legend == True :
+            colors = cmap.colors
+            values = list(  classes .values())
+            txt_labels = list(  classes.keys())
+            patches = [ mpatches.Patch(color=colors[i], label= txt_labels[i] ) for i in values ]
+            plt.legend(handles=patches, 
+                fontsize='small',
+                bbox_to_anchor=(1.05, 1), 
+                loc=2, 
+                frameon = False,
+                borderaxespad=0. )  
         
-        plt.subplots_adjust(wspace=0.02)
-        
-        
+        plt.gca().set_axis_off()
+        plt.subplots_adjust(top = 0.99, bottom = 0.01, right = 1, left = 0, 
+                    hspace = 0, wspace = 0)
+      #  plt.margins(0.02,0)
+     #   plt.gca().xaxis.set_major_locator(plt.NullLocator())
+     #   plt.gca().yaxis.set_major_locator(plt.NullLocator())
         out_name = dest_path +str(TILE_IDS[k])+'.png'
-        plt.savefig(out_name,dpi = 300)
+       # plt.tight_layout()
+        plt.savefig(out_name,dpi = 300, bbox_inches='tight',pad_inches = 0)
         print('fig saved', out_name)
         plt.close()
 
@@ -271,7 +287,8 @@ def predict_and_plot(args,model):
     
     with torch.no_grad():
         # switch to evaluate mode
-        model.eval()         
+        model.eval() 
+        print('Start plotting...')        
         for i, (image, dem, mask) in tqdm(enumerate(test_loader)):                
             # move data to device
             input = torch.cat((image, dem), dim=1).to(device) 
@@ -293,6 +310,7 @@ def predict_and_plot(args,model):
                     plot_predictions(image,dem,mask,preds,)
             #print('plot  one batch and break')
             #break
+        print('End plotting...')   
 
 
 def unnormalize_images(images, ):
@@ -310,7 +328,7 @@ def unnormalize_images(images, ):
 
 if __name__ == '__main__':
     
-    exp_path = '/home/valerie/Projects/Alps_LCC/out/best/mce_lcom_ws13/'
+    exp_path = '/home/valerie/Projects/Alps_LCC/out/ws13/MCE-3_lcom_ws13/'
     config_fp = exp_path + 'config.json'
     checkpoint_path = exp_path + 'current_best.pt'
     
@@ -319,7 +337,7 @@ if __name__ == '__main__':
     with open(config_fp, 'r') as json_file:
         cfg = json.load(json_file)
         args = Namespace(**cfg)
-        args.bs = 256
+        args.bs = 3
         args.device = 'cuda:0'
 
     checkpoint = torch.load(checkpoint_path)

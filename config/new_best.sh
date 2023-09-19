@@ -4,7 +4,7 @@
 ## run baseline with 2 experts with new best
 #python train.py --name MCE-2_lcom_small --experts 2 --log_wandb True --L2penalty True --large_dataset True --catchup_training True
 
-python train.py --name MCE-3_lcom_longer --experts 3 --log_wandb True --L2penalty True --large_dataset True --catchup_training True --epoch 30 --aggregation mean
+python train.py --name MCE-3_lcom_longer --experts 3 --log_wandb True --L2penalty True --large_dataset True --catchup_training True --epoch 30 --aggregation mean --out_dir out/ablation/
 
 
 ## run test max logits 
