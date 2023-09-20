@@ -60,7 +60,7 @@ def main(args):
     
     if args.catchup_training :
         
-       model, optimizer, _ , macc =  load_last_checkpoint(model,optimizer, args)
+       model, optimizer, start_epoch , macc =  load_last_checkpoint(model,optimizer, args)
         
         ## Show experiment setup : 
     print('*'*80)    

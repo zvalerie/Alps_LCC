@@ -218,9 +218,9 @@ def get_dataloader(args=None, phase ='train'):
         phase (str) : indicates the phase in ['train','val','test]
     """    
    
-    img_dir = '/home/valerie/data/rocky_tlm/rgb/' 
-    dem_dir = '/home/valerie/data/rocky_tlm/dem/' 
-    label_dir = '/home/valerie/data/ace_Xiaolong/mask' 
+    img_dir = '/data/valerie/rocky_tlm/rgb/' 
+    dem_dir = '/data/valerie/rocky_tlm/dem/' 
+    label_dir = '/home/valerie/data/master_Xiaolong/mask' 
     
     # Create output folder if needed :
     if args is not None and not os.path.exists(args.out_dir):

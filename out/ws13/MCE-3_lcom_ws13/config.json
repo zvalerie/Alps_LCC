@@ -2,7 +2,7 @@
     "lr": 1e-05,
     "experts": 3,
     "epoch": 50,
-    "bs": 3,
+    "bs": 256,
     "lr_decay_rate": 0.1,
     "weight_decay": 0.01,
     "loss": "celoss",

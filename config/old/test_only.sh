@@ -2,4 +2,4 @@
 
 
 
-python train.py  --experts 3 --small_dataset True   --model Deeplabv3_w_Better_Experts   --log_wandb True     --L2penalty True  --separate_backprop True      --name ace_3exp_L2_separate_bckprp   --test_only True  
+python train.py  --experts 0 --large_dataset True   --model Deeplabv3   --out_dir  out/paper/    --name CEL_ws13/   --test_only True   --pretrained_weights '/home/valerie/Projects/Alps_LCC/out/paper/CEL_ws13/final.pt'

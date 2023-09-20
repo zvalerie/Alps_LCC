@@ -337,7 +337,7 @@ if __name__ == '__main__':
     with open(config_fp, 'r') as json_file:
         cfg = json.load(json_file)
         args = Namespace(**cfg)
-        args.bs = 3
+        args.bs = 256
         args.device = 'cuda:0'
 
     checkpoint = torch.load(checkpoint_path)
