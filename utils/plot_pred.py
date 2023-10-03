@@ -328,7 +328,7 @@ def unnormalize_images(images, ):
 
 if __name__ == '__main__':
     
-    exp_path = '/home/valerie/Projects/Alps_LCC/out/ws13/MCE-3_lcom_ws13/'
+    exp_path = '/home/valerie/Projects/Alps_LCC/out/paper/BEST_mce-3_lcom_ws13/'
     config_fp = exp_path + 'config.json'
     checkpoint_path = exp_path + 'current_best.pt'
     
