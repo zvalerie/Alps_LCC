@@ -1,1 +1,0 @@
-python train.py  --experts 3  --model Deeplabv3_w_Better_Experts   --log_wandb True  --name large_ace_3exp_wd_020_lws_l2_L2 --out_dir out/large_ds/ --weight_decay 0.2  --lws True --L2penalty  True 

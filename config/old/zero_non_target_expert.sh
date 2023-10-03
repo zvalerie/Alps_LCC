@@ -1,1 +1,0 @@
-python train.py --name MCE3_moptim --experts 3  --log_wandb False  --lws True --L2penalty True --weight_decay 0.2  --large_dataset True --test_only True --zero_nontarget_expert True
