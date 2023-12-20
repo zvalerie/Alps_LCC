@@ -2,6 +2,10 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train image segmentation network')
+    parser.add_argument('--ds',
+                        help='which dataset to use, between TLM and FLAIR',
+                        default='TLM',
+                        type=str)
     parser.add_argument('--lr',
                         help='learning rate',
                         default=1e-5,

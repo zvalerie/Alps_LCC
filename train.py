@@ -62,7 +62,7 @@ def main(args):
         
        model, optimizer, start_epoch , macc =  load_last_checkpoint(model,optimizer, args)
         
-        ## Show experiment setup : 
+    ## Show experiment setup : 
     print('*'*80)    
     print('Experiment set up : ') 
     print('\tModel    :  ', type(model).__name__,)

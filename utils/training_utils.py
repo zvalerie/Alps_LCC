@@ -151,20 +151,25 @@ def get_model(args):
     """
    
     # Choose model : 
-
+    if args.ds =='FLAIR':
+        raise NotImplementedError
+        num_classes = 17
+    else :
+        num_classes = 10
+        
     if args.experts ==0 :
-        model = deeplabv3P_resnet(num_classes=10, output_stride=8, pretrained_backbone=True)
+        model = deeplabv3P_resnet(num_classes=num_classes, output_stride=8, pretrained_backbone=True)
     
     elif args.experts == 2 or args.experts == 3 :
         model = model_builder (
-                    num_classes = 10, 
+                    num_classes = num_classes, 
                     num_experts = args.experts, 
                     use_lws = args.lws,
                     aggregation = args.aggregation,
                     )
     else :
         raise NotImplementedError
-   
+    
     if os.path.isfile(args.pretrained_weights): 
         checkpoint = torch.load(args.pretrained_weights)
         model.load_state_dict(checkpoint['state_dict'],strict=False)
@@ -179,7 +184,8 @@ def get_model(args):
                 pass              
                 #print('not frozen: ', name , param.requires_grad)      
         print('Model weights are frozen except for CNN or MLP layers')
-    
+        
+        
         
     return model
 
@@ -206,9 +212,9 @@ def load_last_checkpoint (model,optimizer, args):
    
         
     
+def get_FLAIR_dataloader(args=None, phase ='train'):
     
-    
-
+    raise NotImplementedError
 
 def get_dataloader(args=None, phase ='train'):
     """     Create training and validation datasets    based on arguments from config
@@ -217,11 +223,6 @@ def get_dataloader(args=None, phase ='train'):
         args (dict) : args from config file
         phase (str) : indicates the phase in ['train','val','test]
     """    
-   
-    img_dir = '/data/valerie/rocky_tlm/rgb/' 
-    dem_dir = '/data/valerie/rocky_tlm/dem/' 
-    label_dir = '/data/valerie/master_Xiaolong/mask/' 
-    
     # Create output folder if needed :
     if args is not None and not os.path.exists(args.out_dir):
         os.mkdir(args.out_dir)
@@ -233,17 +234,29 @@ def get_dataloader(args=None, phase ='train'):
     fn = os.path.join( args.out_dir, args.name,'config.json')
     with open(fn, 'w') as file:
         json.dump(vars(args), file, indent=4)
+    
+    
+    if args.ds == 'FLAIR':
+        get_FLAIR_dataloader(args=args,phase=phase)
 
-    
-    # Path to dataset splits : 
-    test_csv = 'data/split/test_dataset.csv'  # always the same test set    
-    train_csv = 'data/split_subset/train_subset.csv'
-    val_csv = 'data/split_subset/val_subset.csv'
-    
-    if  args.large_dataset:    
-        train_csv = 'data/split/train_dataset.csv'
-        val_csv = 'data/split/val_dataset.csv'  
    
+    elif args.ds == 'TLM' :
+        img_dir = '/data/valerie/rocky_tlm/rgb/' 
+        dem_dir = '/data/valerie/rocky_tlm/dem/' 
+        label_dir = '/data/valerie/master_Xiaolong/mask/'     
+        
+        # Path to dataset splits : 
+        test_csv = 'data/split/test_dataset.csv'  # always the same test set    
+        train_csv = 'data/split_subset/train_subset.csv'
+        val_csv = 'data/split_subset/val_subset.csv'
+        
+        if  args.large_dataset:    
+            train_csv = 'data/split/train_dataset.csv'
+            val_csv = 'data/split/val_dataset.csv'  
+        
+       
+    else : 
+        raise NotImplementedError
     
     common_transform = Compose([
         MyRandomHorizontalFlip(p=0.5),
