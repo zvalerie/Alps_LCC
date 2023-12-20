@@ -16,9 +16,9 @@ def compute_mean_std(data_dir=None, full=True):
    # dataset_csv = '/home/valerie/Projects/Alps_LCC/data/split_subset/train_subset.csv'
     
     
-    img_dir = '/home/valerie/data/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
-    dem_dir = '/home/valerie/data/rocky_tlm/dem/' # /data/xiaolong/dem'
-    mask_dir = '/home/valerie/data/ace_alps/mask'
+    img_dir = '/data/valerie/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
+    dem_dir = '/data/valerie/rocky_tlm/dem/' # /data/xiaolong/dem'
+    mask_dir = '/data/valerie/master_Xiaolong/mask/'
     
     common_transform = Compose([
         MyRandomHorizontalFlip(p=0.5),

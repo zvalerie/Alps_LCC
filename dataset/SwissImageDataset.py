@@ -17,7 +17,7 @@ class SwissImage(Dataset):
     def __init__(self, dataset_csv, img_dir, dem_dir, label_dir, common_transform=None, img_transform=None, debug=False):
         self.img_dir = img_dir
         self.dem_dir = dem_dir
-        self.label_dir = label_dir
+        self.label_dir = '/data/valerie/master_Xiaolong/mask/' #label_dir
         self.img_dem_label = pd.read_csv(dataset_csv)
         if debug:
             self.img_dem_label = self.img_dem_label.iloc[:250]
@@ -32,11 +32,11 @@ class SwissImage(Dataset):
         return len(self.img_dem_label)
     
     def __getitem__(self, idx):
-        img_path = os.path.join(self.img_dir, self.img_dem_label.iloc[idx, 0])
-        dem_path = os.path.join(self.dem_dir, self.img_dem_label.iloc[idx, 1])
-        label_path = os.path.join(self.label_dir, self.img_dem_label.iloc[idx, 2])
-        image = Image.open(img_path)
+        img_path = self.img_dir+ self.img_dem_label.iloc[idx, 0]
+        dem_path = self.dem_dir+ self.img_dem_label.iloc[idx, 1]
+        label_path = self.label_dir+ self.img_dem_label.iloc[idx, 2]
         
+        image = Image.open(img_path)
         ## resize rgb images from 400x400 to 200x200 to match the size of label
         image = image.resize((200,200))
         dem = Image.open(dem_path)
@@ -115,14 +115,18 @@ def unnormalize_batch(images, ):
 
 if __name__ =="__main__":
     
-    dataset_csv =   '/home/valerie/Projects/Alps_LCC/data/split_subset/train_subset_few.csv'
+    dataset_csv =   '/home/valerie/Projects/Alps_LCC/data/split_subset/train_subset.csv'
         
-    img_dir = '/home/valerie/data/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
-    dem_dir = '/home/valerie/data/rocky_tlm/dem/' # /data/xiaolong/dem'
-    label_dir = '/home/valerie/data/ace_alps/label'
+    img_dir = '/data/valerie/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
+    dem_dir = '/data/valerie/rocky_tlm/dem/' # /data/xiaolong/dem'
+    label_dir = '/data/valerie/master_Xiaolong/mask/'
     
     ds = SwissImage(dataset_csv,img_dir,dem_dir,label_dir,common_transform=None,img_transform=None,debug=False)
-    print(ds[0][0].shape,ds[0][1].shape,ds[0][2].shape,)
+    
+    for image, dem, label in ds:
+        
+        input = torch.cat((image, dem),axis=0)
+        print(input.mean((1,2)))
     
 
     

@@ -220,7 +220,7 @@ def get_dataloader(args=None, phase ='train'):
    
     img_dir = '/data/valerie/rocky_tlm/rgb/' 
     dem_dir = '/data/valerie/rocky_tlm/dem/' 
-    label_dir = '/home/valerie/data/master_Xiaolong/mask' 
+    label_dir = '/data/valerie/master_Xiaolong/mask/' 
     
     # Create output folder if needed :
     if args is not None and not os.path.exists(args.out_dir):

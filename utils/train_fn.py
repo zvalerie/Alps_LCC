@@ -52,6 +52,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
         mask = mask.long().squeeze().to(device)
         
         # Run forward pass : 
+
         output = model(input) 
         
         # compute loss

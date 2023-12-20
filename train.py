@@ -126,7 +126,7 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    
+    args.epoch =1
     
     
     main(args)
