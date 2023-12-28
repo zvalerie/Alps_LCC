@@ -1,14 +1,3 @@
-"""
-    My implementation of training pipeline
-    
-    
-    Look at the official one : 
-    https://github.com/winterxx/ACE/blob/main/main/train.py
-    Xiaolong one : 
-    https://github.com/xiaollu/Alps_LCC
-    
-    
-"""
 import os
 import torch
 from torch.optim.lr_scheduler import StepLR, LambdaLR, ReduceLROnPlateau
@@ -33,8 +22,7 @@ def main(args):
     set_all_random_seeds(args.seed)
     setup_wandb_log(args)
     pprint(vars(args))
-    
-    
+        
     # Choose model and device :
     model = get_model(args)
     device =  "cuda" if torch.cuda.is_available() and not args.force_cpu else 'cpu'
@@ -126,7 +114,6 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    args.epoch =1
     
     
     main(args)

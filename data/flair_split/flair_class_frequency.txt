@@ -1,0 +1,41 @@
+######################################
+CLASSES frequency in FLAIR TRAIN SET (13 classes)
+######################################
+Class	00	 87 166 534 	occurrences
+Class	01	 1 094 107 649 	occurrences
+Class	02	 1 054 216 203 	occurrences
+Class	03	 1 828 585 744 	occurrences
+Class	04	 372 528 182 	occurrences
+Class	05	 595 562 692 	occurrences
+Class	06	 332 241 767 	occurrences
+Class	07	 1 990 955 096 	occurrences
+Class	08	 885 157 341 	occurrences
+Class	09	 411 873 478 	occurrences
+Class	10	 2 374 609 599 	occurrences
+Class	11	 1 435 023 789 	occurrences
+Class	12	 510 692 054 	occurrences
+
+######################################
+id class name 		% freq	inv freq
+0	other	            20453398	0,16%	634,3
+1	building	        1094107649	8,43%	11,9
+2	pervious surface	1054216203	8,13%	12,3
+3	impervious surface	1828585744	14,10%	7,1
+4	bare soil	        372528182	2,87%	34,8
+5	water	            595562692	4,59%	21,8
+6	coniferous	        332241767	2,56%	39,0
+7	deciduous	        1990955096	15,35%	6,5
+8	brushwood	        885157341	6,82%	14,7
+9	vineyard	        411873478	3,17%	31,5
+10	herbaceous vegetati	2374609599	18,30%	5,5
+11	agricultural land	1435023789	11,06%	9,0
+12	plowed land	        510692054	3,94%	25,4
+13	swimming pool	    3661055	    0,03%	3543,4
+14	snow	            22164288	0,17%	585,3
+15	clear cut	        21905293	0,17%	592,2
+16	mixed	            7685155	    0,06%	1688,0
+17	ligneous	        1238720	    0,01%	10472,7
+18	greenhouse	        10058625	0,08%	1289,7
+				
+				
+sum		12972720128		

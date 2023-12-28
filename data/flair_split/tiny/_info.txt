@@ -1,0 +1,2 @@
+train and val created by selecting 10% of base DATASET
+plot and test are similar to base DATASET

@@ -9,6 +9,7 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 
 from dataset.SwissImageDataset import SwissImage
+from dataset.flairDataset import FLAIRDataset
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 from models import Res50_UNet, deeplabv3P_resnet
 from models.models_utils import model_builder
@@ -213,11 +214,130 @@ def load_last_checkpoint (model,optimizer, args):
         
     
 def get_FLAIR_dataloader(args=None, phase ='train'):
+    data_dir = '/data/valerie/flair/'     
+
+    # Path to dataset splits : 
+    test_csv = 'data/flair_split/tiny/test.csv'
+    train_csv = 'data/flair_split/tiny/train.csv'
+    val_csv =  'data/flair_split/tiny/val.csv'
+    plot_csv = 'data/flair_split/tiny/plot.csv'
+
+    if  args.large_dataset:    
+        train_csv = 'data/flair_split/base/train.csv'
+
+    if args.debug :
+        test_csv = 'data/flair_split/dev/test.csv'
+        train_csv = 'data/flair_split/dev/train.csv'
+        val_csv = 'data/flair_split/dev/val.csv'
+        plot_csv = 'data/flair_split/dev/plot.csv'
     
-    raise NotImplementedError
+    if phase == 'train' :
+        dataset_csv = train_csv
+    elif phase == 'val': 
+        dataset_csv = val_csv
+    elif phase == 'test': 
+        dataset_csv = test_csv
+    elif phase == 'plot':
+        dataset_csv = plot_csv
+    else :
+        raise NotImplementedError
+    
+    dataset = FLAIRDataset(dataset_csv=dataset_csv,
+                           data_dir=data_dir,
+                           phase=phase)
+    
+    loader = DataLoader(
+        dataset= dataset,
+        batch_size= args.bs ,
+        shuffle= True if phase =='train' else False
+        num_workers= args.num_workers,
+        pin_memory=True
+        ) 
+    return loader
+
+
+def get_TLM_dataloader (args=None, phase ='train'):
+    img_dir = '/data/valerie/rocky_tlm/rgb/' 
+    dem_dir = '/data/valerie/rocky_tlm/dem/' 
+    label_dir = '/data/valerie/master_Xiaolong/mask/'     
+
+    # Path to dataset splits : 
+    test_csv = 'data/split/test_dataset.csv'  # always the same test set    
+    train_csv = 'data/split_subset/train_subset.csv'
+    val_csv = 'data/split_subset/val_subset.csv'
+    plot_csv = 'data/split/interesting_dataset_v2.csv'
+
+    if  args.large_dataset:    
+        train_csv = 'data/split/train_dataset.csv'
+       # val_csv = 'data/split/val_dataset.csv'  
+
+    common_transform = Compose([
+        MyRandomHorizontalFlip(p=0.5),
+        MyRandomVerticalFlip(p=0.5),
+        MyRandomRotation90(p=0.5),
+        ])
+
+    img_transform = transforms.Compose([
+        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05)
+        ]) 
+
+    if phase =='train' :
+        dataset = SwissImage(
+            train_csv, 
+            img_dir, 
+            dem_dir, 
+            label_dir, 
+            common_transform = common_transform, 
+            img_transform = img_transform, 
+            debug=args.debug)
+
+    elif phase =='val':
+        dataset = SwissImage(
+            val_csv, 
+            img_dir, 
+            dem_dir, 
+            label_dir, 
+            common_transform=None,
+            img_transform= None,
+            debug=args.debug
+            )
+        
+    elif phase == 'test':
+        dataset = SwissImage(
+            dataset_csv = test_csv,
+            img_dir = img_dir,
+            dem_dir = dem_dir,
+            label_dir = label_dir,
+            common_transform=None,
+            img_transform= None,
+            debug=args.debug,          
+            )
+
+    elif phase == 'plot':        
+        dataset = SwissImage(
+            dataset_csv = plot_csv,
+            img_dir = img_dir,
+            dem_dir = dem_dir,
+            label_dir = label_dir,
+            common_transform=None,
+            img_transform= None,
+            debug=args.debug,          
+            )
+    else :
+        raise NotImplementedError
+    
+    loader = DataLoader(dataset= dataset,
+        batch_size= args.bs if args is not None else 32,
+        shuffle= True if phase =='train' else False
+        num_workers= args.num_workers if args is not None else 16,
+        pin_memory=True
+        )
+
+    return loader
 
 def get_dataloader(args=None, phase ='train'):
-    """     Create training and validation datasets    based on arguments from config
+    """     
+    Create training and validation datasets    based on arguments from config
 
     Args:
         args (dict) : args from config file
@@ -237,132 +357,22 @@ def get_dataloader(args=None, phase ='train'):
     
     
     if args.ds == 'FLAIR':
-        get_FLAIR_dataloader(args=args,phase=phase)
-
+        dl = get_FLAIR_dataloader(args=args,phase=phase)
    
     elif args.ds == 'TLM' :
-        img_dir = '/data/valerie/rocky_tlm/rgb/' 
-        dem_dir = '/data/valerie/rocky_tlm/dem/' 
-        label_dir = '/data/valerie/master_Xiaolong/mask/'     
-        
-        # Path to dataset splits : 
-        test_csv = 'data/split/test_dataset.csv'  # always the same test set    
-        train_csv = 'data/split_subset/train_subset.csv'
-        val_csv = 'data/split_subset/val_subset.csv'
-        
-        if  args.large_dataset:    
-            train_csv = 'data/split/train_dataset.csv'
-            val_csv = 'data/split/val_dataset.csv'  
-        
-       
-    else : 
-        raise NotImplementedError
-    
-    common_transform = Compose([
-        MyRandomHorizontalFlip(p=0.5),
-        MyRandomVerticalFlip(p=0.5),
-        MyRandomRotation90(p=0.5),
-        ])
-        
-    img_transform = transforms.Compose([
-        transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.05)
-        ]) 
-    
-    
-    if phase =='train' :
-        
-        train_dataset = SwissImage(
-            train_csv, 
-            img_dir, 
-            dem_dir, 
-            label_dir, 
-            common_transform = common_transform, 
-            img_transform = img_transform, 
-            debug=args.debug)
-        
-        train_loader = DataLoader(
-            train_dataset,
-            batch_size= args.bs if args is not None else 32,
-            shuffle=True,
-            num_workers= args.num_workers if args is not None else 16,
-            pin_memory=True
-        )
-        
-        return train_loader
-    
-    elif phase =='val':
-        val_dataset = SwissImage(
-            val_csv, 
-            img_dir, 
-            dem_dir, 
-            label_dir, 
-            common_transform=None,
-            img_transform= None,
-            debug=args.debug)
-        
-        val_loader = DataLoader(
-            val_dataset,
-            batch_size= args.bs if args is not None else 32,
-            shuffle=False,
-            num_workers= args.num_workers if args is not None else 16,
-            pin_memory=True
-        )
-    
-        return val_loader
-    
-    elif phase == 'test':
-        test_dataset = SwissImage(
-            dataset_csv = test_csv,
-            img_dir = img_dir,
-            dem_dir = dem_dir,
-            label_dir = label_dir,
-            common_transform=None,
-            img_transform= None,
-            debug=args.debug,          
-        )
-        test_loader = DataLoader(
-            test_dataset, 
-            batch_size= args.bs if args is not None else 32,
-            shuffle=False,
-            num_workers= args.num_workers if args is not None else 16,
-            pin_memory=True
-        )
-        return test_loader
-    
-    elif phase == 'plot':
-        plot_csv = '/home/valerie/Projects/Alps_LCC/data/split/interesting_dataset_v2.csv'
-        test_dataset = SwissImage(
-            dataset_csv = plot_csv,
-            img_dir = img_dir,
-            dem_dir = dem_dir,
-            label_dir = label_dir,
-            common_transform=None,
-            img_transform= None,
-            debug=args.debug,          
-        )
-        test_loader = DataLoader(test_dataset, 
-            batch_size= args.bs if args is not None else 32,
-            shuffle=False,
-            num_workers= args.num_workers if args is not None else 16,
-            pin_memory=True
-        )
-        return test_loader
+        dl = get_TLM_dataloader(args=args, phase=phase)
     
     else :
         raise NotImplementedError
     
+    return dl
 
 
-
-def setup_wandb_log(args):
-        
-    
-
-        
+def setup_wandb_log(args):       
         
     # create new experiment in wandb
     if args.log_wandb :
-        wandb.init(project = "ACE_aggregation", 
+        wandb.init(project = "ACE_revision", 
                 entity = "zvalerie",
                 reinit = True,
                 config = args,           

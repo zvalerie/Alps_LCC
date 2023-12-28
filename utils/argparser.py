@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--experts',
                         help='number of experts, between 2-3, 0 is baseline model',
                         default=0,
-                        type=int)
+                        type=int)    
     parser.add_argument('--epoch',
                         help='training epoches',
                         default=50,
