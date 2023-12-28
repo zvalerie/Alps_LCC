@@ -5,9 +5,35 @@ from random import shuffle
 import torch
 from SwissImageDataset import SwissImage
 import numpy as np
-from torchvision import transforms
+from torchvision import transforms 
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
 
+
+
+
+class RGBJitter(object):
+    def __init__(self, color_jitter_factor ):
+        """ Apply color augmentation on RGB channels, i.e. channels 0,1,2.
+            Input image values must be within [0,1].
+        """
+        
+        self.color_jitter = transforms.ColorJitter(brightness= color_jitter_factor, 
+                                          contrast= color_jitter_factor, 
+                                          saturation = color_jitter_factor, 
+                                          hue= 0.1,
+                                          )
+
+    def __call__(self, img):
+        # Get the RGB channels
+        rgb = img[:3, :, :]
+     
+        # Apply the color jitter to the RGB channels
+        rgb = self.color_jitter(rgb)
+        
+        # Combine the jittered RGB channels with the remaining channels
+        img_jittered = torch.cat([rgb, img[3:, :, :]], dim=0)
+         
+        return img_jittered
 
 def compute_mean_std(data_dir=None, full=True):
     
@@ -76,9 +102,12 @@ def compute_mean_std(data_dir=None, full=True):
         print('-'*20,'\n','Final count : ',len(dataset))
         print('RGB : ave_mean',ave_mean, 'ave_std',ave_std)
         
-    
+
+
+
+
         
-if __name__ =="__main__":
+
     
     print('running dataset utils')
     compute_mean_std(data_dir=None, full=True)
