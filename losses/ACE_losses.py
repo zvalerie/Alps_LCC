@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.nn import CrossEntropyLoss, MSELoss
 
 class MyCrossEntropyLoss(nn.Module):
@@ -25,9 +26,27 @@ class WeightedCrossEntropyLoss(nn.Module):
         
         super(WeightedCrossEntropyLoss, self).__init__()
         device = args.device if args is not None else "cuda"
-        inverse_freq_weights = torch.tensor(
+
+        if args.ds =='TLM':
+            inverse_freq_weights = torch.tensor(
                     [ 0.0,	3.5,	153.8,	7.9,	3.9,	
                      388.6,	3586.6,	3.4,	70.1,	118.4]   ).to(device)
+        else : 
+            # Flair with 19 classes 
+            inverse_freq_weights = torch.tensor(
+                    [ 0.,   11.9,    12.3,  7.1,    34.8,
+                     21.8,  39.0,   6.5,    14.7,   31.5,
+                     5.5,   9.0,    25.4,   3543.4, 585.3,     
+                     592.2, 1688,   10472,  1289,               ]   
+                     ).to(device)
+            
+            # Flair with 13 classes 
+            #inverse_freq_weights = torch.tensor(
+            #        [ 0.0,	11.9,	12.3,	7.1,	34.8,	
+            #         21.8,	39.0,	 6.5,	14.7,	31.5,
+            #         5.5,    9.0,   25.4 ]   
+            #         ).to(device)
+
         
         self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight=inverse_freq_weights)
 
@@ -46,11 +65,21 @@ class CELoss_2experts(nn.Module):
         
         super(CELoss_2experts, self).__init__()
         self.device = args.device
-        self.tail_index = torch.Tensor([2, 3, 4, 6, 7]).to(args.device)
-        self.head_index =  torch.Tensor([1, 5, 8, 9]). to(args.device)
-        self.tail_one_hot= torch.tensor(
-            [0, 0, 1, 1, 1, 0, 1, 1, 0, 0], # 1 for tail index, 0 for head index
-            dtype=torch.float).to(self.device)
+        if args.ds =='TLM':
+            self.tail_index = torch.Tensor([2, 3, 4, 6, 7]).to(args.device)
+            self.head_index =  torch.Tensor([1, 5, 8, 9]). to(args.device)
+            self.tail_one_hot= torch.tensor(# 1 for tail index, 0 for head index
+                [0, 0, 1, 1, 1, 0, 1, 1, 0, 0], 
+                dtype=torch.float).to(self.device)
+            
+        else : #use FLAIR dataset with 19 classes
+            self.tail_index = torch.Tensor([4,5,6,9,12,13,14,15,16,17,18]).to(args.device)
+            self.head_index =  torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
+            self.tail_one_hot= torch.tensor( # 1 for tail index, 0 for head index
+                [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+                dtype=torch.float).to(self.device)
+                 
+                
         self.celoss= CrossEntropyLoss(ignore_index=ignore_index)
         self.masked_celoss = CrossEntropyLoss( ignore_index=ignore_index, weight=self.tail_one_hot)
         self.use_L2_penalty = args.L2penalty
@@ -87,13 +116,27 @@ class CELoss_3experts(nn.Module):
     def __init__(self,  args, ignore_index=0):
         super(CELoss_3experts, self).__init__()
         self.device = args.device
-        self.tail_index = torch.tensor([3, 4]).to(args.device)
-        self.body_index = torch.tensor([ 2, 3, 4, 6, 7 ]).to(args.device)
-        self.head_index = torch.tensor([1, 5, 8, 9]).to(args.device)
-        self.body_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], 
-                                          dtype=torch.float).to(args.device)
-        self.tail_weight =    torch.tensor([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], 
-                                          dtype=torch.float).to(args.device)
+
+        if args.ds =='TLM':
+            self.tail_index = torch.tensor([3, 4]).to(args.device)
+            self.body_index = torch.tensor([ 2, 3, 4, 6, 7 ]).to(args.device)
+            self.head_index = torch.tensor([1, 5, 8, 9]).to(args.device)
+            self.body_weight = torch.tensor([0, 0, 1, 1, 1, 0, 1, 1, 0, 0], 
+                                            dtype=torch.float).to(args.device)
+            self.tail_weight =    torch.tensor([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], 
+                                            dtype=torch.float).to(args.device)
+        else : #use FLAIR dataset with 19 classes
+            self.tail_index = torch.Tensor([13,14,15,16,17,18]).to(args.device)
+            self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
+            self.head_index = torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
+
+            self.body_weight = torch.tensor( # 1 for tail and body index, 0 for head index
+                [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
+                dtype=torch.float).to(self.device)
+            self.tail_weight = torch.tensor( # 1 for tail index, 0 for head index
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
+                dtype=torch.float).to(self.device)
+
         self.celoss= CrossEntropyLoss(ignore_index=ignore_index)
         self.body_masked_celoss = CrossEntropyLoss(weight=self.body_weight, ignore_index = ignore_index)
         self.tail_masked_celoss = CrossEntropyLoss(weight=self.tail_weight, ignore_index = ignore_index)
