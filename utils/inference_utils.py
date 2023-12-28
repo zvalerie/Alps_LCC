@@ -114,9 +114,15 @@ def get_predictions_from_logits(output,args):
 class MetricLogger(object):
     def __init__(self, n_classes):
         self.n_classes = n_classes
-        self.many_idx = [1, 5, 8, 9]
-        self.medium_idx = [2, 6, 7]
-        self.few_idx = [3, 4]
+        if n_classes == 10 : # TLM
+            self.many_idx = [1, 5, 8, 9]
+            self.medium_idx = [2, 6, 7]
+            self.few_idx = [3, 4]
+        else : #FLAIR :
+            self.many_idx = [1,2,3,7,8,10,11]
+            self.medium_idx = [4,5,6,9,12]
+            self.few_idx =[13,14,15,16,17,18]
+
         self.confusion_matrix = np.zeros((n_classes, n_classes))
 
     def _fast_hist(self, label_true, label_pred, n_class):

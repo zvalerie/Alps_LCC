@@ -39,3 +39,27 @@ id class name 		% freq	inv freq
 				
 				
 sum		12972720128		
+#############################################
+self.tail_index = torch.Tensor([13,14,15,16,17,18]).to(args.device)
+13: "swimming pool",        
+14: "snow",    
+15: "clear cut",    
+16: "mixed",
+17: "ligneous",    
+18: "greenhouse",
+
+self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
+4: "bare soil",
+5: "water",         
+6: "coniferous",   
+9: "vineyard",
+12: "plowed land",
+
+self.head_index = torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
+1: "building",      
+2: "pervious surface",      
+3: "impervious surface",          
+7: "deciduous",             
+8: "brushwood",
+10: "herbaceous vegetation",
+11: "agricultural land",    

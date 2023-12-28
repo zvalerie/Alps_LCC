@@ -24,9 +24,11 @@ def main(args):
     pprint(vars(args))
         
     # Choose model and device :
+    args.num_classes = 10 if args.ds =='TLM' else 19
     model = get_model(args)
     device =  "cuda" if torch.cuda.is_available() and not args.force_cpu else 'cpu'
     args.device = device
+    
     model = model.to(device)
     
     # Get dataloaders : 
@@ -114,7 +116,10 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    
+
+    args.epoch = 1
+    args.force_cpu = True
+    args.debug = True
     
     main(args)
         

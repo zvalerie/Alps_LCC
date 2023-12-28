@@ -6,7 +6,7 @@ import wandb
 import torch.nn as nn
 from numpy import linalg as LA
 from utils.inference_utils import AverageMeter
-
+from tqdm import tqdm
 
 
 def freeze_backbone(model):
@@ -45,7 +45,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
     device = args.device
     end = time.time()
     
-    for i, (image, dem, mask) in enumerate(train_loader):
+    for i, (image, dem, mask) in tqdm(enumerate(train_loader)):
         
         # move data to device
         input = torch.cat((image, dem), dim=1).to(device)

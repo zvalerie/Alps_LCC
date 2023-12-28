@@ -4,7 +4,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Train image segmentation network')
     parser.add_argument('--ds',
                         help='which dataset to use, between TLM and FLAIR',
-                        default='TLM',
+                        default='FLAIR',
                         type=str)
     parser.add_argument('--lr',
                         help='learning rate',
@@ -40,7 +40,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/august/',
+                        default='out/flair/',
                         type=str)
     parser.add_argument('--model',
                         help='model',

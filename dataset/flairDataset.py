@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 
 class FLAIRDataset(Dataset):
 
-    def __init__(self,   dataset_csv, data_dir,patch_size=512, phase='test' ):
+    def __init__(self,   dataset_csv, data_dir,patch_size=200, phase='test' ):
         
         self.data_dir =data_dir
         self.means = [0.4339, 0.4512, 0.4134, 0.4027,0]
@@ -78,6 +78,7 @@ class FLAIRDataset(Dataset):
         with rasterio.open(raster_file) as src_msk:
             array = src_msk.read()[0]
            # array[array>12]=0 # set background as label
+            array[array==19]=0 # remap background as label 0
             return torch.from_numpy (array).float().unsqueeze(0)
 
     def __getitem__(self, index):

@@ -3,7 +3,7 @@ import os
 from tqdm import tqdm
 from random import shuffle
 import torch
-from SwissImageDataset import SwissImage
+from .SwissImageDataset import SwissImage
 import numpy as np
 from torchvision import transforms 
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip

@@ -109,25 +109,27 @@ def get_criterion (args):
     Args:
         args (dict) : args from config file
     """
-    
     # Define loss function (criterion) and optimizer
     if args.loss == 'inverse_freq_weights':        
         criterion = WeightedCrossEntropyLoss(ignore_index=0,args=args)
 
     elif args.loss == 'seesaw' and args.experts == 0 :        
-        criterion = SeesawLoss(num_classes= 10)
+        criterion = SeesawLoss(num_classes= args.num_classes)
         
     elif args.loss == 'celoss' and args.experts == 0 :        
         criterion = MyCrossEntropyLoss(ignore_index=0)
 
     elif  args.finetune_classifier_only or 'merge' in args.aggregation:
+        raise NotImplementedError
         assert args.aggregation != 'mean', 'No classifier to finetune in model ! '
         criterion = AggregatorLoss(args)
         
     elif 'moe' in args.aggregation :
+        raise NotImplementedError
         criterion = AggregatorLoss(args)
         
     elif 'select' in args.aggregation :
+        raise NotImplementedError
         criterion = selectExpertLoss(args)
         
     elif args.experts ==2 :    
@@ -152,18 +154,13 @@ def get_model(args):
     """
    
     # Choose model : 
-    if args.ds =='FLAIR':
-        raise NotImplementedError
-        num_classes = 17
-    else :
-        num_classes = 10
-        
+            
     if args.experts ==0 :
-        model = deeplabv3P_resnet(num_classes=num_classes, output_stride=8, pretrained_backbone=True)
+        model = deeplabv3P_resnet(num_classes=args.num_classes, output_stride=8, pretrained_backbone=True)
     
     elif args.experts == 2 or args.experts == 3 :
         model = model_builder (
-                    num_classes = num_classes, 
+                    num_classes = args.num_classes, 
                     num_experts = args.experts, 
                     use_lws = args.lws,
                     aggregation = args.aggregation,
@@ -249,7 +246,7 @@ def get_FLAIR_dataloader(args=None, phase ='train'):
     loader = DataLoader(
         dataset= dataset,
         batch_size= args.bs ,
-        shuffle= True if phase =='train' else False
+        shuffle= True if phase =='train' else False,
         num_workers= args.num_workers,
         pin_memory=True
         ) 
@@ -328,7 +325,7 @@ def get_TLM_dataloader (args=None, phase ='train'):
     
     loader = DataLoader(dataset= dataset,
         batch_size= args.bs if args is not None else 32,
-        shuffle= True if phase =='train' else False
+        shuffle= True if phase =='train' else False,
         num_workers= args.num_workers if args is not None else 16,
         pin_memory=True
         )
@@ -358,9 +355,22 @@ def get_dataloader(args=None, phase ='train'):
     
     if args.ds == 'FLAIR':
         dl = get_FLAIR_dataloader(args=args,phase=phase)
+        flair  =   {
+        0:'Others',
+        1: "building",      2: "pervious surface",      3: "impervious surface",    4: "bare soil",
+        5: "water",         6: "coniferous",            7: "deciduous",             8: "brushwood",
+        9: "vineyard",      10: "herbaceous vegetation",11: "agricultural land",    12: "plowed land",
+        13: "swimming pool",        14: "snow",    15: "clear cut",    16: "mixed",
+        17: "ligneous",    18: "greenhouse",
+        }
+        args.classes = {y:x for x,y in zip (flair.keys(),flair.values())}
    
     elif args.ds == 'TLM' :
         dl = get_TLM_dataloader(args=args, phase=phase)
+        args.classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
+                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
+                    "Scree with grass" : 6,"Water" : 7,
+                    "Forest" : 8, "Glacier" : 9, }
     
     else :
         raise NotImplementedError

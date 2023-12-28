@@ -45,7 +45,7 @@
 
 
 #### BASE wo adaptive lr : 
-python train.py --name MCE_base_no_adap_lr --experts 3  --log_wandb True --large_dataset True   --not_adaptive_lr True 
+#python train.py --name MCE_base_no_adap_lr --experts 3  --log_wandb True --large_dataset True   --not_adaptive_lr True 
 
 ############################# Aggregations methods
 

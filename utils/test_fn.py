@@ -34,7 +34,7 @@ def test_ACE( model,  args):
     with torch.no_grad():
         
         tick= time.time()
-        metrics = MetricLogger( n_classes=10)
+        metrics = MetricLogger( n_classes=args.num_classes)
         
         # switch to evaluate mode
         model.eval()       
@@ -60,22 +60,17 @@ def test_ACE( model,  args):
         print('Elapsed time [s]:',int(tack-tick))
         
         # Compute and save metrics : 
-        classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
-                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
-                    "Scree with grass" : 6,"Water" : 7,
-                    "Forest" : 8, "Glacier" : 9, }    
+        classes = args.classes   
                            
         mean_acc, mean_iou, acc_cls, overall_acc = metrics.get_scores()
         confusion_matrix = metrics.get_confusion_matrix()
         plot_confusion_matrix(confusion_matrix, classes= list(classes.keys()), save_path= os.path.join( args.out_dir, args.name,'confusion_matrix'), normalize=True)
     
         
-        class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
-        freq_cls_acc =   1/4* (class_accuracies["Scree"]+ class_accuracies["Bedrock"] + class_accuracies["Glacier"] + class_accuracies["Forest"])
-        common_cls_acc = 1/3* (class_accuracies["Scree with grass"]+    class_accuracies["Water"]+   class_accuracies["Bedrockwith grass"])
-        rare_cls_acc =   1/2* (class_accuracies["Large blocks"]+   class_accuracies["Large blocks with grass"])
-         
-         
+        cls_acc = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
+        freq_cls_acc,common_cls_acc,rare_cls_acc = get_group_acc (cls_acc,args)
+
+
         metrics = {
                     'test_miou' : np.round ( mean_iou,3), 
                     'test_macc':  np.round (mean_acc,3), 
@@ -83,7 +78,7 @@ def test_ACE( model,  args):
                     'frequent_cls_acc':np.round(freq_cls_acc,3),
                     'common_cls_acc': np.round(common_cls_acc,3),
                     'rare_cls_acc': np.round(rare_cls_acc,3),
-                    'test_acc' :  class_accuracies,
+                    'test_acc' :  cls_acc,
             }
         if args.log_wandb :
             wandb.log(metrics)       
@@ -96,7 +91,29 @@ def test_ACE( model,  args):
         
         
         
-        
+def get_group_acc (cls_acc,args):
+
+    if args.ds =='TLM' : 
+        freq_cls_acc =   1/4* (cls_acc["Scree"]+ cls_acc["Bedrock"] + 
+                               cls_acc["Glacier"] + cls_acc["Forest"])
+        common_cls_acc = 1/3* (cls_acc["Scree with grass"]+ cls_acc["Water"]+ 
+                               cls_acc["Bedrockwith grass"])
+        rare_cls_acc =   1/2* (cls_acc["Large blocks"]+ cls_acc["Large blocks with grass"])
+    
+    else : #FLAIR
+        freq_cls_acc = 1/7 *( cls_acc["building"] + cls_acc["pervious surface"]+ 
+                             cls_acc["impervious surface"] + cls_acc["deciduous"]+ 
+                             cls_acc["brushwood"]+ cls_acc["herbaceous vegetation"]+
+                             cls_acc["agricultural land"])
+        common_cls_acc = 1/5* ( cls_acc["bare soil"] + cls_acc["water"] + 
+                               cls_acc[ "coniferous"] + cls_acc["vineyard"] + 
+                               cls_acc["plowed land"] )
+        rare_cls_acc =  1/6 * ( cls_acc["swimming pool"] +cls_acc["snow"] +
+                               cls_acc["clear cut"] +cls_acc["mixed"] +  
+                                cls_acc["ligneous"] +cls_acc["greenhouse"]  )
+
+
+    return  freq_cls_acc,common_cls_acc,rare_cls_acc 
 
         
 def write_result_to_csv(data,args=None):
