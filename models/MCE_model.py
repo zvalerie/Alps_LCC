@@ -13,7 +13,8 @@ class Expert(nn.Module):
         self.cnn1 = nn.Conv2d(input_dim, hidden_dim, 3, padding=1, bias=False)
         self.bn1  = nn.BatchNorm2d(hidden_dim)
         self.cnn2 = nn.Conv2d(hidden_dim, output_dim, 1)
-   
+        _init_weight(self)
+        
     def forward(self, x):
         x= self.cnn1(x)
         x=self.bn1(x)
@@ -100,13 +101,13 @@ class MCE(nn.Module):
         return output_feature, aggregator_output
 
         
-    def _init_weight(self):
-        for m in self.modules():
-            if isinstance(m, nn.Conv2d):
-                nn.init.kaiming_normal_(m.weight)
-            elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
-                nn.init.constant_(m.weight, 1)
-                nn.init.constant_(m.bias, 0)
+def _init_weight(self):
+    for m in self.modules():
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight)
+        elif isinstance(m, (nn.BatchNorm2d, nn.GroupNorm)):
+            nn.init.constant_(m.weight, 1)
+            nn.init.constant_(m.bias, 0)
 
 
 

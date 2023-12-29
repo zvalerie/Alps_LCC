@@ -61,3 +61,16 @@ class _MultiExpertModel(nn.Module):
                 
         
         return output
+
+
+if __name__ == '__main__':
+    import torch
+    x = torch.rand([8,4,200,200])
+    model = model_builder(num_classes=19,num_experts=3,
+                          pretrained_backbone=True,
+                          use_lws=True,
+                          )
+                
+    output = model(x) 
+    for key in output.keys():
+        print('output i=',key, output[key].shape)

@@ -99,10 +99,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
         
         if args.log_wandb :        
             
-            classes = {'Background':0, "Bedrock" : 1, "Bedrockwith grass" : 2,
-                    "Large blocks" : 3, "Large blocks with grass" : 4, "Scree" : 5,
-                    "Scree with grass" : 6,"Water" : 7,
-                    "Forest" : 8, "Glacier" : 9, }  
+            classes = args.classes  
             class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
             
             metrics = {

@@ -116,6 +116,13 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
+    if True :
+        args.backbone ='unet'
+        args.debug =True
+        args.epoch=1
+        args.bs =4
+        args.experts =2
+        
 
     main(args)
         

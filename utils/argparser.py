@@ -20,7 +20,7 @@ def parse_args():
                         type=int)  
     parser.add_argument('--bs',
                         help='batch size',
-                        default=64,
+                        default=16,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',
@@ -42,9 +42,9 @@ def parse_args():
                         help='directory to save outputs',
                         default='out/flair/',
                         type=str)
-    parser.add_argument('--model',
-                        help='model',
-                        default='MCE',
+    parser.add_argument('--backbone',
+                        help='choose visual backbone between deeplab or unet',
+                        default='deeplab',
                         type=str)
     parser.add_argument('--num_workers',
                         help='num of dataloader workers',

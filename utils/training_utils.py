@@ -11,10 +11,11 @@ from torch.utils.data import DataLoader
 from dataset.SwissImageDataset import SwissImage
 from dataset.flairDataset import FLAIRDataset
 from utils.transforms import Compose, MyRandomRotation90, MyRandomHorizontalFlip, MyRandomVerticalFlip
-from models import Res50_UNet, deeplabv3P_resnet
+from models import Res50_UNet, deeplabv3P_resnet, MCE_Unet
 from models.models_utils import model_builder
   
-from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss, WeightedCrossEntropyLoss
+from losses.ACE_losses import CELoss_2experts, CELoss_3experts, MyCrossEntropyLoss
+from losses.ACE_losses import ClassBalancedLoss, WeightedCrossEntropyLoss
 from losses.aggregator_losses import AggregatorLoss
 from losses.selectExpertLoss import selectExpertLoss
 from losses.SeesawLoss import SeesawLoss
@@ -46,41 +47,67 @@ def get_optimizer (model,args):
         model (nn.Module): model used in the main loop
         args (dict) : args from config file
     """
-    
-    
-    if args.experts ==0  :
-        optimizer = optim.Adam(model.parameters(), 
-                               lr=args.lr, 
-                               weight_decay=args.weight_decay
-                               )
+    if args.ds == 'TLM':
+        alpha_2exp = 0.03
+        alpha_3exp =(0.03,0.003)
+    elif args.ds == 'FLAIR':
+        alpha_2exp = 0.1781
+        alpha_3exp =(0.1714,0.0067)
         
-    elif args.experts ==2 :      
-        optimizer = optim.Adam([
-                                {'params': model.backbone.parameters()},
-                                {'params': model.classifier.project.parameters()},
-                                {'params': model.classifier.aspp.parameters()},
-                                {'params': model.classifier.classifier.parameters()},
-                                {'params': model.classifier.expert_head.parameters()},
-                                {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *0.03}, 
-                                ], 
-                                lr= args.lr, 
+    if args.backbone == 'unet':
+        if args.experts ==0  :
+            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay )
+        elif args.experts ==2 :
+            optimizer = optim.Adam([
+                        {'params': model.backbone.parameters()},
+                        {'params': model.expert_head.parameters()},
+                        {'params': model.expert_tail.parameters(), 'lr' : args.lr *alpha_2exp}, 
+                        ], lr= args.lr, weight_decay=args.weight_decay
+                        )
+        elif args.experts ==3 :
+            optimizer = optim.Adam([
+                {'params': model.backbone.parameters()},
+                {'params': model.expert_head.parameters()},
+                {'params': model.expert_body.parameters(), 'lr' : args.lr *alpha_3exp[0]}, 
+                {'params': model.expert_tail.parameters(), 'lr' : args.lr *alpha_3exp[1]},  
+                ], lr=args.lr,  weight_decay=args.weight_decay,
+            )  
+        
+    elif args.backbone == 'deeplab':
+        if args.experts ==0  :
+            optimizer = optim.Adam(model.parameters(), 
+                                lr=args.lr, 
                                 weight_decay=args.weight_decay
                                 )
-        
-    elif args.experts ==3 :
-        optimizer = optim.Adam(
-                                [
-                                {'params': model.backbone.parameters()},
-                                {'params': model.classifier.project.parameters()},
-                                {'params': model.classifier.aspp.parameters()},
-                                {'params': model.classifier.classifier.parameters()},
-                                {'params': model.classifier.expert_head.parameters()},
-                                {'params': model.classifier.expert_body.parameters(), 'lr' : args.lr *0.03}, 
-                                {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *0.003},  
-                                ], 
-                                lr=args.lr, 
-                                weight_decay=args.weight_decay,
-                               )    
+            
+        elif args.experts ==2 :      
+            optimizer = optim.Adam([
+                                    {'params': model.backbone.parameters()},
+                                    {'params': model.classifier.project.parameters()},
+                                    {'params': model.classifier.aspp.parameters()},
+                                    {'params': model.classifier.classifier.parameters()},
+                                    {'params': model.classifier.expert_head.parameters()},
+                                    {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *alpha_2exp}, 
+                                    ], 
+                                    lr= args.lr, 
+                                    weight_decay=args.weight_decay
+                                    )
+            
+        elif args.experts ==3 :
+            
+            optimizer = optim.Adam(
+                                    [
+                                    {'params': model.backbone.parameters()},
+                                    {'params': model.classifier.project.parameters()},
+                                    {'params': model.classifier.aspp.parameters()},
+                                    {'params': model.classifier.classifier.parameters()},
+                                    {'params': model.classifier.expert_head.parameters()},
+                                    {'params': model.classifier.expert_body.parameters(), 'lr' : args.lr *alpha_3exp[0]}, 
+                                    {'params': model.classifier.expert_tail.parameters(), 'lr' : args.lr *alpha_3exp[1]},  
+                                    ], 
+                                    lr=args.lr, 
+                                    weight_decay=args.weight_decay,
+                                )    
     
     if args.finetune_classifier_only  :
         optimizer = optim.SGD( model.classifier.classifier.parameters(),                                
@@ -112,12 +139,21 @@ def get_criterion (args):
     # Define loss function (criterion) and optimizer
     if args.loss == 'inverse_freq_weights':        
         criterion = WeightedCrossEntropyLoss(ignore_index=0,args=args)
+        
+    elif args.experts ==2 :    
+        criterion = CELoss_2experts (args)
+        
+    elif args.experts == 3: 
+        criterion = CELoss_3experts ( args)
 
     elif args.loss == 'seesaw' and args.experts == 0 :        
         criterion = SeesawLoss(num_classes= args.num_classes)
         
     elif args.loss == 'celoss' and args.experts == 0 :        
         criterion = MyCrossEntropyLoss(ignore_index=0)
+    
+    elif args.loss == 'cbloss' and args.experts == 0 :        
+        criterion = ClassBalancedLoss(ignore_index=0, args=args)
 
     elif  args.finetune_classifier_only or 'merge' in args.aggregation:
         raise NotImplementedError
@@ -132,11 +168,7 @@ def get_criterion (args):
         raise NotImplementedError
         criterion = selectExpertLoss(args)
         
-    elif args.experts ==2 :    
-        criterion = CELoss_2experts (args)
-        
-    elif args.experts == 3: 
-        criterion = CELoss_3experts ( args)
+
     
     
     else:
@@ -154,24 +186,37 @@ def get_model(args):
     """
    
     # Choose model : 
-            
-    if args.experts ==0 :
-        model = deeplabv3P_resnet(num_classes=args.num_classes, output_stride=8, pretrained_backbone=True)
-    
-    elif args.experts == 2 or args.experts == 3 :
-        model = model_builder (
-                    num_classes = args.num_classes, 
-                    num_experts = args.experts, 
-                    use_lws = args.lws,
-                    aggregation = args.aggregation,
-                    )
+    if args.backbone =='deeplab':        
+        if args.experts ==0 :
+            model = deeplabv3P_resnet(num_classes=args.num_classes, output_stride=8, pretrained_backbone=True)
+        
+        elif args.experts == 2 or args.experts == 3 :
+            model = model_builder (
+                        num_classes = args.num_classes, 
+                        num_experts = args.experts, 
+                        use_lws = args.lws,
+                        aggregation = args.aggregation,
+                        )
+    elif args.backbone =='unet':
+        if args.experts ==0 :
+            model = Res50_UNet(num_classes = args.num_classes,)
+        elif args.experts == 2 or args.experts == 3 :
+            model = MCE_Unet(num_classes = args.num_classes,
+                             num_experts = args.experts,
+                             use_lws = args.lws,
+                             aggregation = args.aggregation,
+                             )
+        
     else :
-        raise NotImplementedError
+        raise NotImplementedError 
     
+   # Load weights from path:     
     if os.path.isfile(args.pretrained_weights): 
         checkpoint = torch.load(args.pretrained_weights)
         model.load_state_dict(checkpoint['state_dict'],strict=False)
         print('Model weights loaded from file:',args.pretrained_weights)
+    else :
+        print('Model trained from scratch')
         
     if args.finetune_classifier_only :      
         
@@ -211,14 +256,16 @@ def load_last_checkpoint (model,optimizer, args):
         
     
 def get_FLAIR_dataloader(args=None, phase ='train'):
-    data_dir = '/data/valerie/flair/'     
+    
+    data_dir = '/data/valerie/flair/'   # Modify the absolute path to the data here !  #TODO
 
     # Path to dataset splits : 
     test_csv = 'data/flair_split/tiny/test.csv'
     train_csv = 'data/flair_split/tiny/train.csv'
     val_csv =  'data/flair_split/tiny/val.csv'
     plot_csv = 'data/flair_split/tiny/plot.csv'
-
+    patch_size = 512
+    
     if  args.large_dataset:    
         train_csv = 'data/flair_split/base/train.csv'
 
@@ -227,9 +274,12 @@ def get_FLAIR_dataloader(args=None, phase ='train'):
         train_csv = 'data/flair_split/dev/train.csv'
         val_csv = 'data/flair_split/dev/val.csv'
         plot_csv = 'data/flair_split/dev/plot.csv'
+        patch_size = 200
+        
     
     if phase == 'train' :
         dataset_csv = train_csv
+        patch_size = 400
     elif phase == 'val': 
         dataset_csv = val_csv
     elif phase == 'test': 
@@ -241,7 +291,9 @@ def get_FLAIR_dataloader(args=None, phase ='train'):
     
     dataset = FLAIRDataset(dataset_csv=dataset_csv,
                            data_dir=data_dir,
-                           phase=phase)
+                           phase=phase,
+                           patch_size=patch_size,
+                           )
     
     loader = DataLoader(
         dataset= dataset,

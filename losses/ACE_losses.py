@@ -57,6 +57,43 @@ class WeightedCrossEntropyLoss(nn.Module):
         
         else :
             return self.ce( output, targets )
+        
+        
+class ClassBalancedLoss(nn.Module):
+    
+    def __init__(self, ignore_index=0,args =None):
+        
+        super(ClassBalancedLoss, self).__init__()
+        device = args.device if args is not None else "cuda"
+        # CBL computed with beta = 0.999
+
+
+        if args.ds =='TLM': 
+            CBL_weights = torch.tensor(
+                    [0.0071,	0.0010,	0.0049,	0.0010,	
+                    0.0010,	0.0117,	0.1046,	0.0010,	
+                    0.0025,	0.0039,]  ).to(device)
+        else : 
+            # Flair with 19 classes 
+            CBL_weights = torch.tensor(
+                [    0,	0.0010,	0.0010,	0.0010,	0.0013,	
+                0.0011,	0.0014,	0.0010,	0.0010,	0.0013,
+                0.0010,	0.0010,	0.0012,	0.0721,	0.0123,	
+                0.0125,	0.0346,	0.2120,	0.0266,]   
+                     ).to(device)
+                        
+        
+        self.ce = nn.CrossEntropyLoss(ignore_index= ignore_index,weight=CBL_weights)
+
+    def forward(self, output, targets):
+    
+        if isinstance(output,dict):
+            return self.ce( output['out'], targets )
+        
+        else :
+            return self.ce( output, targets )
+
+
 
 
 class CELoss_2experts(nn.Module):

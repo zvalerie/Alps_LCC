@@ -6,3 +6,4 @@ from models.MCE_model import MCE
 from DeepLabV3Plus import deeplabv3P_resnet
 from Unet import Res50_UNet
 from ResNet import resnet50
+from MCE_Unet import MCE_Unet

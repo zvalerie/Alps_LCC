@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 
 class FLAIRDataset(Dataset):
 
-    def __init__(self,   dataset_csv, data_dir,patch_size=200, phase='test' ):
+    def __init__(self,   dataset_csv, data_dir,patch_size=400, phase='test' ):
         
         self.data_dir =data_dir
         self.means = [0.4339, 0.4512, 0.4134, 0.4027,0]

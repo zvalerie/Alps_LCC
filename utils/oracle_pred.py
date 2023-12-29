@@ -245,7 +245,7 @@ if __name__ == '__main__':
     
     args = parse_args()
 
-    args.model ='MCE'
+
     args.experts = 3
     args.out_dir='out/ws13/'
     args.name = 'MCE-3_lcom_ws13'
