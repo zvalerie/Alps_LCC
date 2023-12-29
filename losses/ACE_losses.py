@@ -125,15 +125,15 @@ class CELoss_3experts(nn.Module):
                                             dtype=torch.float).to(args.device)
             self.tail_weight =    torch.tensor([0, 0, 0, 1, 1, 0, 0, 0, 0, 0], 
                                             dtype=torch.float).to(args.device)
+            
         else : #use FLAIR dataset with 19 classes
             self.tail_index = torch.Tensor([13,14,15,16,17,18]).to(args.device)
             self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
             self.head_index = torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
-
             self.body_weight = torch.tensor( # 1 for tail and body index, 0 for head index
                 [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
                 dtype=torch.float).to(self.device)
-            self.tail_weight = torch.tensor( # 1 for tail index, 0 for head index
+            self.tail_weight = torch.tensor( # 1 for tail index, 0 for head and body index
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
                 dtype=torch.float).to(self.device)
 

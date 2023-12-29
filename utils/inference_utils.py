@@ -93,9 +93,21 @@ def get_predictions_from_logits(output,args):
         device = output['exp_1'].device
         sum_logits = ( output['exp_0'] + output['exp_1'] ) if args.experts ==2  \
             else  ( output['exp_0'] + output['exp_1'] + output['exp_2'] )
+            
         # Divide the sum of logits by the number of experts used to predict them :
-        quotient = [1,1,2,2,2,1,2,2,1,1] if args.experts ==2  \
-            else   [1,1,2,3,3,1,2,2,1,1]
+        if args.ds =='TLM':
+            quotient = [1,1,2,2,2,1,2,2,1,1] if args.experts ==2  \
+                else   [1,1,2,3,3,1,2,2,1,1]
+                
+        else : # FLAIR
+            if args.experts ==2:
+                quotient = [1, 1, 1, 1, 2, 2, 2, 1, 1, 2, 1, 1, 2,  2, 2, 2, 2, 2, 2]
+
+            elif args.experts ==3 :
+                quotient = [1, 1, 1, 1, 2, 2, 2, 1, 1, 2, 1, 1, 2,  3, 3, 3, 3, 3, 3]
+            else : 
+                return NotImplementedError
+            
         quotient = torch.tensor(quotient).unsqueeze(-1).unsqueeze(-1).to(device)
         logits = sum_logits / quotient
             

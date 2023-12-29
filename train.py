@@ -117,9 +117,5 @@ if __name__ == '__main__':
   
     args = parse_args()
 
-    args.epoch = 1
-    args.force_cpu = True
-    args.debug = True
-    
     main(args)
         
