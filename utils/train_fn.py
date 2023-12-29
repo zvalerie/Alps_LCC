@@ -156,7 +156,7 @@ def train_ACE(train_loader,  model, criterion, optimizer, epoch, args):
                 'epoch':epoch,                         
             }
             
-        wandb.log(metrics)
+        wandb.log(metrics,step = epoch)
     
     
     

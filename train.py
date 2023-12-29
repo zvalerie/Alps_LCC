@@ -116,7 +116,7 @@ def main(args):
 if __name__ == '__main__':
   
     args = parse_args()
-    if True :
+    if False:
         args.backbone ='unet'
         args.debug =True
         args.epoch=1

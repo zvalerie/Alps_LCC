@@ -110,6 +110,6 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
                     'val_acc' : class_accuracies,
                     'val_oacc':overall_acc,   
             }
-            wandb.log(metrics)
+            wandb.log(metrics,step =epoch)
     
     return losses.avg, perf_indicator

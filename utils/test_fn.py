@@ -81,7 +81,7 @@ def test_ACE( model,  args):
                     'test_acc' :  cls_acc,
             }
         if args.log_wandb :
-            wandb.log(metrics)       
+            wandb.log(metrics,step=0)       
         
         
         pprint(metrics)
