@@ -67,7 +67,7 @@ def test_ACE( model,  args):
         plot_confusion_matrix(confusion_matrix, classes= list(classes.keys()), save_path= os.path.join( args.out_dir, args.name,'confusion_matrix'), normalize=True)
     
         
-        cls_acc = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
+        cls_acc = { cls : np.round (np.nan_to_num(value),3) for cls, value in zip (classes.keys(),acc_cls )  }
         freq_cls_acc,common_cls_acc,rare_cls_acc = get_group_acc (cls_acc,args)
 
 

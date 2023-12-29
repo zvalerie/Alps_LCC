@@ -40,7 +40,7 @@ def parse_args():
                         type=int)
     parser.add_argument('--out_dir',
                         help='directory to save outputs',
-                        default='out/flair/',
+                        default='out/revision/',
                         type=str)
     parser.add_argument('--backbone',
                         help='choose visual backbone between deeplab or unet',

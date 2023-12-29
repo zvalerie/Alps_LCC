@@ -100,7 +100,7 @@ def validate_ACE(val_loader, model, criterion, epoch, args):
         if args.log_wandb :        
             
             classes = args.classes  
-            class_accuracies = { cls : np.round (value,3) for cls, value in zip (classes.keys(),acc_cls )  }
+            class_accuracies = { cls : np.round (np.nan_to_num(value),3) for cls, value in zip (classes.keys(),acc_cls )  }
             
             metrics = {
                     'val_loss':losses.avg,
