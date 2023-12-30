@@ -20,8 +20,8 @@ class FLAIRDataset(Dataset):
     def __init__(self,   dataset_csv, data_dir,patch_size=400, phase='test' ):
         
         self.data_dir =data_dir
-        self.means = [0.4339, 0.4512, 0.4134, 0.4027,0]
-        self.stds =  [0.1368, 0.1213, 0.1181, 0.0958,1]
+        self.means = [0.4441, 0.4589, 0.4245, 0.3921,0]
+        self.stds =  [0.1370, 0.1207, 0.1145, 0.0920,1]
         self.patch_size = patch_size
         split_path = dataset_csv      
 
@@ -71,15 +71,16 @@ class FLAIRDataset(Dataset):
         with rasterio.open(raster_file) as src_img:
             array = src_img.read() 
             array = array
-            array = torch.from_numpy(array[:4,:,:]/255).float() # do not select additional bands  
-            return array
+            img = torch.from_numpy(array[:3,:,:]/255).float()
+            dsm = torch.from_numpy(array[3:4,:,:]/255).float() # digital surface model  
+        return torch.cat((img,dsm),axis=0)
 
     def read_msk(self, raster_file: str) -> np.ndarray:
         with rasterio.open(raster_file) as src_msk:
             array = src_msk.read()[0]
-           # array[array>12]=0 # set background as label
+           # array[array>12]=0 # set rare classes as background ---> flair 13 classes
             array[array==19]=0 # remap background as label 0
-            return torch.from_numpy (array).float().unsqueeze(0)
+        return torch.from_numpy (array).float().unsqueeze(0)
 
     def __getitem__(self, index):
 
@@ -100,7 +101,8 @@ def compute_mean_std(dataset ):
     run_stds = torch.tensor([0.,0.,0.,0.])
     count= 0
     print('compute mean and std')
-    for x  in tqdm(dataset):
+    
+    for x  in dataset:
         rgb,dem,mask  = x
         img =  torch.cat((rgb,dem),axis=0) 
         means = img.mean((1,2))
@@ -147,19 +149,21 @@ if __name__ =="__main__":
     ds= FLAIRDataset(dataset_csv='data/flair_split/base/train.csv' ,
                     data_dir= '/data/valerie/flair/',
                     patch_size=512,
-                    phase='test'  )
+                    phase='train'  )
     print(len(ds))
     
     from tqdm import tqdm 
     
-    # compute_mean_std(ds)
-    # Compute class frequencies
-    class_frequencies = compute_FLAIR_class_frequencies(ds)
+    compute_mean_std(ds)
 
-    # Print class frequencies
-    for class_label, frequency in class_frequencies.items():
-        print(f"Class {class_label}: {frequency} occurrences")
-        
+    # Compute class frequencies
+    if False :
+        class_frequencies = compute_FLAIR_class_frequencies(ds)
+
+        # Print class frequencies
+        for class_label, frequency in class_frequencies.items():
+            print(f"Class {class_label}: {frequency} occurrences")
+            
 
     
     if False : 
