@@ -67,29 +67,6 @@ class SwissImage(Dataset):
     
 
 
-def xunnormalize_batch(batch):
-    """
-    Unnormalizes a batch of tensors.
-
-    Args:
-        batch (torch.Tensor): Batch of tensors to be unnormalized, of shape (B, C, H, W).
-        mean (sequence): Sequence of mean values for each channel.
-        std (sequence): Sequence of standard deviation values for each channel.
-
-    Returns:
-        torch.Tensor: Unnormalized batch of tensors.
-    """
-    mean = [0.5585, 0.5771, 0.5543]  
-    std = [0.2535, 0.2388, 0.2318] 
-    # Create a normalization tensor of the same shape as the batch
-    norm_tensor = torch.Tensor(mean)[None, :, None, None]  # Shape: (1, C, 1, 1)
-    std_tensor = torch.Tensor(std)[None, :, None, None]    # Shape: (1, C, 1, 1)
-
-    # Unnormalize the batch
-    unnormalized_batch = batch * std_tensor + norm_tensor
-
-    return unnormalized_batch
-
 def unnormalize_batch(images, ):
     """
     Unnormalizes a batch of tensors.
@@ -115,18 +92,20 @@ def unnormalize_batch(images, ):
 
 if __name__ =="__main__":
     
-    dataset_csv =   '/home/valerie/Projects/Alps_LCC/data/split_subset/train_subset.csv'
+    dataset_csv =   '/home/valerie/Projects/Alps_LCC/data/split/train_dataset.csv'
         
     img_dir = '/data/valerie/rocky_tlm/rgb/'  #'/data/xiaolong/rgb'
     dem_dir = '/data/valerie/rocky_tlm/dem/' # /data/xiaolong/dem'
     label_dir = '/data/valerie/master_Xiaolong/mask/'
+
+    from tqdm import tqdm
     
     ds = SwissImage(dataset_csv,img_dir,dem_dir,label_dir,common_transform=None,img_transform=None,debug=False)
     
-    for image, dem, label in ds:
-        
-        input = torch.cat((image, dem),axis=0)
-        print(input.mean((1,2)))
+    for image, dem, label in tqdm( ds, ncols =30):
+        pass
+        #input = torch.cat((image, dem),axis=0)
+        #print(input.mean((1,2)))
     
 
     

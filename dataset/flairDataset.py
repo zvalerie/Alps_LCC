@@ -154,7 +154,7 @@ if __name__ =="__main__":
     
     from tqdm import tqdm 
     
-    compute_mean_std(ds)
+    #compute_mean_std(ds)
 
     # Compute class frequencies
     if False :
@@ -166,7 +166,7 @@ if __name__ =="__main__":
             
 
     
-    if False : 
+    if True : 
         for x in tqdm( range( len(ds))):
             #print(x)
             try :

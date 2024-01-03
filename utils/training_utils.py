@@ -319,6 +319,7 @@ def get_TLM_dataloader (args=None, phase ='train'):
     if  args.large_dataset:    
         train_csv = 'data/split/train_dataset.csv'
        # val_csv = 'data/split/val_dataset.csv'  
+        print('use large dataset')
 
     common_transform = Compose([
         MyRandomHorizontalFlip(p=0.5),
