@@ -28,6 +28,8 @@ class WeightedCrossEntropyLoss(nn.Module):
         device = args.device if args is not None else "cuda"
 
         if args.ds =='TLM':
+            # inverse frequency weights computed from pixel 
+            # frequency on the base train set
             inverse_freq_weights = torch.tensor(
                     [ 0.0,	3.5,	153.8,	7.9,	3.9,	
                      388.6,	3586.6,	3.4,	70.1,	118.4]   ).to(device)

@@ -20,7 +20,7 @@ def parse_args():
                         type=int)  
     parser.add_argument('--bs',
                         help='batch size',
-                        default=16,
+                        default=32,
                         type=int)
     parser.add_argument('--lr_decay_rate',
                         help='scheduler_decay_rate',

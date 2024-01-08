@@ -14,10 +14,10 @@
 #python train.py --ds TLM --backbone unet --name TLM_unet_SL_dev      --experts 0   --loss seesaw    --log_wand True
 
 ## MCE 2
-#python train.py --ds TLM --backbone unet --name TLM_unet_MCE2_dev    --experts 2   --lws True --L2penalty True --weight_decay 0.2       --log_wand True
+#python train.py --ds TLM --backbone unet --name TLM_unet_MCE2_dev_v2    --experts 2   --lws False --L2penalty True       --log_wand True 
 
 ## MCE 3 
-#python train.py --ds TLM --backbone unet --name TLM_unet_MCE3_dev    --experts 3   --lws True --L2penalty True --weight_decay 0.2      --log_wand True
+python train.py --ds TLM --backbone unet --name TLM_unet_MCE3_dev_v2    --experts 3   --lws False --L2penalty True       --log_wand True  --bs 32
 
 
 #####################################################
@@ -25,10 +25,10 @@
 #######################################################
 
 #simple CE 
-#python train.py --ds TLM --backbone unet --name TLM_unet_CEL_basev2    --experts 0   --loss celoss   --weight_decay 0.2  --large_dataset True  --log_wand True
+#python train.py --ds TLM --backbone unet --name TLM_unet_CEL_basev2    --experts 0   --loss celoss    --large_dataset True  --log_wand True
 
 # weighted CE
-python train.py --ds TLM --backbone unet --name TLM_unet_WEL_base    --experts 0   --loss inverse_freq_weights --weight_decay 0.2 --large_dataset True  --log_wand True
+#python train.py --ds TLM --backbone unet --name TLM_unet_WEL_base    --experts 0   --loss inverse_freq_weights  --large_dataset True  --log_wand True
 
 # Class balanced loss : 
 #python train.py --ds TLM --backbone unet --name TLM_unet_CBL_base    --experts 0   --loss cbloss --large_dataset True  --log_wand True
@@ -37,7 +37,10 @@ python train.py --ds TLM --backbone unet --name TLM_unet_WEL_base    --experts 0
 #python train.py --ds TLM --backbone unet --name TLM_unet_SL_base     --experts 0   --loss seesaw --large_dataset True  --log_wand True
 
 ## MCE 2
-python train.py --ds TLM --backbone unet --name TLM_unet_MCE2_base   --experts 2   --lws True --L2penalty True --weight_decay 0.2    --large_dataset True  --log_wand True
+#python train.py --ds TLM --backbone unet --name TLM_unet_MCE2_base   --experts 2   --lws False --L2penalty True    --large_dataset True  --log_wand True
 
 ## MCE 3 
-python train.py --ds TLM --backbone unet --name TLM_unet_MCE3_base   --experts 3   --lws True --L2penalty True --weight_decay 0.2   --large_dataset True  --log_wand True
+#python train.py --ds TLM --backbone unet --name TLM_unet_MCE3_base   --experts 3   --lws False --L2penalty True    --large_dataset True  --log_wand True
+
+
+#sudo systemctl restart display-manager
