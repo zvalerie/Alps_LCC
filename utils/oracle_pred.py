@@ -67,7 +67,8 @@ def main(args):
     '''
     print('Start prediction as oracle model....')
     assert args.experts == 2 or args.experts ==3, 'oracle mode only implemented from 2-3 experts, \nProcess ended' 
-    
+    args.num_classes = 10 if args.ds =='TLM' else 19
+
     # Choose model and device :
     model = get_model(args)
     load_best_model_weights(model,args)        
@@ -225,30 +226,21 @@ def get_score_per_expert(metrics):
 
 
 
-if __name__ == '__xmain__':
-    size= 8,10,5,5
-    
-    logits = torch.rand(size=size)
-    gt = torch.randint(high =10,size=[8,5,5],  )
-    output = {'exp_0': logits, 'exp_1':logits, 'exp_2':logits}
-    get_oracle_logits_from_experts(output,gt)
-    
     
 
 
 if __name__ == '__main__':
   
-    
-    
-    
-    
-    
     args = parse_args()
-
-
+    args.ds ='TLM'
+    args.backbone ='unet'
+    args.name = 'TLM_unet_MCE3_base_V2'
+    args.lws = False
     args.experts = 3
-    args.out_dir='out/ws13/'
-    args.name = 'MCE-3_lcom_ws13'
+    args.out_dir='/home/valerie/Projects/Alps_LCC/out/revision/'
+    args.large_dataset =True
+    args.num_classes = 10
+
     args.test_only = True
     main(args)
         

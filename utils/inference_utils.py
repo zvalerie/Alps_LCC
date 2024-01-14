@@ -19,7 +19,7 @@ def load_best_model_weights (model,args):
         print('Using last model weights, best weights not found')     
     
     else :
-        raise NameError ('Best or last model weights are not found in folder', args.out_dir , args.name )
+        raise NameError ('Best or last model weights are not found in folder', best_model_path,last_model_path )
     
     best_weights = checkpoint['state_dict']
     model =  model.load_state_dict (best_weights)
