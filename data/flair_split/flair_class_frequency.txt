@@ -16,6 +16,8 @@ Class	11	 1 435 023 789 	occurrences
 Class	12	 510 692 054 	occurrences
 
 ######################################
+CLASSES frequency in FLAIR TRAIN SET (19 classes)
+######################################
 id class name 		% freq	inv freq
 0	other	            20453398	0,16%	634,3
 1	building	        1094107649	8,43%	11,9
@@ -39,7 +41,7 @@ id class name 		% freq	inv freq
 				
 				
 sum		12972720128		
-#############################################
+############################################# RARE CLASSSES in FLAIR 19
 self.tail_index = torch.Tensor([13,14,15,16,17,18]).to(args.device)
 13: "swimming pool",        
 14: "snow",    
@@ -48,6 +50,7 @@ self.tail_index = torch.Tensor([13,14,15,16,17,18]).to(args.device)
 17: "ligneous",    
 18: "greenhouse",
 
+############################################# COMMON CLASSSES in FLAIR 19
 self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
 4: "bare soil",
 5: "water",         
@@ -55,6 +58,7 @@ self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
 9: "vineyard",
 12: "plowed land",
 
+############################################# FREQUENT CLASSSES in FLAIR 19
 self.head_index = torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
 1: "building",      
 2: "pervious surface",      

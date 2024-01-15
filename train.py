@@ -62,11 +62,13 @@ def main(args):
     print('\tDevice   :  ', device)    
     print('\tTrain set:  ', len(train_loader.dataset), 'samples')  
     print('\tVal set  :  ', len(val_loader.dataset),   'samples')  
+    if args.catchup_training :
+         print('\tStart training from checkpoint at epoch',start_epoch)  
     print('*'*80)
     
     
     if not args.test_only: 
-        for epoch in range( args.epoch):
+        for epoch in range(start_epoch, args.epoch):
                    
             # train for one epoch
             train_ACE(train_loader, model, criterion, optimizer, epoch, args)

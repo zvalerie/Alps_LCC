@@ -112,9 +112,11 @@ class CELoss_2experts(nn.Module):
                 dtype=torch.float).to(self.device)
             
         else : #use FLAIR dataset with 19 classes
+            # tail indices corresponds to common and rare classes
             self.tail_index = torch.Tensor([4,5,6,9,12,13,14,15,16,17,18]).to(args.device)
             self.head_index =  torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
             self.tail_one_hot= torch.tensor( # 1 for tail index, 0 for head index
+                #0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18
                 [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
                 dtype=torch.float).to(self.device)
                  
@@ -170,9 +172,11 @@ class CELoss_3experts(nn.Module):
             self.body_index = torch.Tensor([4,5,6,9,12]).to(args.device)
             self.head_index = torch.Tensor([1,2,3,7,8,10,11]).to(args.device)
             self.body_weight = torch.tensor( # 1 for tail and body index, 0 for head index
+                #0  1  2  3  4  5  6  7  8  9 10  11 12 13 14 15 16 17 18
                 [0, 0, 0, 0, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1],
                 dtype=torch.float).to(self.device)
             self.tail_weight = torch.tensor( # 1 for tail index, 0 for head and body index
+                #0  1  2  3  4  5  6  7  8  9 10  11 12 13 14 15 16 17 18
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1],
                 dtype=torch.float).to(self.device)
 
