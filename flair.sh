@@ -2,10 +2,10 @@
 
 
 #simple CE 
-python train.py --name FLAIR_CEL_dev  --experts 0  --loss celoss      --log_wand True
+python train.py --name FLAIR_CEL_dev  --experts 0  --loss celoss   --bs 16   --log_wand True
 
 # weighted CE
-#python train.py --name FLAIR_WCEL_dev   --experts 0    --loss inverse_freq_weights --debug True   --log_wand True
+python train.py --name FLAIR_WCEL_dev   --experts 0    --loss inverse_freq_weights --debug True   --log_wand True
 
 # Class balanced loss : 
 #python train.py --name FLAIR_CBL_dev   --experts 0    --loss cbloss --debug True   --log_wand True
@@ -14,10 +14,10 @@ python train.py --name FLAIR_CEL_dev  --experts 0  --loss celoss      --log_wand
 python train.py --name FLAIR_SL_dev  --experts 0  --loss seesaw   --log_wand True
 
 ## MCE 2
-python train.py --name FLAIR_MCE2_dev  --experts 2   --lws False --L2penalty True      --log_wand True
+#python train.py --name FLAIR_MCE2_dev  --experts 2   --lws False --L2penalty True --bs 16     --log_wand True
 
 ## MCE 3 
-python train.py --name FLAIR_MCE3_dev --experts 3   --lws False --L2penalty True       --log_wand True
+python train.py --name FLAIR_MCE3_dev --experts 3   --lws False --L2penalty True  --bs 16     --log_wand True 
 
 
 #####################################################

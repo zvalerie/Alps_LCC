@@ -150,10 +150,11 @@ class MetricLogger(object):
 
     def get_scores(self):
         """Returns accuracy score evaluation result.
-            - overall accuracy
+            
             - mean accuracy
-            - mean IU
-            - fwavacc
+            - mean IoU
+            - accuracy per class
+            - overall accuracy
         """
         
         hist = self.confusion_matrix
